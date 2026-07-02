@@ -1,4 +1,5 @@
-import { debounce, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { debounce, MarkdownRenderChild, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { TrackerRenderer, RenderOptions } from "./renderer";
 import { DEFAULT_SETTINGS, TrackerSettings, TrackerSettingTab } from "./settings";
 import { Store } from "./store";
 import { TrackerView, VIEW_TYPE } from "./view";
@@ -24,6 +25,26 @@ export default class TodoHabitsPlugin extends Plugin {
 		});
 
 		this.addSettingTab(new TrackerSettingTab(this.app, this));
+
+		// blocco ```todo-habits``` incorporabile in qualsiasi nota
+		this.registerMarkdownCodeBlockProcessor("todo-habits", (source, el, ctx) => {
+			const opts = parseEmbedOptions(source);
+			el.addClass("th-embed");
+			const renderer = new TrackerRenderer(this, el, opts);
+
+			const child = new MarkdownRenderChild(el);
+			ctx.addChild(child);
+			const refresh = debounce(() => void renderer.render(), 150, true);
+			child.registerEvent(
+				this.app.vault.on("modify", (file) => {
+					if (file instanceof TFile && this.store.isTrackedPath(file.path)) {
+						refresh();
+					}
+				})
+			);
+
+			void renderer.render();
+		});
 
 		// ri-renderizza quando uno dei tre file cambia (edit manuale o Obsidian Sync)
 		this.registerEvent(
@@ -64,4 +85,37 @@ export default class TodoHabitsPlugin extends Plugin {
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
 	}
+}
+
+/**
+ * Opzioni del blocco ```todo-habits```, una per riga:
+ * `habits`, `todos`, `header`, `habit: <id>`. Vuoto = habits + todos.
+ */
+function parseEmbedOptions(source: string): RenderOptions {
+	const opts: RenderOptions = { header: false, habits: false, todos: false };
+	let any = false;
+	for (const raw of source.split(/\r?\n/)) {
+		const line = raw.trim().toLowerCase();
+		if (!line) continue;
+		if (line === "habits" || line === "abitudini") {
+			opts.habits = true;
+			any = true;
+		} else if (line === "todos" || line === "todo") {
+			opts.todos = true;
+			any = true;
+		} else if (line === "header" || line === "data") {
+			opts.header = true;
+		} else {
+			const m = line.match(/^habit:\s*([a-z0-9-]+)$/);
+			if (m) {
+				opts.habitId = m[1];
+				any = true;
+			}
+		}
+	}
+	if (!any) {
+		opts.habits = true;
+		opts.todos = true;
+	}
+	return opts;
 }

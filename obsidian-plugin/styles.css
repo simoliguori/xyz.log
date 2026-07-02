@@ -36,6 +36,16 @@
 	overflow-y: auto;
 }
 
+/* blocco incorporato nelle note: niente padding da vista, sezioni più compatte */
+.th-root.th-embed {
+	padding: 4px 0;
+	overflow-y: visible;
+}
+
+.th-root.th-embed .th-section {
+	margin-top: 12px;
+}
+
 /* ---------- header ---------- */
 
 .th-title {

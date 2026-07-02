@@ -46,6 +46,39 @@ Colore accent:
 
 Il plugin funziona anche su **Obsidian mobile** (`isDesktopOnly: false`).
 
+### Tracker dentro una nota
+
+Oltre alla vista dedicata puoi incorporare il tracker in qualsiasi nota con un code block:
+
+````markdown
+```todo-habits
+```
+````
+
+Vuoto mostra abitudini + todo. Opzioni (una per riga):
+
+| Opzione | Effetto |
+|---|---|
+| `habits` | solo la sezione abitudini |
+| `todos` | solo la todo list |
+| `habit: <id>` | una singola abitudine con la heatmap GitHub già espansa |
+| `header` | aggiunge l'intestazione con la data di oggi |
+
+Esempio per la nota giornaliera (o il suo template):
+
+````markdown
+```todo-habits
+header
+habits
+```
+
+```todo-habits
+habit: meditazione
+```
+````
+
+Il blocco è interattivo (spunte, aggiunta task) e si aggiorna da solo quando i file cambiano.
+
 ## Installazione — app/widget Android
 
 Prerequisito importante: **il vault sul telefono deve stare in una cartella dello storage
