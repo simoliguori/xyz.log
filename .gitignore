@@ -1,0 +1,15 @@
+node_modules/
+main.js
+*.map
+.DS_Store
+
+# Font proprietario Nothing: non redistribuibile, resta solo in locale
+android-widget/app/src/main/assets/fonts/*.otf
+
+# Android
+android-widget/.gradle/
+android-widget/build/
+android-widget/app/build/
+android-widget/local.properties
+android-widget/.idea/
+*.iml

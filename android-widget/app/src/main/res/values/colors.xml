@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- design/tokens.json -->
+    <color name="th_bg">#1e1e1e</color>
+    <color name="th_bg2">#262626</color>
+    <color name="th_surface">#2c2c31</color>
+    <color name="th_border">#3a3a41</color>
+    <color name="th_text">#dcdcdc</color>
+    <color name="th_accent">#44437a</color>
+    <color name="th_accent_bright">#8887c5</color>
+</resources>

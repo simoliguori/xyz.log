@@ -1,0 +1,9 @@
+{
+	"id": "todo-habits",
+	"name": "Todo & Habits",
+	"version": "0.1.0",
+	"minAppVersion": "1.4.0",
+	"description": "Habit tracker con cronologia e todo list con date e priorità, su file markdown condivisi con il widget Android.",
+	"author": "simol",
+	"isDesktopOnly": false
+}
