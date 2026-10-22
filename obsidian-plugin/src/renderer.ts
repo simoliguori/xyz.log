@@ -50,6 +50,52 @@ function renderRich(el: HTMLElement, text: string): void {
 	if (last < text.length) el.appendText(text.slice(last));
 }
 
+/** Contenitori scrollabili di cui preservare la posizione tra un render e l'altro. */
+const TH_SCROLLERS = [
+	".th-todo-scroll",
+	".th-habit-scroll",
+	".th-cross-cell--todo",
+	".th-cross-cell--habits",
+	".th-cross-cell--history",
+];
+
+/** Suono breve e morbido alla spunta (Web Audio, nessun file esterno). */
+let thAudioCtx: AudioContext | null = null;
+function playCheckSound(): void {
+	try {
+		const Ctx = (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
+			|| (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+		if (!Ctx) return;
+		if (!thAudioCtx) thAudioCtx = new Ctx();
+		const ctx = thAudioCtx;
+		if (ctx.state === "suspended") void ctx.resume();
+		const o = ctx.createOscillator();
+		const g = ctx.createGain();
+		o.type = "sine";
+		o.connect(g);
+		g.connect(ctx.destination);
+		const t0 = ctx.currentTime;
+		o.frequency.setValueAtTime(620, t0);
+		o.frequency.exponentialRampToValueAtTime(920, t0 + 0.1);
+		g.gain.setValueAtTime(0.0001, t0);
+		g.gain.exponentialRampToValueAtTime(0.06, t0 + 0.012);
+		g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.19);
+		o.start(t0);
+		o.stop(t0 + 0.2);
+	} catch (e) {
+		/* audio non disponibile: ignora */
+	}
+}
+
+/** Collassa l'elemento (altezza → 0) e poi esegue `fn`, per far scivolare su le righe sotto. */
+function collapseThenRun(el: HTMLElement, fn: () => void): void {
+	el.style.maxHeight = `${el.scrollHeight}px`;
+	el.style.overflow = "hidden";
+	void el.offsetHeight; // reflow
+	el.addClass("th-collapsing");
+	window.setTimeout(fn, 240);
+}
+
 /** Griglia di icone lucide con ricerca, per scegliere l'icona di un'abitudine. */
 class IconPickerModal extends Modal {
 	private onChooseCb: (iconId: string) => void;
@@ -124,6 +170,8 @@ class IconPickerModal extends Modal {
  */
 export class TrackerRenderer {
 	private expanded = new Set<string>();
+	/** chiavi dei gruppi/categorie chiusi, per preservare il collasso tra i render */
+	private collapsed = new Set<string>();
 
 	constructor(
 		private plugin: TodoHabitsPlugin,
@@ -136,13 +184,13 @@ export class TrackerRenderer {
 	async render(): Promise<void> {
 		const data = await this.plugin.store.readAll();
 		const root = this.root;
-		const scrollTop = root.scrollTop;
+		const scroll = this.captureScroll();
 		root.empty();
 		root.addClass("th-root");
 
 		if (this.opts.cross) {
 			this.renderCross(root, data);
-			root.scrollTop = scrollTop;
+			this.restoreScroll(scroll);
 			return;
 		}
 
@@ -158,7 +206,37 @@ export class TrackerRenderer {
 			this.renderTodos(root, data);
 		}
 
-		root.scrollTop = scrollTop;
+		this.restoreScroll(scroll);
+	}
+
+	/** Posizione di scroll dei contenitori, così lo spunto non riporta in cima. */
+	private captureScroll(): Record<string, number> {
+		const out: Record<string, number> = { __root: this.root.scrollTop };
+		for (const sel of TH_SCROLLERS) {
+			const el = this.root.querySelector(sel) as HTMLElement | null;
+			if (el) out[sel] = el.scrollTop;
+		}
+		return out;
+	}
+
+	private restoreScroll(s: Record<string, number>): void {
+		this.root.scrollTop = s.__root ?? 0;
+		for (const sel of TH_SCROLLERS) {
+			if (!(sel in s)) continue;
+			const el = this.root.querySelector(sel) as HTMLElement | null;
+			if (el) el.scrollTop = s[sel];
+		}
+	}
+
+	private collapsibleOpen(key: string): Record<string, string> {
+		return this.collapsed.has(key) ? {} : { open: "" };
+	}
+
+	private trackCollapse(details: HTMLDetailsElement, key: string): void {
+		details.ontoggle = () => {
+			if (details.open) this.collapsed.delete(key);
+			else this.collapsed.add(key);
+		};
 	}
 
 	private renderHeader(root: HTMLElement): void {
@@ -305,8 +383,10 @@ export class TrackerRenderer {
 	): void {
 		const saved = (data.categories ?? []).find((c) => c.icon === icon);
 		const name = saved?.name || icon.replace(/^lucide-/, "");
-		const cat = parent.createDiv({ cls: "th-category" });
-		const head = cat.createDiv({ cls: "th-category-head" });
+		const key = `c:${icon}`;
+		const cat = parent.createEl("details", { cls: "th-category", attr: this.collapsibleOpen(key) });
+		this.trackCollapse(cat, key);
+		const head = cat.createEl("summary", { cls: "th-category-head" });
 		const ic = head.createDiv({ cls: "th-category-icon" });
 		setIcon(ic, icon);
 		const nameEl = head.createEl("span", {
@@ -316,7 +396,9 @@ export class TrackerRenderer {
 		});
 		head.createSpan({ cls: "th-group-count", text: String(habs.length) });
 
-		nameEl.onclick = () => {
+		nameEl.onclick = (e) => {
+			e.preventDefault();
+			e.stopPropagation();
 			const input = document.createElement("input");
 			input.type = "text";
 			input.value = name;
@@ -414,18 +496,45 @@ export class TrackerRenderer {
 		dates: Map<string, number>,
 		today: string
 	): void {
-		const card = parent.createDiv({ cls: "th-habit" });
+		const doneToday = !habit.countable && dates.has(today);
+		const card = parent.createDiv({ cls: `th-habit ${doneToday ? "is-done" : ""}` });
 		const row = card.createDiv({ cls: "th-habit-row" });
 
-		const check = row.createEl("button", {
-			cls: `th-check ${dates.has(today) ? "is-done" : ""}`,
-			attr: { "aria-label": tf.markToday(habit.name) },
-		});
-		setIcon(check, "check");
-		check.onclick = async (e) => {
-			e.stopPropagation();
-			await this.plugin.store.toggleHabit(habit.id, today);
-		};
+		if (habit.countable) {
+			// abitudini "a conteggio" (es. cose brutte): mostra quante volte oggi,
+			// clic = +1, clic destro = -1
+			const count = dates.get(today) ?? 0;
+			const counter = row.createEl("button", {
+				cls: `th-count ${count > 0 ? "is-done" : ""}`,
+				text: String(count),
+				attr: { "aria-label": tf.markToday(habit.name), title: tf.markToday(habit.name) },
+			});
+			counter.onclick = (e) => {
+				e.stopPropagation();
+				playCheckSound();
+				counter.addClass("th-pop");
+				void this.plugin.store.incrementHabit(habit.id, today);
+			};
+			counter.oncontextmenu = (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				if ((dates.get(today) ?? 0) > 0) void this.plugin.store.decrementHabit(habit.id, today);
+			};
+		} else {
+			const check = row.createEl("button", {
+				cls: `th-check ${dates.has(today) ? "is-done" : ""}`,
+				attr: { "aria-label": tf.markToday(habit.name) },
+			});
+			setIcon(check, "check");
+			check.onclick = (e) => {
+				e.stopPropagation();
+				if (!dates.has(today)) {
+					playCheckSound();
+					check.addClass("th-pop");
+				}
+				void this.plugin.store.toggleHabit(habit.id, today);
+			};
+		}
 
 		const iconBtn = row.createEl("button", {
 			cls: "th-icon-btn",
@@ -558,8 +667,13 @@ export class TrackerRenderer {
 
 		for (const [label, todos, cls] of groups) {
 			if (todos.length === 0) continue;
-			const group = list.createDiv({ cls: `th-group ${cls}` });
-			const h = group.createEl("h3", { cls: "th-group-title" });
+			const key = `g:${label}`;
+			const group = list.createEl("details", {
+				cls: `th-group ${cls}`,
+				attr: this.collapsibleOpen(key),
+			});
+			this.trackCollapse(group, key);
+			const h = group.createEl("summary", { cls: "th-group-title" });
 			h.createSpan({ text: label });
 			h.createSpan({ cls: "th-group-count", text: String(todos.length) });
 			for (const todo of todos.sort(byPrioThenDue)) {
@@ -674,7 +788,16 @@ export class TrackerRenderer {
 			attr: { "aria-label": todo.done ? t("reopen") : t("complete") },
 		});
 		setIcon(check, "check");
-		check.onclick = () => void this.plugin.store.toggleTodo(todo);
+		check.onclick = () => {
+			if (todo.done) {
+				void this.plugin.store.toggleTodo(todo);
+				return;
+			}
+			playCheckSound();
+			check.addClass("is-done");
+			check.addClass("th-pop");
+			collapseThenRun(wrap, () => void this.plugin.store.toggleTodo(todo));
+		};
 
 		if (todo.priority !== Priority.None) {
 			row.createSpan({

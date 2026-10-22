@@ -369,6 +369,84 @@
 	text-decoration: underline;
 }
 
+/* ---------- animazioni, contatore, collassabili ---------- */
+@keyframes th-pop {
+	0% { transform: scale(1); }
+	40% { transform: scale(1.28); }
+	100% { transform: scale(1); }
+}
+.th-root .th-pop {
+	animation: th-pop 0.3s ease;
+}
+@keyframes th-check-in {
+	0% { transform: scale(0.2); opacity: 0; }
+	60% { transform: scale(1.2); opacity: 1; }
+	100% { transform: scale(1); opacity: 1; }
+}
+.th-root .th-check.th-pop svg {
+	animation: th-check-in 0.3s ease;
+}
+
+/* la task completata collassa e fa scivolare su quelle sotto */
+.th-todo {
+	transition: max-height 0.22s ease, opacity 0.18s ease, padding 0.22s ease, margin 0.22s ease;
+}
+.th-todo.th-collapsing {
+	max-height: 0 !important;
+	opacity: 0;
+	padding-top: 0;
+	padding-bottom: 0;
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
+/* abitudine fatta oggi: nome barrato */
+.th-habit.is-done .th-habit-name {
+	text-decoration: line-through;
+	color: var(--th-muted);
+	transition: color 0.2s ease;
+}
+
+/* contatore per abitudini "a conteggio" (es. cose brutte) */
+.th-root .th-count {
+	width: 16px;
+	height: 16px;
+	min-width: 16px;
+	border-radius: 4px;
+	border: 1.5px solid var(--background-modifier-border, var(--th-border));
+	background: var(--th-bg2);
+	color: var(--th-muted);
+	font-family: var(--th-mono);
+	font-size: 0.7em;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	padding: 0;
+	box-shadow: none;
+	transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.th-root .th-count:hover {
+	background: var(--background-modifier-hover);
+}
+.th-root .th-count.is-done {
+	background: var(--interactive-accent, var(--th-accent));
+	border-color: var(--interactive-accent, var(--th-accent));
+	color: var(--text-on-accent, var(--th-text));
+}
+
+/* gruppi (overdue, oggi…) e categorie collassabili */
+.th-group > summary,
+.th-category > summary {
+	cursor: pointer;
+	list-style: none;
+}
+.th-group > summary::-webkit-details-marker,
+.th-category > summary::-webkit-details-marker {
+	display: none;
+}
+
 /* ---------- vista a cartelle (lista → sezione) ---------- */
 .th-folder {
 	margin-bottom: 6px;
