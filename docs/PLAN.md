@@ -1,4 +1,4 @@
-# Piano del progetto — *xyz.log* (nome provvisorio)
+# Piano del progetto — xyzlog
 
 > Habit & todo tracker **markdown-first**, multi-client, con un widget desktop sempre
 > attivo. Obiettivo: sostituire TickTick con un sistema aperto dove **i dati sono tuoi**
@@ -178,7 +178,7 @@ un habit → “Vuoi un promemoria?” con uno o più orari (es. 2/giorno per mi
 
 ## 8. Decisioni aperte
 
-1. **Nome** (in discussione): `xyz.log` vs alternative — vedi nota nel thread.
+1. **Nome**: **xyzlog** (deciso).
 2. **Licenza**: MIT o GPL-3.0?
 3. **Repo GitHub**: pubblica subito o privata finché non è pronta?
 4. **Idee TickTick** (59 appunti): nota di riferimento separata o import come todo?

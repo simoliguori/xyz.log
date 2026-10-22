@@ -1,5 +1,6 @@
-# Todo & Habits · *xyz.log* (nome provvisorio)
+# xyzlog
 
+> Habit tracker e todo **markdown-first**, **modulare**, multi-client.
 > **Piano del progetto** — architettura, widget desktop Windows, notifiche, open source:
 > [docs/PLAN.md](docs/PLAN.md). Focus principale: **modularità** — ogni funzione è un
 > modulo componibile, la "homepage" è solo una composizione di moduli.

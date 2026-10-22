@@ -1,9 +1,9 @@
 {
 	"id": "todo-habits",
-	"name": "Todo & Habits",
+	"name": "xyzlog",
 	"version": "0.1.0",
 	"minAppVersion": "1.4.0",
-	"description": "Habit tracker con cronologia e todo list con date e priorità, su file markdown condivisi con il widget Android.",
+	"description": "xyzlog — habit tracker e todo markdown-first, modulare, con blocchi componibili. Dati condivisi con i widget Android e desktop.",
 	"author": "simol",
 	"isDesktopOnly": false
 }
