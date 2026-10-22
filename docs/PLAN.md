@@ -159,7 +159,8 @@ un habit → “Vuoi un promemoria?” con uno o più orari (es. 2/giorno per mi
 - **CI**: GitHub Actions per buildare plugin + widget e pubblicare le release.
 - **Contribuzione**: `CONTRIBUTING.md`, issue template, `DATA_FORMAT.md` come contratto
   tra i parser (va tenuto allineato in TS e Kotlin).
-- **Repo**: ancora **non creata** su GitHub. Si crea quando il nome è deciso.
+- **Repo**: creata su GitHub come [`simoliguori/xyzlog`](https://github.com/simoliguori/xyzlog),
+  **privata** per ora → diventa pubblica quando si sceglie la licenza e si aggiunge `LICENSE`.
 
 ## 7. Roadmap a fasi
 
@@ -180,5 +181,5 @@ un habit → “Vuoi un promemoria?” con uno o più orari (es. 2/giorno per mi
 
 1. **Nome**: **xyzlog** (deciso).
 2. **Licenza**: MIT o GPL-3.0?
-3. **Repo GitHub**: pubblica subito o privata finché non è pronta?
+3. **Repo GitHub**: creata privata — quando passarla a pubblica (serve la licenza)?
 4. **Idee TickTick** (59 appunti): nota di riferimento separata o import come todo?
