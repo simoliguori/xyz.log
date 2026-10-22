@@ -33,6 +33,7 @@ export class TrackerView extends ItemView {
 				header: true,
 				habits: true,
 				todos: true,
+				cross: false,
 			});
 		}
 		await this.renderer.render();

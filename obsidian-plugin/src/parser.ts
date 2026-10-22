@@ -1,4 +1,4 @@
-import { Habit, HabitLog, Priority, Todo } from "./types";
+import { Category, Habit, HabitLog, Priority, Todo } from "./types";
 
 /* Parser puro (nessuna dipendenza da Obsidian): la stessa logica è replicata
    in Kotlin nell'app Android (MarkdownParser.kt). Se cambi qualcosa qui,
@@ -44,7 +44,7 @@ export function parseHabits(content: string): Habit[] {
 	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
 	if (!fm) return [];
 	const habits: Habit[] = [];
-	let cur: Partial<Habit> | null = null;
+	let cur: Record<string, string> | null = null;
 	let inHabits = false;
 
 	const push = () => {
@@ -53,6 +53,12 @@ export function parseHabits(content: string): Habit[] {
 				id: cur.id,
 				name: cur.name ?? cur.id,
 				emoji: cur.emoji ?? "",
+				icon: cur.icon ?? "",
+				cadence: Math.max(1, Number(cur.cadence) || 1),
+				start: cur.start ?? "",
+				duration: Math.max(0, Number(cur.duration) || 0),
+				countable: cur.countable === "true",
+				goal: Math.max(1, Number(cur.goal) || 1),
 			});
 		}
 		cur = null;
@@ -75,23 +81,25 @@ export function parseHabits(content: string): Habit[] {
 		if (item) {
 			push();
 			cur = {};
-			(cur as Record<string, string>)[item[1]] = unquote(item[2]);
+			cur[item[1]] = unquote(item[2]);
 		} else if (field && cur) {
-			(cur as Record<string, string>)[field[1]] = unquote(field[2]);
+			cur[field[1]] = unquote(field[2]);
 		}
 	}
 	push();
 	return habits;
 }
 
+/** Conta i completamenti per abitudine e per giorno (le righe duplicate si sommano). */
 export function parseLog(content: string): HabitLog {
 	const log: HabitLog = new Map();
 	for (const line of content.split(/\r?\n/)) {
 		const m = line.match(LOG_LINE_RE);
 		if (!m) continue;
 		const [, date, id] = m;
-		if (!log.has(id)) log.set(id, new Set());
-		log.get(id)!.add(date);
+		if (!log.has(id)) log.set(id, new Map());
+		const byDate = log.get(id)!;
+		byDate.set(date, (byDate.get(date) ?? 0) + 1);
 	}
 	return log;
 }
@@ -120,7 +128,7 @@ export function parseTodoLine(line: string, lineNo: number): Todo | null {
 	const m = line.match(TODO_LINE_RE);
 	if (!m) return null;
 	const done = m[2].toLowerCase() === "x";
-	let rest = m[3];
+	const rest = m[3];
 
 	const due = rest.match(DUE_RE)?.[1] ?? null;
 	const doneDate = rest.match(DONE_RE)?.[1] ?? null;
@@ -139,7 +147,7 @@ export function parseTodoLine(line: string, lineNo: number): Todo | null {
 		}
 	}
 
-	let text = rest
+	const text = rest
 		.replace(DUE_RE, "")
 		.replace(DONE_RE, "")
 		.replace(/[🔺⏫🔼🔽⏬]/gu, "")
@@ -224,13 +232,296 @@ export function addDays(iso: string, n: number): string {
 	return toISO(date);
 }
 
-/** Streak di giorni consecutivi: conta a ritroso da oggi (o da ieri se oggi non è ancora fatto). */
-export function streak(dates: Set<string>, today: string): number {
-	let cursor = dates.has(today) ? today : addDays(today, -1);
+/* ---------- streak / cronologia ---------- */
+
+/** Completamenti registrati in una certa data (0 se nessuno). */
+export function countOn(counts: Map<string, number>, date: string): number {
+	return counts.get(date) ?? 0;
+}
+
+/**
+ * Streak a periodi: un "periodo" lungo `cadence` giorni è fatto se almeno uno
+ * dei suoi giorni raggiunge `goal` completamenti. Conta a ritroso da oggi
+ * (o dal periodo precedente se quello corrente non è ancora fatto).
+ */
+export function streak(
+	counts: Map<string, number>,
+	today: string,
+	goal = 1,
+	cadence = 1
+): number {
+	const dayDone = (d: string) => countOn(counts, d) >= goal;
+	const periodDone = (end: string) => {
+		for (let i = 0; i < cadence; i++) {
+			if (dayDone(addDays(end, -i))) return true;
+		}
+		return false;
+	};
+	let end = periodDone(today) ? today : addDays(today, -cadence);
 	let count = 0;
-	while (dates.has(cursor)) {
+	while (periodDone(end)) {
 		count++;
-		cursor = addDays(cursor, -1);
+		end = addDays(end, -cadence);
 	}
 	return count;
+}
+
+/** true se l'abitudine a termine ha superato la sua durata. */
+export function habitExpired(habit: Habit, today: string): boolean {
+	return (
+		habit.duration > 0 &&
+		!!habit.start &&
+		today >= addDays(habit.start, habit.duration)
+	);
+}
+
+/* ---------- scrittura del frontmatter di Habits.md ---------- */
+
+/** Slug univoco dal nome: minuscole, senza accenti, solo a-z0-9 e trattini. */
+export function slugifyHabitId(name: string): string {
+	const s = name
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/[̀-ͯ]/g, "")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+	return s || "abitudine";
+}
+
+function yamlValue(s: string): string {
+	return /[:#"']/.test(s) ? `"${s.replace(/"/g, "'")}"` : s;
+}
+
+/** Sottoinsieme di Habit usato quando si aggiunge/serializza un'abitudine. */
+type HabitSeed = { id: string; name: string; emoji?: string; icon?: string };
+
+function habitItemLines(habit: HabitSeed): string[] {
+	const lines = [`  - id: ${habit.id}`, `    name: ${yamlValue(habit.name)}`];
+	if (habit.emoji) lines.push(`    emoji: "${habit.emoji.replace(/"/g, "")}"`);
+	if (habit.icon) lines.push(`    icon: ${habit.icon}`);
+	return lines;
+}
+
+/** Indice (esclusivo) della fine del blocco indentato che inizia alla riga `idx`. */
+function habitsBlockEnd(lines: string[], idx: number): number {
+	let end = idx + 1;
+	while (end < lines.length && (/^\s/.test(lines[end]) || lines[end].trim() === "")) end++;
+	while (end > idx + 1 && lines[end - 1].trim() === "") end--;
+	return end;
+}
+
+export function addHabitToFrontmatter(content: string, habit: HabitSeed): string {
+	const item = habitItemLines(habit);
+	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+	if (!fm) {
+		return ["---", "habits:", ...item, "---", ""].join("\n") + content;
+	}
+	const lines = fm[1].split(/\r?\n/);
+	const idx = lines.findIndex((l) => /^habits:\s*(\[\s*\])?\s*$/.test(l));
+	if (idx < 0) {
+		lines.push("habits:", ...item);
+	} else {
+		lines[idx] = "habits:";
+		lines.splice(habitsBlockEnd(lines, idx), 0, ...item);
+	}
+	return content.replace(fm[0], `---\n${lines.join("\n")}\n---`);
+}
+
+export function removeHabitFromFrontmatter(content: string, id: string): string {
+	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+	if (!fm) return content;
+	const lines = fm[1].split(/\r?\n/);
+	const idx = lines.findIndex((l) => /^habits:\s*$/.test(l));
+	if (idx < 0) return content;
+	const end = habitsBlockEnd(lines, idx);
+	const items: number[] = [];
+	for (let i = idx + 1; i < end; i++) {
+		if (/^\s*-\s+\w+:/.test(lines[i])) items.push(i);
+	}
+	for (let k = 0; k < items.length; k++) {
+		const start = items[k];
+		const stop = k + 1 < items.length ? items[k + 1] : end;
+		for (let i = start; i < stop; i++) {
+			const m = lines[i].match(/^\s*(?:-\s+)?id:\s*(.*)$/);
+			if (m && unquote(m[1]) === id) {
+				lines.splice(start, stop - start);
+				return content.replace(fm[0], `---\n${lines.join("\n")}\n---`);
+			}
+		}
+	}
+	return content;
+}
+
+export function setHabitIconInFrontmatter(
+	content: string,
+	id: string,
+	iconName: string
+): string {
+	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+	if (!fm) return content;
+	const lines = fm[1].split(/\r?\n/);
+	const idx = lines.findIndex((l) => /^habits:\s*$/.test(l));
+	if (idx < 0) return content;
+	const end = habitsBlockEnd(lines, idx);
+	const items: number[] = [];
+	for (let i = idx + 1; i < end; i++) {
+		if (/^\s*-\s+\w+:/.test(lines[i])) items.push(i);
+	}
+	for (let k = 0; k < items.length; k++) {
+		const start = items[k];
+		const stop = k + 1 < items.length ? items[k + 1] : end;
+		let found = false;
+		for (let i = start; i < stop; i++) {
+			const m = lines[i].match(/^\s*(?:-\s+)?id:\s*(.*)$/);
+			if (m && unquote(m[1]) === id) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) continue;
+		let removed = 0;
+		for (let i = stop - 1; i > start; i--) {
+			if (/^\s+icon:/.test(lines[i]) && !/^\s*-/.test(lines[i])) {
+				lines.splice(i, 1);
+				removed++;
+			}
+		}
+		if (iconName) lines.splice(stop - removed, 0, `    icon: ${iconName}`);
+		return content.replace(fm[0], `---\n${lines.join("\n")}\n---`);
+	}
+	return content;
+}
+
+export function setHabitFieldsInFrontmatter(
+	content: string,
+	id: string,
+	fields: Record<string, string | number>
+): string {
+	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+	if (!fm) return content;
+	const lines = fm[1].split(/\r?\n/);
+	const idx = lines.findIndex((l) => /^habits:\s*$/.test(l));
+	if (idx < 0) return content;
+	const end = habitsBlockEnd(lines, idx);
+	const items: number[] = [];
+	for (let i = idx + 1; i < end; i++) {
+		if (/^\s*-\s+\w+:/.test(lines[i])) items.push(i);
+	}
+	const keys = Object.keys(fields).filter((k) => k !== "id");
+	for (let k = 0; k < items.length; k++) {
+		const start = items[k];
+		const stop = k + 1 < items.length ? items[k + 1] : end;
+		let found = false;
+		for (let i = start; i < stop; i++) {
+			const m = lines[i].match(/^\s*(?:-\s+)?id:\s*(.*)$/);
+			if (m && unquote(m[1]) === id) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) continue;
+		let removed = 0;
+		for (let i = stop - 1; i > start; i--) {
+			const m = lines[i].match(/^\s+(\w+):/);
+			if (m && !/^\s*-/.test(lines[i]) && keys.includes(m[1])) {
+				lines.splice(i, 1);
+				removed++;
+			}
+		}
+		const insert: string[] = [];
+		for (const key of keys) {
+			const v = fields[key];
+			if (v !== "" && v != null) insert.push(`    ${key}: ${yamlValue(String(v))}`);
+		}
+		lines.splice(stop - removed, 0, ...insert);
+		return content.replace(fm[0], `---\n${lines.join("\n")}\n---`);
+	}
+	return content;
+}
+
+/** Parser YAML generico per una lista di item indentati sotto `key:`. */
+function parseFmItems(content: string, key: string): Record<string, string>[] {
+	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+	if (!fm) return [];
+	const items: Record<string, string>[] = [];
+	let cur: Record<string, string> | null = null;
+	let inKey = false;
+	const push = () => {
+		if (cur) items.push(cur);
+		cur = null;
+	};
+	for (const line of fm[1].split(/\r?\n/)) {
+		if (new RegExp(`^${key}:\\s*$`).test(line)) {
+			inKey = true;
+			continue;
+		}
+		if (!inKey) continue;
+		if (/^\S/.test(line)) {
+			push();
+			inKey = false;
+			continue;
+		}
+		const item = line.match(/^\s*-\s+(\w+):\s*(.*)$/);
+		const field = line.match(/^\s+(\w+):\s*(.*)$/);
+		if (item) {
+			push();
+			cur = {};
+			cur[item[1]] = unquote(item[2]);
+		} else if (field && cur) {
+			cur[field[1]] = unquote(field[2]);
+		}
+	}
+	push();
+	return items;
+}
+
+/** Categorie definite nel frontmatter (chiave `categories:`), una per icona. */
+export function parseCategories(content: string): Category[] {
+	return parseFmItems(content, "categories")
+		.filter((c) => c.icon)
+		.map((c) => ({ icon: c.icon, name: c.name ?? "" }));
+}
+
+export function setCategoryNameInFrontmatter(
+	content: string,
+	icon: string,
+	name: string
+): string {
+	const item = [`  - icon: ${icon}`, `    name: ${yamlValue(name)}`];
+	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+	if (!fm) {
+		return ["---", "categories:", ...item, "---", ""].join("\n") + content;
+	}
+	const lines = fm[1].split(/\r?\n/);
+	const idx = lines.findIndex((l) => /^categories:\s*(\[\s*\])?\s*$/.test(l));
+	if (idx < 0) {
+		lines.push("categories:", ...item);
+	} else {
+		lines[idx] = "categories:";
+		const end = habitsBlockEnd(lines, idx);
+		const items: number[] = [];
+		for (let i = idx + 1; i < end; i++) {
+			if (/^\s*-\s+\w+:/.test(lines[i])) items.push(i);
+		}
+		let replaced = false;
+		for (let k = 0; k < items.length; k++) {
+			const start = items[k];
+			const stop = k + 1 < items.length ? items[k + 1] : end;
+			let match = false;
+			for (let i = start; i < stop; i++) {
+				const m = lines[i].match(/^\s*(?:-\s+)?icon:\s*(.*)$/);
+				if (m && unquote(m[1]) === icon) {
+					match = true;
+					break;
+				}
+			}
+			if (match) {
+				lines.splice(start, stop - start, ...item);
+				replaced = true;
+				break;
+			}
+		}
+		if (!replaced) lines.splice(end, 0, ...item);
+	}
+	return content.replace(fm[0], `---\n${lines.join("\n")}\n---`);
 }

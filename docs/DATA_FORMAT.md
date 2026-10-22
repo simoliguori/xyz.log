@@ -13,10 +13,18 @@ Le abitudini sono definite nel frontmatter YAML:
 habits:
   - id: meditazione
     name: Meditazione
-    emoji: "🧘"
+    icon: lucide-flower
   - id: lettura
     name: Lettura
     emoji: "📖"
+    cadence: 2
+  - id: corso-inglese
+    name: Corso di inglese
+    start: 2026-09-01
+    duration: 90
+categories:
+  - icon: lucide-flower
+    name: Benessere
 ---
 
 # Abitudini
@@ -25,10 +33,24 @@ Il corpo del file è libero: appunti, motivazioni, ecc.
 ```
 
 Regole:
-- `id`: slug univoco, solo `a-z0-9-`, usato nel log. **Non cambiarlo** dopo aver iniziato a tracciare (o la cronologia si sgancia).
+- `id`: slug univoco, solo `a-z0-9-`, usato nel log. **Non cambiarlo** dopo aver iniziato a tracciare (o la cronologia si sgancia). Quando crei un'abitudine dalla UI, l'id viene generato dal nome.
 - `name`: nome mostrato nelle UI.
 - `emoji`: opzionale.
+- `icon`: opzionale, nome icona [lucide](https://lucide.dev) (es. `lucide-book`) o di Iconize se installato. Se presente **vince sull'emoji**. Le abitudini che condividono la stessa icona vengono raggruppate in una **categoria**.
+- `cadence`: intero ≥ 1 (default `1`). Ogni quanti giorni l'abitudine deve risultare fatta perché lo streak continui (es. `2` = a giorni alterni).
+- `goal`: intero ≥ 1 (default `1`). Quanti completamenti nello stesso giorno servono perché il giorno conti come fatto.
+- `countable`: `true`/`false` (default `false`). Abitudini da contare più volte al giorno.
+- `start` + `duration`: abitudini a termine. `start` è una data ISO, `duration` i giorni di durata (`0` = senza fine).
 - L'ordine nel frontmatter è l'ordine di visualizzazione.
+
+### `categories:` (opzionale)
+
+Lista parallela che dà un **nome** a un gruppo di abitudini accomunate dall'icona:
+
+- `icon`: l'icona condivisa dalle abitudini del gruppo.
+- `name`: etichetta mostrata sopra il gruppo (rinominabile cliccandola nella UI).
+
+> Nota: questi campi aggiuntivi sono letti dal plugin Obsidian. Il parser Android (`MarkdownParser.kt`) va ancora allineato a `icon`/`cadence`/`goal`/`countable`/`start`/`duration` e alle categorie.
 
 ## 2. `Habit Log.md` — cronologia
 

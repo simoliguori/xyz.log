@@ -2,10 +2,29 @@ export interface Habit {
 	id: string;
 	name: string;
 	emoji: string;
+	/** nome icona (lucide o Iconize), es. "lucide-book"; vince sull'emoji */
+	icon: string;
+	/** ogni quanti giorni l'abitudine "conta" per lo streak (1 = ogni giorno) */
+	cadence: number;
+	/** data ISO di inizio (opzionale), usata con duration per le abitudini a termine */
+	start: string;
+	/** durata in giorni (0 = senza fine) */
+	duration: number;
+	/** se true l'abitudine si conta più volte al giorno */
+	countable: boolean;
+	/** completamenti al giorno necessari perché il giorno sia "fatto" */
+	goal: number;
 }
 
-/** habitId -> insieme di date ISO (YYYY-MM-DD) completate */
-export type HabitLog = Map<string, Set<string>>;
+export interface Category {
+	/** nome icona condivisa dalle abitudini del gruppo */
+	icon: string;
+	/** nome visualizzato della categoria */
+	name: string;
+}
+
+/** habitId -> (data ISO YYYY-MM-DD -> numero di completamenti in quel giorno) */
+export type HabitLog = Map<string, Map<string, number>>;
 
 export enum Priority {
 	Highest = 0,

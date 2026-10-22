@@ -1,16 +1,24 @@
 import { App, TFile, normalizePath } from "obsidian";
 import {
+	addHabitToFrontmatter,
 	appendLine,
+	logLine,
+	parseCategories,
 	parseHabits,
 	parseLog,
 	parseTodos,
+	removeHabitFromFrontmatter,
 	replaceLine,
 	serializeTodo,
+	setCategoryNameInFrontmatter,
+	setHabitFieldsInFrontmatter,
+	setHabitIconInFrontmatter,
+	slugifyHabitId,
 	todayISO,
 	toggleLog,
 	toggleTodoLine,
 } from "./parser";
-import { Habit, HabitLog, Priority, Todo } from "./types";
+import { Category, Habit, HabitLog, Priority, Todo } from "./types";
 
 const HABITS_TEMPLATE = `---
 habits:
@@ -35,6 +43,7 @@ const TODO_TEMPLATE = `# Todo
 
 export interface TrackerData {
 	habits: Habit[];
+	categories: Category[];
 	log: HabitLog;
 	todos: Todo[];
 }
@@ -78,8 +87,10 @@ export class Store {
 			const f = this.app.vault.getFileByPath(path);
 			return f ? this.app.vault.cachedRead(f) : "";
 		};
+		const habitsContent = await read(this.habitsPath);
 		return {
-			habits: parseHabits(await read(this.habitsPath)),
+			habits: parseHabits(habitsContent),
+			categories: parseCategories(habitsContent),
 			log: parseLog(await read(this.logPath)),
 			todos: parseTodos(await read(this.todoPath)),
 		};
@@ -115,5 +126,61 @@ export class Store {
 		await this.process(this.todoPath, (data) =>
 			appendLine(data, serializeTodo(text, priority, due))
 		);
+	}
+
+	/** Crea una nuova abitudine, generando uno slug id univoco dal nome. */
+	async addHabit(name: string, emoji: string, icon: string): Promise<void> {
+		await this.ensureFiles();
+		await this.process(this.habitsPath, (data) => {
+			const existing = parseHabits(data);
+			const base = slugifyHabitId(name);
+			let id = base;
+			let n = 2;
+			while (existing.some((h) => h.id === id)) id = `${base}-${n++}`;
+			return addHabitToFrontmatter(data, { id, name, emoji, icon });
+		});
+	}
+
+	async deleteHabit(id: string): Promise<void> {
+		await this.process(this.habitsPath, (data) =>
+			removeHabitFromFrontmatter(data, id)
+		);
+	}
+
+	async setHabitIcon(id: string, iconName: string): Promise<void> {
+		await this.process(this.habitsPath, (data) =>
+			setHabitIconInFrontmatter(data, id, iconName)
+		);
+	}
+
+	async setCategoryName(icon: string, name: string): Promise<void> {
+		await this.process(this.habitsPath, (data) =>
+			setCategoryNameInFrontmatter(data, icon, name)
+		);
+	}
+
+	async setHabitFields(
+		id: string,
+		fields: Record<string, string | number>
+	): Promise<void> {
+		await this.process(this.habitsPath, (data) =>
+			setHabitFieldsInFrontmatter(data, id, fields)
+		);
+	}
+
+	/** Aggiunge un completamento (abitudini contabili: più volte nello stesso giorno). */
+	async incrementHabit(habitId: string, date: string): Promise<void> {
+		await this.process(this.logPath, (data) => appendLine(data, logLine(date, habitId)));
+	}
+
+	/** Rimuove un singolo completamento per (data, abitudine). */
+	async decrementHabit(habitId: string, date: string): Promise<void> {
+		await this.process(this.logPath, (data) => {
+			const lines = data.split(/\r?\n/);
+			const target = logLine(date, habitId);
+			const idx = lines.findIndex((l) => l.trim() === target);
+			if (idx >= 0) lines.splice(idx, 1);
+			return lines.join("\n");
+		});
 	}
 }

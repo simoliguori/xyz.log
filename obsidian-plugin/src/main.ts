@@ -1,4 +1,4 @@
-import { debounce, MarkdownRenderChild, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { debounce, Editor, MarkdownRenderChild, Plugin, TFile, WorkspaceLeaf } from "obsidian";
 import { TrackerRenderer, RenderOptions } from "./renderer";
 import { DEFAULT_SETTINGS, TrackerSettings, TrackerSettingTab } from "./settings";
 import { Store } from "./store";
@@ -22,6 +22,15 @@ export default class TodoHabitsPlugin extends Plugin {
 			id: "open-tracker",
 			name: "Apri il tracker",
 			callback: () => void this.activateView(),
+		});
+
+		this.addCommand({
+			id: "insert-block",
+			name: "Inserisci blocco Todo & Habits nella nota",
+			editorCallback: (editor: Editor) => {
+				const block = "```todo-habits\nheader\nhabits\ntodos\n```\n";
+				editor.replaceSelection(block);
+			},
 		});
 
 		this.addSettingTab(new TrackerSettingTab(this.app, this));
@@ -92,7 +101,7 @@ export default class TodoHabitsPlugin extends Plugin {
  * `habits`, `todos`, `header`, `habit: <id>`. Vuoto = habits + todos.
  */
 function parseEmbedOptions(source: string): RenderOptions {
-	const opts: RenderOptions = { header: false, habits: false, todos: false };
+	const opts: RenderOptions = { header: false, habits: false, todos: false, cross: false };
 	let any = false;
 	for (const raw of source.split(/\r?\n/)) {
 		const line = raw.trim().toLowerCase();
@@ -102,6 +111,9 @@ function parseEmbedOptions(source: string): RenderOptions {
 			any = true;
 		} else if (line === "todos" || line === "todo") {
 			opts.todos = true;
+			any = true;
+		} else if (line === "cross" || line === "croce" || line === "griglia") {
+			opts.cross = true;
 			any = true;
 		} else if (line === "header" || line === "data") {
 			opts.header = true;

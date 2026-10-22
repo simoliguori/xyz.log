@@ -1,9 +1,15 @@
-# Todo & Habits
+# Todo & Habits · *xyz.log* (nome provvisorio)
 
-Habit tracker con cronologia e todo list con date e priorità, in due client con la stessa estetica:
+> **Piano del progetto** — architettura, widget desktop Windows, notifiche, open source:
+> [docs/PLAN.md](docs/PLAN.md). Focus principale: **modularità** — ogni funzione è un
+> modulo componibile, la "homepage" è solo una composizione di moduli.
 
-- **`obsidian-plugin/`** — plugin per Obsidian (desktop e mobile) con vista dedicata
+Habit tracker con cronologia e todo list con date e priorità, **markdown-first** e multi-client
+con la stessa estetica:
+
+- **`obsidian-plugin/`** — plugin per Obsidian (desktop e mobile) con vista dedicata e blocchi modulari
 - **`android-widget/`** — app Android con due widget per la home screen (abitudini e todo)
+- **widget Windows** — gadget desktop sempre attivo, in arrivo (vedi [PLAN](docs/PLAN.md))
 
 I dati vivono in **tre file markdown nel vault** (default: cartella `Tracker/`), sincronizzati da
 Obsidian Sync tra PC e telefono. Nessun database, nessun server: il markdown è l'unica fonte di
@@ -13,13 +19,12 @@ Formato dei file: [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md) · Design token con
 
 ## Estetica
 
-Minimal dark (`#1e1e1e`), **Roboto Mono** per il testo e **NType82-Headline** (il font di Nothing)
-per i titoli.
+Minimal dark (`#1e1e1e`), **Roboto Mono** per il testo e **Space Grotesk** (OFL, libero) per i
+titoli.
 
-Font: il CSS del plugin **incorpora** NType82-Headline come data-URI (funziona anche su Obsidian
-mobile, niente da installare); l'app Android lo carica da
-`android-widget/app/src/main/assets/fonts/NType82-Headline.otf`. I widget Glance non supportano
-font custom → sans di sistema in grassetto.
+Font: caricati da Google Fonts nel CSS del plugin — **niente font proprietari incorporati**, così
+il progetto resta ridistribuibile come open source. I widget Glance Android non supportano font
+custom → sans di sistema in grassetto.
 
 Colore accent:
 

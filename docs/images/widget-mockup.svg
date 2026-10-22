@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 440" font-family="'Roboto Mono','DejaVu Sans Mono',monospace">
+  <rect width="820" height="440" fill="#141414"/>
+  <style>
+    .t{fill:#dcdcdc} .m{fill:#8f8f96} .acc{fill:#9a99d6}
+    .panel{fill:#1e1e1e;stroke:#3a3a41;stroke-width:1.5}
+    .card{fill:#262626;stroke:#3a3a41;stroke-width:1}
+    .dot{fill:#44437a}
+  </style>
+
+  <text x="30" y="34" font-size="13" class="m">Widget desktop (mockup) — sempre sul desktop, niente taskbar</text>
+
+  <!-- window -->
+  <rect x="24" y="48" width="772" height="372" rx="16" class="panel"/>
+
+  <!-- tab bar -->
+  <rect x="44" y="68" width="92" height="26" rx="13" class="dot" opacity="0.5"/>
+  <text x="90" y="86" text-anchor="middle" font-size="12" class="t">Abitudini</text>
+  <text x="176" y="86" font-size="12" class="m">Todo</text>
+  <text x="240" y="86" font-size="12" class="m">Oggi</text>
+
+  <!-- left: todo (tall) -->
+  <rect x="44" y="110" width="360" height="290" rx="10" class="card"/>
+  <text x="62" y="134" font-size="13" class="acc">Todo</text>
+  <g class="t" font-size="11">
+    <circle cx="70" cy="160" r="6" fill="none" stroke="#8f8f96"/><text x="88" y="164">rinnovare passaporto</text>
+    <circle cx="70" cy="186" r="6" fill="none" stroke="#8f8f96"/><text x="88" y="190">chiamare il dentista</text>
+    <circle cx="70" cy="212" r="6" fill="none" stroke="#8f8f96"/><text x="88" y="216">spesa settimanale</text>
+    <circle cx="70" cy="238" r="6" fill="none" stroke="#8f8f96"/><text x="88" y="242">slide riunione</text>
+    <circle cx="70" cy="264" r="6" fill="none" stroke="#8f8f96"/><text x="88" y="268">prenotare viaggio</text>
+    <circle cx="70" cy="290" r="6" fill="none" stroke="#8f8f96"/><text x="88" y="294">leggere articolo</text>
+  </g>
+  <rect x="396" y="120" width="4" height="60" rx="2" fill="#3a3a41"/>
+
+  <!-- right top: habits -->
+  <rect x="420" y="110" width="356" height="138" rx="10" class="card"/>
+  <text x="438" y="134" font-size="13" class="acc">Abitudini</text>
+  <g font-size="11" class="t">
+    <circle cx="448" cy="160" r="7" fill="#44437a"/><text x="466" y="164">minoxidil</text>
+    <circle cx="448" cy="188" r="7" fill="#44437a"/><text x="466" y="192">lamictal 50mg</text>
+    <circle cx="448" cy="216" r="7" fill="none" stroke="#8f8f96"/><text x="466" y="220">denti</text>
+  </g>
+  <g fill="#44437a">
+    <rect x="690" y="156" width="7" height="7" rx="2"/><rect x="700" y="156" width="7" height="7" rx="2"/>
+    <rect x="710" y="156" width="7" height="7" rx="2" opacity="0.3"/><rect x="720" y="156" width="7" height="7" rx="2"/>
+  </g>
+
+  <!-- right bottom: history -->
+  <rect x="420" y="258" width="356" height="142" rx="10" class="card"/>
+  <text x="438" y="282" font-size="13" class="acc">Cronologia</text>
+  <rect x="612" y="270" width="150" height="20" rx="6" fill="#262626" stroke="#3a3a41"/>
+  <text x="624" y="284" font-size="10" class="m">minoxidil  ▾</text>
+  <g fill="#44437a">
+    <!-- mini heatmap -->
+    <g>
+      <rect x="438" y="300" width="9" height="9" rx="2"/><rect x="450" y="300" width="9" height="9" rx="2" opacity="0.4"/>
+      <rect x="462" y="300" width="9" height="9" rx="2"/><rect x="474" y="300" width="9" height="9" rx="2"/>
+      <rect x="486" y="300" width="9" height="9" rx="2" opacity="0.3"/><rect x="498" y="300" width="9" height="9" rx="2"/>
+      <rect x="510" y="300" width="9" height="9" rx="2"/><rect x="522" y="300" width="9" height="9" rx="2" opacity="0.5"/>
+      <rect x="534" y="300" width="9" height="9" rx="2"/><rect x="546" y="300" width="9" height="9" rx="2"/>
+    </g>
+    <g transform="translate(0,12)">
+      <rect x="438" y="300" width="9" height="9" rx="2" opacity="0.3"/><rect x="450" y="300" width="9" height="9" rx="2"/>
+      <rect x="462" y="300" width="9" height="9" rx="2"/><rect x="474" y="300" width="9" height="9" rx="2" opacity="0.5"/>
+      <rect x="486" y="300" width="9" height="9" rx="2"/><rect x="498" y="300" width="9" height="9" rx="2"/>
+      <rect x="510" y="300" width="9" height="9" rx="2" opacity="0.4"/><rect x="522" y="300" width="9" height="9" rx="2"/>
+      <rect x="534" y="300" width="9" height="9" rx="2"/><rect x="546" y="300" width="9" height="9" rx="2" opacity="0.3"/>
+    </g>
+  </g>
+  <text x="438" y="360" font-size="10" class="m">streak 22 giorni</text>
+</svg>
