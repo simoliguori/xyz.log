@@ -1,4 +1,4 @@
-# xyzlog
+# xyz.log
 
 > Habit tracker e todo **markdown-first**, **modulare**, multi-client.
 > **Piano del progetto** — architettura, widget desktop Windows, notifiche, open source:

@@ -1,4 +1,4 @@
-# Piano del progetto — xyzlog
+# Piano del progetto — xyz.log
 
 > Habit & todo tracker **markdown-first**, multi-client, con un widget desktop sempre
 > attivo. Obiettivo: sostituire TickTick con un sistema aperto dove **i dati sono tuoi**
@@ -159,7 +159,7 @@ un habit → “Vuoi un promemoria?” con uno o più orari (es. 2/giorno per mi
 - **CI**: GitHub Actions per buildare plugin + widget e pubblicare le release.
 - **Contribuzione**: `CONTRIBUTING.md`, issue template, `DATA_FORMAT.md` come contratto
   tra i parser (va tenuto allineato in TS e Kotlin).
-- **Repo**: creata su GitHub come [`simoliguori/xyzlog`](https://github.com/simoliguori/xyzlog),
+- **Repo**: creata su GitHub come [`simoliguori/xyz.log`](https://github.com/simoliguori/xyz.log),
   **privata** per ora → diventa pubblica quando si sceglie la licenza e si aggiunge `LICENSE`.
 
 ## 7. Roadmap a fasi
@@ -179,7 +179,7 @@ un habit → “Vuoi un promemoria?” con uno o più orari (es. 2/giorno per mi
 
 ## 8. Decisioni aperte
 
-1. **Nome**: **xyzlog** (deciso).
+1. **Nome**: **xyz.log** (deciso).
 2. **Licenza**: MIT o GPL-3.0?
 3. **Repo GitHub**: creata privata — quando passarla a pubblica (serve la licenza)?
 4. **Idee TickTick** (59 appunti): nota di riferimento separata o import come todo?
