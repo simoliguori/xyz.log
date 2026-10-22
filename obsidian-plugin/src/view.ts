@@ -16,7 +16,7 @@ export class TrackerView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return "Todo & Habits";
+		return "xyz.log";
 	}
 
 	getIcon(): string {
@@ -34,6 +34,7 @@ export class TrackerView extends ItemView {
 				habits: true,
 				todos: true,
 				cross: false,
+				folders: false,
 			});
 		}
 		await this.renderer.render();

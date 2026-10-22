@@ -61,6 +61,9 @@ const S = {
 	},
 	setLangName: { en: "Language", it: "Lingua" },
 	setLangDesc: { en: "Interface language.", it: "Lingua dell'interfaccia." },
+	// comandi / ribbon
+	openTracker: { en: "Open xyz.log", it: "Apri xyz.log" },
+	insertBlock: { en: "Insert xyz.log block", it: "Inserisci blocco xyz.log" },
 } as const;
 
 export function t(key: keyof typeof S): string {

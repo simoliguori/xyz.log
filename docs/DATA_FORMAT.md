@@ -1,104 +1,135 @@
-# Formato dati condiviso
+# Shared data format
 
-Tutti i dati vivono in **tre file markdown** dentro una cartella del vault (default: `Tracker/`).
-Sia il plugin Obsidian che l'app Android leggono e scrivono questi file. Obsidian Sync li tiene
-allineati tra PC e telefono. Nessun database: il markdown è l'unica fonte di verità.
+All data lives in **three markdown files** inside a vault folder (default: `Tracker/`).
+Both the Obsidian plugin and the other clients read and write these files; a synced folder
+(Obsidian Sync or otherwise) keeps PC and phone aligned. No database: markdown is the only
+source of truth.
 
-## 1. `Habits.md` — definizione delle abitudini
+## 1. `Habits.md` — habit definitions
 
-Le abitudini sono definite nel frontmatter YAML:
+Habits are defined in the YAML frontmatter:
 
 ```markdown
 ---
 habits:
-  - id: meditazione
-    name: Meditazione
+  - id: meditation
+    name: Meditation
     icon: lucide-flower
-  - id: lettura
-    name: Lettura
+  - id: reading
+    name: Reading
     emoji: "📖"
     cadence: 2
-  - id: corso-inglese
-    name: Corso di inglese
+  - id: english
+    name: English course
     start: 2026-09-01
     duration: 90
 categories:
   - icon: lucide-flower
-    name: Benessere
+    name: Wellbeing
 ---
 
-# Abitudini
+# Habits
 
-Il corpo del file è libero: appunti, motivazioni, ecc.
+The body is free text (notes, motivations, …).
 ```
 
-Regole:
-- `id`: slug univoco, solo `a-z0-9-`, usato nel log. **Non cambiarlo** dopo aver iniziato a tracciare (o la cronologia si sgancia). Quando crei un'abitudine dalla UI, l'id viene generato dal nome.
-- `name`: nome mostrato nelle UI.
-- `emoji`: opzionale.
-- `icon`: opzionale, nome icona [lucide](https://lucide.dev) (es. `lucide-book`) o di Iconize se installato. Se presente **vince sull'emoji**. Le abitudini che condividono la stessa icona vengono raggruppate in una **categoria**.
-- `cadence`: intero ≥ 1 (default `1`). Ogni quanti giorni l'abitudine deve risultare fatta perché lo streak continui (es. `2` = a giorni alterni).
-- `goal`: intero ≥ 1 (default `1`). Quanti completamenti nello stesso giorno servono perché il giorno conti come fatto.
-- `countable`: `true`/`false` (default `false`). Abitudini da contare più volte al giorno.
-- `start` + `duration`: abitudini a termine. `start` è una data ISO, `duration` i giorni di durata (`0` = senza fine).
-- L'ordine nel frontmatter è l'ordine di visualizzazione.
+Rules:
+- `id`: unique slug, `a-z0-9-` only, used in the log. **Don't change it** after you start
+  tracking (history would detach). Created from the name when you add a habit from the UI.
+- `name`: display name.
+- `emoji`: optional.
+- `icon`: optional [lucide](https://lucide.dev) icon name (e.g. `lucide-book`) or an
+  Iconize icon. If present it **wins over the emoji**. Habits sharing the same icon are
+  grouped into a **category**.
+- `cadence`: integer ≥ 1 (default `1`). How often the habit must be done for the streak to
+  continue (e.g. `2` = every other day).
+- `goal`: integer ≥ 1 (default `1`). Completions needed in a day for it to count as done.
+- `countable`: `true`/`false` (default `false`). Habits logged multiple times a day.
+- `start` + `duration`: fixed-term habits. `start` is an ISO date, `duration` is days
+  (`0` = open-ended).
+- Frontmatter order is the display order.
 
-### `categories:` (opzionale)
+### `categories:` (optional)
 
-Lista parallela che dà un **nome** a un gruppo di abitudini accomunate dall'icona:
+A parallel list giving a **name** to a group of habits that share an icon:
 
-- `icon`: l'icona condivisa dalle abitudini del gruppo.
-- `name`: etichetta mostrata sopra il gruppo (rinominabile cliccandola nella UI).
+- `icon`: the shared icon.
+- `name`: label shown above the group (editable by clicking it in the UI).
 
-> Nota: questi campi aggiuntivi sono letti dal plugin Obsidian. Il parser Android (`MarkdownParser.kt`) va ancora allineato a `icon`/`cadence`/`goal`/`countable`/`start`/`duration` e alle categorie.
+## 2. `Habit Log.md` — history
 
-## 2. `Habit Log.md` — cronologia
-
-Una riga per ogni completamento, formato rigido:
+One line per completion, strict format:
 
 ```markdown
-# Cronologia abitudini
+# Habit history
 
-- [x] 2026-07-01 meditazione
-- [x] 2026-07-01 lettura
-- [x] 2026-07-02 meditazione
+- [x] 2026-07-01 meditation
+- [x] 2026-07-01 reading
+- [x] 2026-07-02 meditation
 ```
 
-Regole:
-- Formato riga: `- [x] YYYY-MM-DD <habit-id>`.
-- Spuntare un'abitudine = aggiungere la riga; togliere la spunta = rimuoverla.
-- Le righe che non rispettano il formato vengono ignorate (puoi scrivere note libere nel file).
-- Streak e heatmap sono **derivati** da queste righe, mai salvati.
+Rules:
+- Line format: `- [x] YYYY-MM-DD <habit-id>`.
+- Checking a habit = adding the line; unchecking = removing it. Countable habits add one
+  line per completion (so a day with `goal: 2` done twice has two lines).
+- Lines that don't match the format are ignored (free notes are fine).
+- Streaks and heatmaps are **derived** from these lines, never stored.
 
-## 3. `Todo.md` — attività
+## 3. `Todo.md` — tasks (with sub-folders and descriptions)
 
-Sintassi **compatibile con il plugin Tasks** di Obsidian (formato emoji):
+Tasks use the **Tasks** plugin emoji syntax, organized into sub-folders via headings, with
+optional descriptions.
 
 ```markdown
 # Todo
 
-- [ ] Comprare il regalo 📅 2026-07-05 ⏫
-- [ ] Chiamare il dentista 🔼
-- [x] Pagare la bolletta 📅 2026-07-01 ✅ 2026-07-01
+## Inbox
+
+- [ ] Buy the gift 📅 2026-07-05 ⏫
+- [ ] Call the dentist 🔼
+
+## ideas
+
+### live visual
+
+- [ ] lidar video idea
+	description on indented lines
+	with an [embedded link](https://example.com)
+
+## shopping
+
+- [x] Pay the bill 📅 2026-07-01 ✅ 2026-07-01
 ```
 
-Campi (tutti opzionali, in qualunque ordine dopo il testo):
+Structure:
+- `## List` → **first-level sub-folder** (e.g. `Inbox`, `ideas`).
+- `### Section` → **second-level sub-folder** inside the current list.
+- `- [ ]` / `- [x]` → a task.
+- **Indented, non-task lines** right under a task → its **description** (joined). It may
+  contain markdown links `[text](url)` and bare URLs, which are rendered clickable.
 
-| Campo | Sintassi | Note |
+Task fields (all optional, any order after the text):
+
+| Field | Syntax | Notes |
 |---|---|---|
-| Scadenza | `📅 YYYY-MM-DD` | due date |
-| Priorità | `🔺` massima, `⏫` alta, `🔼` media, `🔽` bassa, `⏬` minima | assente = normale |
-| Completamento | `✅ YYYY-MM-DD` | aggiunto automaticamente quando spunti |
-| Tag | `#tag` | liberi, mostrati come pill |
+| Due date | `📅 YYYY-MM-DD` | |
+| Priority | `🔺` highest, `⏫` high, `🔼` medium, `🔽` low, `⏬` lowest | absent = normal |
+| Done | `✅ YYYY-MM-DD` | added automatically when checked |
+| Tag | `#tag` | shown inline |
 
-Regole:
-- Completare = `- [ ]` → `- [x]` + ` ✅ <oggi>` in coda.
-- Le nuove attività vengono aggiunte in fondo al file.
-- Righe non-task (titoli, testo) vengono preservate intatte.
+Rules:
+- Completing = `- [ ]` → `- [x]` + ` ✅ <today>` appended.
+- New tasks are appended at the end of the file.
+- Non-task lines (headings, descriptions) are preserved as-is.
+- The `todos` block groups by due date; the `folders` block groups by list → section.
 
-## Concorrenza e sync
+## Concurrency and sync
 
-- Entrambi i client scrivono con modifiche **line-based minime** (aggiunta/rimozione/sostituzione
-  di una singola riga) per ridurre i conflitti di Obsidian Sync.
-- In caso di conflitto vince la logica di merge di Obsidian Sync; i formati a righe indipendenti
-  rendono i merge quasi sempre indolori.
+- Both clients write with **minimal line-based edits** (add/remove/replace a single line)
+  to reduce Obsidian Sync conflicts.
+- Independent line-based formats make merges almost always painless.
+
+> Keep parsing logic in sync across all parsers (TypeScript in the Obsidian plugin, Kotlin
+> in the Android scaffold) and in this spec. The Android parser still needs updating for
+> `icon`/`cadence`/`goal`/`countable`/`start`/`duration`, categories, and the Todo
+> sub-folders/descriptions.

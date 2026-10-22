@@ -1,124 +1,95 @@
 # xyz.log
 
-> Habit tracker e todo **markdown-first**, **modulare**, multi-client.
-> **Piano del progetto** — architettura, widget desktop Windows, notifiche, open source:
-> [docs/PLAN.md](docs/PLAN.md). Focus principale: **modularità** — ogni funzione è un
-> modulo componibile, la "homepage" è solo una composizione di moduli.
+> A **markdown-first**, **modular** habit tracker and to-do system, multi-client and
+> local-first. Your data lives as plain markdown files in your vault — no database, no
+> server, no lock-in. Compatible with the Obsidian **Tasks** plugin.
+>
+> **Project plan** (architecture, Windows desktop widget, notifications, open source):
+> [docs/PLAN.md](docs/PLAN.md). Core focus: **modularity** — every function is a
+> composable block; a "homepage" is just a composition of modules.
 
-Habit tracker con cronologia e todo list con date e priorità, **markdown-first** e multi-client
-con la stessa estetica:
+![Architecture](docs/images/architettura.svg)
 
-- **`obsidian-plugin/`** — plugin per Obsidian (desktop e mobile) con vista dedicata e blocchi modulari
-- **`android-widget/`** — app Android con due widget per la home screen (abitudini e todo)
-- **widget Windows** — gadget desktop sempre attivo, in arrivo (vedi [PLAN](docs/PLAN.md))
+![Desktop widget mockup](docs/images/widget-mockup.svg)
 
-I dati vivono in **tre file markdown nel vault** (default: cartella `Tracker/`), sincronizzati da
-Obsidian Sync tra PC e telefono. Nessun database, nessun server: il markdown è l'unica fonte di
-verità e i todo sono compatibili con il plugin community **Tasks**.
+## Clients
 
-Formato dei file: [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md) · Design token condivisi: [design/tokens.json](design/tokens.json)
+- **`obsidian-plugin/`** — Obsidian plugin (desktop + mobile): a dedicated view and
+  composable ` ```todo-habits ` blocks you can drop in any note. **Implemented.**
+- **widget Windows** — an always-on desktop gadget (Tauri). **Planned** — see the PLAN.
+- **`android-widget/`** — Kotlin/Glance home-screen widgets. **Early scaffold, not
+  functional yet** (code only; never built/shipped).
 
-## Estetica
+All clients read and write the **same three markdown files** in a vault folder
+(default `Tracker/`), kept in sync by Obsidian Sync (or any synced folder):
 
-Minimal dark (`#1e1e1e`), **Roboto Mono** per il testo e **Space Grotesk** (OFL, libero) per i
-titoli.
+- `Habits.md` — habit definitions (YAML frontmatter)
+- `Habit Log.md` — history (`- [x] YYYY-MM-DD <id>`); streaks and heatmaps are derived
+- `Todo.md` — tasks (Tasks-plugin emoji syntax), with **sub-folders** (`## list` /
+  `### section`) and **descriptions** (indented lines, links supported)
 
-Font: caricati da Google Fonts nel CSS del plugin — **niente font proprietari incorporati**, così
-il progetto resta ridistribuibile come open source. I widget Glance Android non supportano font
-custom → sans di sistema in grassetto.
+File format: [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md) · Shared design tokens:
+[design/tokens.json](design/tokens.json)
 
-Colore accent:
+## Modular blocks
 
-- **Obsidian**: segue l'accent del tema (*Impostazioni → Aspetto → Colore di evidenziazione*),
-  con varianti chiara/soft derivate via `color-mix`.
-- **Android**: default `#44437a`, personalizzabile dall'app (campo hex + anteprima) con bottone
-  **Default** per ripristinarlo. Le varianti chiare/soft sono derivate automaticamente.
+Drop a code block in any note and compose what you need (one option per line):
 
-## Installazione — plugin Obsidian
-
-1. Compila (già fatto se trovi `main.js`):
-   ```
-   cd obsidian-plugin
-   npm install
-   npm run build
-   ```
-2. Copia `main.js`, `manifest.json` e `styles.css` in
-   `<vault>/.obsidian/plugins/todo-habits/`.
-3. Abilita **Todo & Habits** in *Impostazioni → Plugin della community*.
-4. Apri la vista dall'icona nella ribbon (o comando "Apri il tracker"). Al primo avvio crea
-   `Tracker/Habits.md`, `Tracker/Habit Log.md` e `Tracker/Todo.md`.
-5. Nelle impostazioni del plugin puoi cambiare la cartella dei dati e l'ampiezza della heatmap
-   (clic su un'abitudine per espandere la cronologia).
-
-Il plugin funziona anche su **Obsidian mobile** (`isDesktopOnly: false`).
-
-### Tracker dentro una nota
-
-Oltre alla vista dedicata puoi incorporare il tracker in qualsiasi nota con un code block:
-
-````markdown
-```todo-habits
-```
-````
-
-Vuoto mostra abitudini + todo. Opzioni (una per riga):
-
-| Opzione | Effetto |
-|---|---|
-| `habits` | solo la sezione abitudini |
-| `todos` | solo la todo list |
-| `habit: <id>` | una singola abitudine con la heatmap GitHub già espansa |
-| `header` | aggiunge l'intestazione con la data di oggi |
-
-Esempio per la nota giornaliera (o il suo template):
-
-````markdown
 ```todo-habits
 header
 habits
+todos
 ```
 
-```todo-habits
-habit: meditazione
-```
-````
+| Option | Shows |
+|---|---|
+| `habits` | the habits section |
+| `todos` | the to-do list, grouped by due date |
+| `folders` (`cartelle`) | tasks grouped by **list → section**, with descriptions/links |
+| `cross` (`croce`) | the dashboard: tasks left, habits + selectable history right |
+| `habit: <id>` | a single habit with its GitHub-style heatmap |
+| `header` | a heading with today's date |
 
-Il blocco è interattivo (spunte, aggiunta task) e si aggiorna da solo quando i file cambiano.
+Empty block = habits + todos. Each block is interactive and live-updates when the files
+change.
 
-## Installazione — app/widget Android
+## Language
 
-Prerequisito importante: **il vault sul telefono deve stare in una cartella dello storage
-condiviso** (es. `Documents/`), non nella cartella privata dell'app Obsidian, altrimenti il widget
-non può leggerlo. Con Obsidian Sync basta creare/spostare il vault in una posizione visibile al
-file manager.
+The UI ships in **English** and can be switched to **Italian** in the plugin settings
+(*Settings → xyz.log → Language*).
 
-1. Apri `android-widget/` in **Android Studio** (scarica da sé Gradle e SDK) e premi Run,
-   oppure `./gradlew assembleDebug` e installa l'APK.
-2. Apri l'app **Todo & Habits** → *Scegli la cartella del vault* → seleziona la radice del vault.
-3. Verifica che la sottocartella dati coincida con quella del plugin (default `Tracker`).
-4. Aggiungi i widget **Abitudini** e **Todo** alla home screen.
+## Aesthetic
 
-I widget si aggiornano quando li tocchi (↻), ogni ~30 minuti in automatico, e quando spunti
-qualcosa. Le spunte scrivono direttamente i file markdown: alla prossima sincronizzazione le vedi
-in Obsidian, e viceversa.
+Minimal dark (`#1e1e1e`), **Roboto Mono** for text and **Space Grotesk** (OFL, free) for
+headings — loaded from Google Fonts, no proprietary fonts embedded (so the project stays
+redistributable).
 
-Comportamenti:
+Accent color follows the Obsidian theme accent (*Settings → Appearance → Accent color*),
+with lighter/soft variants derived via `color-mix`.
 
-- ogni abitudine mostra i **pallini degli ultimi 7 giorni** (pieni = fatto);
-- toccando il **nome** di un'abitudine (non la spunta) si apre l'app sulla sua **cronologia
-  stile GitHub** (~52 settimane, con l'inizio di ogni mese segnato in alto) — nel plugin Obsidian
-  la stessa cronologia si espande cliccando la riga dell'abitudine;
-- dall'app puoi regolare l'**opacità dello sfondo** dei widget (0–100%, il testo resta opaco).
-  Nota: gli angoli arrotondati dello sfondo richiedono Android 12+.
-
-## Struttura
+## Build — Obsidian plugin
 
 ```
-docs/DATA_FORMAT.md     specifica del formato markdown condiviso
-design/tokens.json      palette e font condivisi
-obsidian-plugin/        plugin TypeScript (parser in src/parser.ts)
-android-widget/         app Kotlin + widget Glance (parser speculare in data/MarkdownParser.kt)
-vault-sample/Tracker/   file di esempio per provare subito
+cd obsidian-plugin
+npm install
+npm run build
 ```
 
-Se modifichi la logica di parsing, tienila allineata in **entrambi** i parser e nella specifica.
+Copy `main.js`, `manifest.json` and `styles.css` into
+`<vault>/.obsidian/plugins/xyzlog/`, then enable **xyz.log** in *Settings → Community
+plugins*. Open it from the ribbon icon or the "Open xyz.log" command; on first run it
+creates `Habits.md`, `Habit Log.md` and `Todo.md` in the data folder.
+
+## Structure
+
+```
+docs/DATA_FORMAT.md     shared markdown format spec
+docs/PLAN.md            architecture, roadmap, open-source plan
+design/tokens.json      shared palette and fonts
+obsidian-plugin/        TypeScript plugin (pure parser/renderer in src/)
+android-widget/         Kotlin scaffold (mirror parser) — not functional yet
+```
+
+## License
+
+MIT — see [LICENSE](LICENSE).

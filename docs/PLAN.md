@@ -1,185 +1,176 @@
-# Piano del progetto — xyz.log
+# Project plan — xyz.log
 
-> Habit & todo tracker **markdown-first**, multi-client, con un widget desktop sempre
-> attivo. Obiettivo: sostituire TickTick con un sistema aperto dove **i dati sono tuoi**
-> (file markdown nel vault), sincronizzati ovunque.
+> A **markdown-first** habit & to-do tracker, multi-client, with an always-on desktop
+> widget. Goal: replace proprietary trackers (e.g. TickTick) with an open system where
+> **your data is yours** (markdown files in your vault), synced everywhere.
 
-![Architettura](images/architettura.svg)
+![Architecture](images/architettura.svg)
 
-## Principio guida: modularità
+## Guiding principle: modularity
 
-La modularità è **il focus principale** del progetto. Ogni funzione (abitudini, todo,
-cronologia, singola abitudine, …) è un **modulo indipendente** che si compone liberamente:
-nel plugin come blocco ` ```todo-habits ` con opzioni, nel widget come scheda. Lo stesso
-vale per il codice (`packages/core` riusato da tutti i client) e per il repo: feature
-isolate, combinabili, testabili da sole. La "homepage" è solo **una composizione di
-moduli**, non un pezzo monolitico.
+Modularity is **the core focus**. Every function (habits, to-dos, history, a single
+habit, …) is an **independent module** you compose freely: in the plugin as a
+` ```todo-habits ` block with options, in the widget as a tab. The same applies to the
+code (`packages/core`, reused by every client) and to the repo: isolated features,
+combinable, testable on their own. A "homepage" is just **a composition of modules**, not
+a monolith.
 
-![Mockup widget desktop](images/widget-mockup.svg)
+![Desktop widget mockup](images/widget-mockup.svg)
 
-## 1. Idea in una riga
+## 1. The idea in one line
 
-Tre file markdown nel vault sono l'**unica fonte di verità**; ogni client (plugin
-Obsidian, widget Android, widget Windows) li legge e scrive. Niente database, niente
-server, nessun lock-in. La sync (Obsidian Sync o qualsiasi cartella sincronizzata) tiene
-tutto allineato tra PC e telefono.
+Three markdown files in a vault are the **single source of truth**; every client (Obsidian
+plugin, Android widget, Windows widget) reads and writes them. Any folder sync (Obsidian
+Sync or otherwise) keeps everything aligned across PC and phone. No database, no server, no
+lock-in.
 
-## 2. Stato attuale (già implementato)
+## 2. Current status
 
-**Plugin Obsidian** (`obsidian-plugin/`, TypeScript):
-- vista dedicata + blocco ` ```todo-habits ` incorporabile nelle note (opzioni `habits`,
-  `todos`, `header`, `habit:<id>`, **`croce`**);
-- abitudini con icone (lucide/Iconize), **categorie** per icona, **streak** a cadenza,
-  **heatmap stile GitHub**, abitudini **contabili** (goal N volte/giorno);
-- todo compatibili col plugin **Tasks** (date `📅`, priorità, completamento `✅`, tag);
-- aggiunta/rinomina/eliminazione abitudini dalla UI; picker icone a griglia;
-- layout **dashboard** componibile: todo a sinistra (alto, scrollabile), abitudini in alto
-  a destra e cronologia di un'abitudine **selezionabile** in basso a destra; a larghezza
-  piena;
-- comando palette «Inserisci blocco»; UI compatta.
+**Obsidian plugin** (`obsidian-plugin/`, TypeScript) — **implemented**:
+- dedicated view + embeddable ` ```todo-habits ` block (options `habits`, `todos`,
+  `folders`/`cartelle`, `cross`/`croce`, `habit:<id>`, `header`);
+- habits with icons (lucide/Iconize), **categories** by icon, **cadence streaks**,
+  **GitHub-style heatmap**, **countable** habits (goal N/day);
+- to-dos compatible with the **Tasks** plugin (dates `📅`, priorities, done `✅`, tags),
+  with **sub-folders** (`## list` / `### section`) and **descriptions** (indented lines,
+  markdown links rendered);
+- add/rename/delete habits from the UI; grid icon picker;
+- **dashboard** layout: to-dos on the left (tall, scrollable), habits top-right and a
+  selectable habit's history bottom-right; full-width page;
+- command-palette "insert block"; compact UI;
+- **i18n**: English (default) / Italian toggle in settings.
 
-**Widget Android** (`android-widget/`, Kotlin + Glance): due widget home (abitudini e
-todo), parser markdown speculare, accent color personalizzabile.
+**Windows desktop widget** — **planned** (see §4).
 
-**Formato condiviso**: `docs/DATA_FORMAT.md`. **Import da TickTick** (CSV → `Todo.md`,
-abitudini → `Habits.md` + `Habit Log.md`) già sperimentato.
+**Android widget** (`android-widget/`, Kotlin + Glance) — **early scaffold only, not
+functional yet** (source exists but was never built/shipped). Its parser must be kept in
+sync with the format.
 
-**Font**: rimosso il font proprietario (NType82); ora **Space Grotesk** (OFL) per i
-titoli — niente asset non ridistribuibili nel CSS.
+**Shared format**: `docs/DATA_FORMAT.md`. **TickTick import** (CSV → `Todo.md` with
+list/section/description structure; habits → `Habits.md` + `Habit Log.md`) prototyped.
 
-## 3. Architettura di riferimento
+**Fonts**: no proprietary assets — **Space Grotesk** (OFL) for headings, loaded from Google
+Fonts.
+
+## 3. Reference architecture
 
 ```
             ┌─────────────────────────────────────────────┐
-            │   Vault / cartella sincronizzata (markdown)  │
+            │     Vault / synced folder (markdown)         │
             │   Habits.md   ·   Habit Log.md   ·   Todo.md │
             └──────────────┬───────────────┬──────────────┘
                            │               │
         ┌──────────────────┼───────────────┼──────────────────┐
-        │                  │               │                  │
-  Plugin Obsidian     Widget Android   Widget Windows     (futuri client)
-  (TS, già fatto)     (Kotlin)         (da costruire)
+   Obsidian plugin     Android widget   Windows widget     (future clients)
+   (TS, done)          (Kotlin, scaffold) (Tauri, planned)
 ```
 
-**Core condiviso** — oggi il parser/renderer esiste solo lato Obsidian. Passo chiave:
-estrarre `parser` + `types` + `renderer` + `styles` in un pacchetto **`packages/core`**
-(TypeScript, zero dipendenze da Obsidian) riusato da:
-- plugin Obsidian (già TS),
-- **widget Windows** (webview),
-- eventuale versione web/PWA.
+**Shared core** — today the parser/renderer live only inside the Obsidian plugin. Key
+step: extract `parser` + `types` + `renderer` + `styles` into a **`packages/core`**
+package (pure TypeScript, no Obsidian deps) reused by the Obsidian plugin, the **Windows
+widget** (webview) and a possible web/PWA client.
 
-Struttura monorepo proposta (pnpm workspaces):
+Proposed monorepo (pnpm workspaces):
 
 ```
-packages/core/          parser, tipi, renderer, stili (TS puro)
-apps/obsidian-plugin/   adapter Obsidian sopra core
-apps/windows-widget/    Tauri (Rust + webview) sopra core
-android-widget/         Kotlin (parser speculare)
-docs/                   formato, piano, immagini
+packages/core/          parser, types, renderer, styles (pure TS)
+apps/obsidian-plugin/   Obsidian adapter over core
+apps/windows-widget/    Tauri (Rust + webview) over core
+android-widget/         Kotlin (mirror parser)
+docs/                   format, plan, images
 ```
 
-## 4. Widget desktop Windows
+## 4. Windows desktop widget
 
-Requisiti dell'utente:
-- **parte allo startup**;
-- **resta in background sul desktop**, come un gadget;
-- **non appare nella taskbar**;
-- **resta visibile anche con “mostra desktop” / tutte le finestre minimizzate**;
-- abitudini (e funzioni) in **schede separate**, stile widget TickTick ma più completo.
+Requirements:
+- **starts on startup**;
+- **stays in the background on the desktop**, like a gadget;
+- **no taskbar entry**;
+- **stays visible even on "show desktop" / minimize-all**;
+- functions in **separate tabs**, like the TickTick widget but fuller.
 
-### 4.1 Scelta tecnologica
+### 4.1 Technology
 
-| Opzione | Riuso codice | Footprint | Desktop-pinning | Verdetto |
+| Option | Code reuse | Footprint | Desktop pinning | Verdict |
 |---|---|---|---|---|
-| **Tauri** (Rust + webview) | alto (riusa il renderer TS nella webview) | ~5–10 MB, RAM bassa | via Win32 in Rust | **consigliata** |
-| Electron | altissimo | ~100 MB, RAM alta | via modulo nativo | ok ma pesante per un “sempre acceso” |
-| .NET WPF/WinUI | nullo (riscrittura XAML) | basso | nativo, il più semplice | solo se si rinuncia al riuso |
+| **Tauri** (Rust + webview) | high (reuses the TS renderer) | ~5–10 MB, low RAM | via Win32 in Rust | **recommended** |
+| Electron | very high | ~100 MB, high RAM | via native module | ok but heavy for always-on |
+| .NET WPF/WinUI | none (XAML rewrite) | low | native, simplest | only if dropping reuse |
 
-**Consigliata: Tauri.** Un processo leggero, sempre attivo, che mostra la stessa UI del
-plugin (stesso `core`), con le parti “di sistema” scritte in Rust.
+**Recommended: Tauri** — a lightweight always-on process showing the same UI as the plugin
+(shared `core`), with the OS-level bits written in Rust.
 
-### 4.2 Comportamento “gadget da desktop” (Windows)
+### 4.2 "Desktop gadget" behavior (Windows)
 
-- **Niente taskbar**: finestra con `skip_taskbar` + stile `WS_EX_TOOLWINDOW`.
-- **Senza bordi**: `decorations: false`, trasparenza opzionale.
-- **Ancorata al desktop / sopravvive a “mostra desktop”**: si fa “figlia” del layer del
-  wallpaper (`Progman` → si forza la creazione di `WorkerW`, poi `SetParent` della nostra
-  finestra a `WorkerW`). È la tecnica dei wallpaper/gadget: la finestra vive dietro le
-  icone del desktop e non viene minimizzata dal “mostra desktop”.
-  - Variante più semplice (fase 1): finestra `always_on_bottom`, non minimizzabile, senza
-    taskbar — buona al 90%, ma un “mostra desktop” può comunque nasconderla. Il pinning a
-    `WorkerW` è la soluzione robusta (fase 4).
-- **Avvio automatico**: `tauri-plugin-autostart` (scrive la chiave Run del registro).
-- **Tray**: icona nella system tray per mostra/nascondi, impostazioni, uscita.
-- **Schede**: una tab bar compatta (Abitudini · Todo · Oggi) che riusa i render già
-  esistenti; il layout “croce” è già un buon punto di partenza.
+- **No taskbar**: `skip_taskbar` + `WS_EX_TOOLWINDOW` style.
+- **Borderless**: `decorations: false`, optional transparency.
+- **Pinned to the desktop / survives "show desktop"**: re-parent the window to the
+  wallpaper layer (`Progman` → force-create `WorkerW`, then `SetParent` our window to
+  `WorkerW`). This is the wallpaper/gadget technique: the window lives behind the desktop
+  icons and isn't minimized by "show desktop".
+  - Simpler phase-1 variant: an `always_on_bottom`, non-minimizable, taskbar-less window —
+    ~90% there, but "show desktop" can still hide it. `WorkerW` pinning is the robust fix.
+- **Autostart**: `tauri-plugin-autostart` (writes the registry Run key).
+- **Tray**: show/hide, settings, quit.
+- **Tabs**: a compact tab bar (Habits · Tasks · Today); the `cross` dashboard is a good
+  starting point.
 
-### 4.3 Accesso ai file
+### 4.3 File access
 
-- l'utente sceglie la cartella del tracker (es. `vault/allegati/tracker`);
-- **watch** dei tre file (debounce) → re-render al cambiamento (anche da Obsidian/Sync);
-- scritture **line-based minime** (come il plugin) per ridurre i conflitti di sync.
+- the user picks the tracker folder (e.g. `vault/allegati/tracker`);
+- **watch** the three files (debounced) → re-render on change (incl. from Obsidian/Sync);
+- **line-based minimal writes** (like the plugin) to reduce sync conflicts.
 
-## 5. Notifiche / reminder
+## 5. Notifications / reminders
 
-Requisito: reminder **opzionali** a orari della giornata, impostati **insieme** all'habit
-o all'evento quando metti la data; gli habit sono **giornalieri**, quindi alla creazione
-si chiede se vuoi un reminder (e a che ora/e).
+Requirement: **optional** reminders at times of day, set **together** with a habit or an
+event when you add a date; habits are **daily**, so on creation you're asked whether you
+want a reminder (and at which time(s)).
 
-**Modello dati (nel markdown, così sincronizza ovunque):**
-- **Abitudini** — campo opzionale nel frontmatter per habit:
+**Data model (in the markdown, so it syncs everywhere):**
+- **Habits** — optional per-habit frontmatter field:
   ```yaml
   - id: minoxidil
-    name: minoxidil
     goal: 2
-    reminders: ["09:00", "21:00"]   # una notifica per orario, ogni giorno
+    reminders: ["09:00", "21:00"]   # one notification per time, every day
   ```
-- **Todo/eventi** — orario opzionale accanto alla data. Due opzioni di sintassi:
-  - `⏰ HH:mm` accanto al `📅 YYYY-MM-DD` (riconoscibile, poco invasivo), oppure
-  - `📅 YYYY-MM-DD HH:mm` (data+ora unite).
-  Scelta consigliata: `📅 data` + `⏰ ora` separati, per restare compatibili col parsing
-  attuale.
+- **To-dos / events** — optional time next to the date: `📅 YYYY-MM-DD` + `⏰ HH:mm`
+  (kept separate to stay compatible with current parsing).
 
-**Chi fa scattare le notifiche:** il client **sempre attivo**.
-- **Widget Windows**: notifiche toast native (`tauri-plugin-notification`) con uno
-  scheduler che legge gli orari dal markdown e pianifica gli avvisi del giorno.
-- **Android**: `AlarmManager` + notifiche.
-- Plugin Obsidian: può avvisare quando è aperto, ma non è affidabile per i reminder
-  pianificati (Obsidian non è sempre in esecuzione) → i notificatori “veri” sono il widget
-  Windows e Android.
-
-**UX:** quando aggiungi una data a un todo → campo orario reminder opzionale. Quando crei
-un habit → “Vuoi un promemoria?” con uno o più orari (es. 2/giorno per minoxidil).
+**Who fires them:** the always-on client.
+- **Windows widget**: native toasts (`tauri-plugin-notification`) + a scheduler reading
+  times from the markdown.
+- **Android**: `AlarmManager` + notifications.
+- Obsidian plugin: can notify when open, but isn't reliable for scheduled reminders.
 
 ## 6. Open source
 
-- **Licenza**: **MIT** (vedi `LICENSE`) — massima adozione e libertà di contribuire.
-- **Font**: risolto per il plugin (Space Grotesk/OFL). Resta da ripulire l'asset NType82
-  lato Android prima della pubblicazione (già `gitignored`).
-- **CI**: GitHub Actions per buildare plugin + widget e pubblicare le release.
-- **Contribuzione**: `CONTRIBUTING.md`, issue template, `DATA_FORMAT.md` come contratto
-  tra i parser (va tenuto allineato in TS e Kotlin).
-- **Repo**: [`simoliguori/xyz.log`](https://github.com/simoliguori/xyz.log) — **pubblica**,
-  licenza MIT.
+- **License**: **MIT** (see `LICENSE`) — maximum adoption and freedom to contribute.
+- **Fonts**: solved (Space Grotesk / OFL). Still need to drop the NType82 asset on the
+  Android side before shipping (already `gitignored`).
+- **CI**: GitHub Actions to build the plugin + widget and publish releases.
+- **Contributing**: `CONTRIBUTING.md`, issue templates, `DATA_FORMAT.md` as the contract
+  between parsers (kept in sync in TS and Kotlin).
+- **Repo**: [`simoliguori/xyz.log`](https://github.com/simoliguori/xyz.log) — **public**,
+  MIT.
 
-## 7. Roadmap a fasi
+## 7. Roadmap
 
-- **Fase 0 — fatto**: formato markdown condiviso, plugin Obsidian completo, widget
-  Android, import TickTick, rimozione font proprietario.
-- **Fase 1 — fondamenta OSS**: rebrand al nome scelto; estrai `packages/core`; licenza;
-  README con immagini; crea la repo GitHub.
-- **Fase 2 — widget Windows MVP (Tauri)**: finestra senza bordi/taskbar, schede
-  Abitudini/Todo/Oggi in sola lettura dai file.
-- **Fase 3 — interattività**: spunta abitudini, aggiungi/completa todo scrivendo nel
-  markdown; watch bidirezionale.
-- **Fase 4 — gadget**: pinning a `WorkerW`, autostart, tray, trasparenza.
-- **Fase 5 — notifiche**: reminder opzionali (habit giornalieri + eventi con orario),
-  scheduler + toast.
-- **Fase 6 — release**: CI, pacchetti, documentazione, v1.0 open source.
+- **Phase 0 — done**: shared markdown format, Obsidian plugin (view, blocks, dashboard,
+  folders/descriptions, i18n), TickTick import, no proprietary fonts.
+- **Phase 1 — OSS foundations**: extract `packages/core`; CI; contributor docs.
+- **Phase 2 — Windows widget MVP (Tauri)**: borderless, taskbar-less window; Habits/Tasks/
+  Today tabs reading the files.
+- **Phase 3 — interactivity**: check habits, add/complete to-dos writing back to markdown.
+- **Phase 4 — gadget**: `WorkerW` pinning, autostart, tray, transparency.
+- **Phase 5 — notifications**: optional reminders (daily habits + timed events).
+- **Phase 6 — Android**: actually build and ship the widget (currently a scaffold).
+- **Phase 7 — release**: packaging, docs, v1.0.
 
-## 8. Decisioni aperte
+## 8. Open decisions
 
-1. **Nome**: **xyz.log** (deciso).
-2. **Licenza**: **MIT** (deciso).
-3. **Repo GitHub**: **pubblica** (deciso).
-4. **Idee TickTick** (59 appunti): nota di riferimento separata o import come todo?
+1. **Name**: **xyz.log** (decided; plugin id `xyzlog` since Obsidian ids can't contain a
+   dot).
+2. **License**: **MIT** (decided).
+3. **Repo**: **public** (decided).
+4. Monorepo extraction of `packages/core` — when.

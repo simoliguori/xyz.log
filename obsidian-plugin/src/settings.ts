@@ -1,14 +1,17 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type TodoHabitsPlugin from "./main";
+import { Lang, setLang, t } from "./strings";
 
 export interface TrackerSettings {
 	folder: string;
 	heatmapWeeks: number;
+	lang: Lang;
 }
 
 export const DEFAULT_SETTINGS: TrackerSettings = {
 	folder: "Tracker",
 	heatmapWeeks: 52,
+	lang: "en",
 };
 
 export class TrackerSettingTab extends PluginSettingTab {
@@ -21,10 +24,25 @@ export class TrackerSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Cartella dei dati")
-			.setDesc(
-				"Cartella del vault che contiene Habits.md, Habit Log.md e Todo.md. Usa la stessa nell'app Android."
-			)
+			.setName(t("setLangName"))
+			.setDesc(t("setLangDesc"))
+			.addDropdown((d) =>
+				d
+					.addOption("en", "English")
+					.addOption("it", "Italiano")
+					.setValue(this.plugin.settings.lang)
+					.onChange(async (value) => {
+						this.plugin.settings.lang = value as Lang;
+						setLang(this.plugin.settings.lang);
+						await this.plugin.saveSettings();
+						this.plugin.refreshView();
+						this.display(); // ridisegna le impostazioni nella nuova lingua
+					})
+			);
+
+		new Setting(containerEl)
+			.setName(t("setFolderName"))
+			.setDesc(t("setFolderDesc"))
 			.addText((text) =>
 				text
 					.setPlaceholder("Tracker")
@@ -37,8 +55,8 @@ export class TrackerSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Settimane nella heatmap")
-			.setDesc("Quante settimane di cronologia mostrare quando espandi un'abitudine (52 ≈ come GitHub).")
+			.setName(t("setHeatmapName"))
+			.setDesc(t("setHeatmapDesc"))
 			.addSlider((slider) =>
 				slider
 					.setLimits(12, 53, 1)

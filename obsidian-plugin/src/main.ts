@@ -2,6 +2,7 @@ import { debounce, Editor, MarkdownRenderChild, Plugin, TFile, WorkspaceLeaf } f
 import { TrackerRenderer, RenderOptions } from "./renderer";
 import { DEFAULT_SETTINGS, TrackerSettings, TrackerSettingTab } from "./settings";
 import { Store } from "./store";
+import { setLang, t } from "./strings";
 import { TrackerView, VIEW_TYPE } from "./view";
 
 export default class TodoHabitsPlugin extends Plugin {
@@ -14,19 +15,19 @@ export default class TodoHabitsPlugin extends Plugin {
 
 		this.registerView(VIEW_TYPE, (leaf) => new TrackerView(leaf, this));
 
-		this.addRibbonIcon("calendar-check", "Apri Todo & Habits", () => {
+		this.addRibbonIcon("calendar-check", t("openTracker"), () => {
 			void this.activateView();
 		});
 
 		this.addCommand({
 			id: "open-tracker",
-			name: "Apri il tracker",
+			name: t("openTracker"),
 			callback: () => void this.activateView(),
 		});
 
 		this.addCommand({
 			id: "insert-block",
-			name: "Inserisci blocco Todo & Habits nella nota",
+			name: t("insertBlock"),
 			editorCallback: (editor: Editor) => {
 				const block = "```todo-habits\nheader\nhabits\ntodos\n```\n";
 				editor.replaceSelection(block);
@@ -89,6 +90,7 @@ export default class TodoHabitsPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		setLang(this.settings.lang);
 	}
 
 	async saveSettings(): Promise<void> {
@@ -101,7 +103,13 @@ export default class TodoHabitsPlugin extends Plugin {
  * `habits`, `todos`, `header`, `habit: <id>`. Vuoto = habits + todos.
  */
 function parseEmbedOptions(source: string): RenderOptions {
-	const opts: RenderOptions = { header: false, habits: false, todos: false, cross: false };
+	const opts: RenderOptions = {
+		header: false,
+		habits: false,
+		todos: false,
+		cross: false,
+		folders: false,
+	};
 	let any = false;
 	for (const raw of source.split(/\r?\n/)) {
 		const line = raw.trim().toLowerCase();
@@ -114,6 +122,9 @@ function parseEmbedOptions(source: string): RenderOptions {
 			any = true;
 		} else if (line === "cross" || line === "croce" || line === "griglia") {
 			opts.cross = true;
+			any = true;
+		} else if (line === "folders" || line === "cartelle" || line === "liste") {
+			opts.folders = true;
 			any = true;
 		} else if (line === "header" || line === "data") {
 			opts.header = true;

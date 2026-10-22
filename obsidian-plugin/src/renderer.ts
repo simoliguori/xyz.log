@@ -1,14 +1,9 @@
 import { App, getIconIds, Modal, setIcon } from "obsidian";
 import type TodoHabitsPlugin from "./main";
-import {
-	addDays,
-	PRIORITY_EMOJI,
-	PRIORITY_LABEL,
-	streak,
-	todayISO,
-} from "./parser";
+import { addDays, PRIORITY_EMOJI, streak, todayISO } from "./parser";
 import { Habit, Priority, Todo } from "./types";
 import { TrackerData } from "./store";
+import { locale, prioLabel, t, tf } from "./strings";
 
 const PRIO_CLASS: Record<Priority, string> = {
 	[Priority.Highest]: "th-prio-highest",
@@ -24,10 +19,35 @@ export interface RenderOptions {
 	header: boolean;
 	habits: boolean;
 	todos: boolean;
-	/** layout a croce: tutte le funzioni, una per angolo (griglia 2×2) */
+	/** layout dashboard: todo a sinistra, abitudini + cronologia a destra */
 	cross: boolean;
+	/** vista a cartelle: todo raggruppati per lista → sezione, con descrizioni */
+	folders: boolean;
 	/** se presente, mostra solo questa abitudine con la heatmap già espansa */
 	habitId?: string;
+}
+
+/** Testo con link markdown `[t](url)`, URL nudi e #tag resi cliccabili. */
+function renderRich(el: HTMLElement, text: string): void {
+	const re = /\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s)]+)|(#[\w/-]+)/g;
+	let last = 0;
+	let m: RegExpExecArray | null;
+	while ((m = re.exec(text)) !== null) {
+		if (m.index > last) el.appendText(text.slice(last, m.index));
+		if (m[1] !== undefined) {
+			const a = el.createEl("a", { text: m[1], href: m[2], cls: "th-link" });
+			a.setAttr("target", "_blank");
+			a.setAttr("rel", "noopener");
+		} else if (m[3] !== undefined) {
+			const a = el.createEl("a", { text: m[3], href: m[3], cls: "th-link" });
+			a.setAttr("target", "_blank");
+			a.setAttr("rel", "noopener");
+		} else if (m[4] !== undefined) {
+			el.createSpan({ cls: "th-tag", text: m[4] });
+		}
+		last = m.index + m[0].length;
+	}
+	if (last < text.length) el.appendText(text.slice(last));
 }
 
 /** Griglia di icone lucide con ricerca, per scegliere l'icona di un'abitudine. */
@@ -47,9 +67,9 @@ class IconPickerModal extends Modal {
 		const top = contentEl.createDiv({ cls: "th-icon-top" });
 		const search = top.createEl("input", {
 			cls: "th-icon-search",
-			attr: { type: "text", placeholder: "Cerca un'icona…" },
+			attr: { type: "text", placeholder: t("searchIcon") },
 		});
-		const none = top.createEl("button", { cls: "th-icon-none", text: "Nessuna" });
+		const none = top.createEl("button", { cls: "th-icon-none", text: t("none") });
 		none.onclick = () => {
 			this.onChooseCb("");
 			this.close();
@@ -77,7 +97,7 @@ class IconPickerModal extends Modal {
 		}
 		grid.onmouseleave = () => hoverName.setText("");
 
-		const updateCount = (n: number) => counter.setText(`${n} icone`);
+		const updateCount = (n: number) => counter.setText(tf.iconsCount(n));
 		updateCount(tiles.length);
 
 		search.oninput = () => {
@@ -104,8 +124,6 @@ class IconPickerModal extends Modal {
  */
 export class TrackerRenderer {
 	private expanded = new Set<string>();
-	/** abitudine selezionata nel riquadro Cronologia del layout a croce */
-	private historyHabitId: string | null = null;
 
 	constructor(
 		private plugin: TodoHabitsPlugin,
@@ -134,12 +152,26 @@ export class TrackerRenderer {
 		} else if (this.opts.habits) {
 			this.renderHabits(root, data);
 		}
-		if (this.opts.todos) this.renderTodos(root, data);
+		if (this.opts.folders) {
+			this.renderFolders(root, data);
+		} else if (this.opts.todos) {
+			this.renderTodos(root, data);
+		}
 
 		root.scrollTop = scrollTop;
 	}
 
-	/* ---------------- Layout a croce (griglia 2×2) ---------------- */
+	private renderHeader(root: HTMLElement): void {
+		const header = root.createDiv({ cls: "th-header" });
+		const date = new Date().toLocaleDateString(locale(), {
+			weekday: "long",
+			day: "numeric",
+			month: "long",
+		});
+		header.createEl("h1", { text: date, cls: "th-title" });
+	}
+
+	/* ---------------- Layout dashboard ---------------- */
 
 	private renderCross(root: HTMLElement, data: TrackerData): void {
 		root.addClass("th-cross");
@@ -147,9 +179,7 @@ export class TrackerRenderer {
 		const today = todayISO();
 
 		const grid = root.createDiv({ cls: "th-cross-grid" });
-		// sinistra (alta, due blocchi): todo scrollabile
 		const todoCell = grid.createDiv({ cls: "th-cross-cell th-cross-cell--todo" });
-		// destra alto: abitudini — destra basso: cronologia di un'abitudine a scelta
 		const habitsCell = grid.createDiv({ cls: "th-cross-cell th-cross-cell--habits" });
 		const historyCell = grid.createDiv({ cls: "th-cross-cell th-cross-cell--history" });
 
@@ -158,43 +188,63 @@ export class TrackerRenderer {
 		this.renderHistoryCell(historyCell, data, today);
 	}
 
+	/** Panoramica cronologia: una riga compatta per abitudine, raggruppata per categoria. */
 	private renderHistoryCell(cell: HTMLElement, data: TrackerData, today: string): void {
 		const section = cell.createDiv({ cls: "th-section" });
-		const head = section.createDiv({ cls: "th-history-head" });
-		head.createEl("h2", { text: "Cronologia", cls: "th-section-title" });
+		section.createEl("h2", { text: t("history"), cls: "th-section-title" });
 
 		if (data.habits.length === 0) {
-			section.createDiv({ cls: "th-empty", text: "Nessuna abitudine." });
+			section.createDiv({ cls: "th-empty", text: t("noHabitsShort") });
 			return;
 		}
 
-		const current =
-			this.historyHabitId && data.habits.some((h) => h.id === this.historyHabitId)
-				? this.historyHabitId
-				: data.habits[0].id;
-
-		const sel = head.createEl("select", { cls: "th-history-select" });
+		const byIcon = new Map<string, Habit[]>();
 		for (const h of data.habits) {
-			sel.createEl("option", { text: h.name, attr: { value: h.id } });
+			if (!h.icon) continue;
+			if (!byIcon.has(h.icon)) byIcon.set(h.icon, []);
+			byIcon.get(h.icon)!.push(h);
 		}
-		sel.value = current;
-		sel.onchange = () => {
-			this.historyHabitId = sel.value;
-			void this.render();
-		};
 
-		const habit = data.habits.find((h) => h.id === current)!;
-		this.renderHeatmap(section, data.log.get(habit.id) ?? new Map(), today);
+		const renderedCats = new Set<string>();
+		for (const habit of data.habits) {
+			const group = habit.icon ? byIcon.get(habit.icon) : null;
+			if (group && group.length >= 2) {
+				if (renderedCats.has(habit.icon)) continue;
+				renderedCats.add(habit.icon);
+				const saved = (data.categories ?? []).find((c) => c.icon === habit.icon);
+				const name = saved?.name || habit.icon.replace(/^lucide-/, "");
+				const head = section.createDiv({ cls: "th-hist-cat" });
+				const ic = head.createDiv({ cls: "th-category-icon" });
+				setIcon(ic, habit.icon);
+				head.createSpan({ text: name });
+				for (const h of group) this.renderHistoryLine(section, h, data, today);
+			} else {
+				this.renderHistoryLine(section, habit, data, today);
+			}
+		}
 	}
 
-	private renderHeader(root: HTMLElement): void {
-		const header = root.createDiv({ cls: "th-header" });
-		const date = new Date().toLocaleDateString("it-IT", {
-			weekday: "long",
-			day: "numeric",
-			month: "long",
-		});
-		header.createEl("h1", { text: date, cls: "th-title" });
+	/** Una riga: nome abitudine + striscia compatta degli ultimi giorni. */
+	private renderHistoryLine(
+		parent: HTMLElement,
+		habit: Habit,
+		data: TrackerData,
+		today: string
+	): void {
+		const dates = data.log.get(habit.id) ?? new Map<string, number>();
+		const line = parent.createDiv({ cls: "th-hist-line" });
+		line.createSpan({ cls: "th-hist-name", text: habit.name, attr: { title: habit.name } });
+		const s = streak(dates, today);
+		if (s > 0) line.createSpan({ cls: "th-streak", text: `${s}×` });
+		const strip = line.createDiv({ cls: "th-hist-strip" });
+		const DAYS = 28;
+		for (let i = DAYS - 1; i >= 0; i--) {
+			const d = addDays(today, -i);
+			strip.createDiv({
+				cls: `th-cell ${dates.has(d) ? "is-done" : ""} ${d === today ? "is-today" : ""}`,
+				attr: { "aria-label": d },
+			});
+		}
 	}
 
 	/* ---------------- Abitudini ---------------- */
@@ -204,7 +254,7 @@ export class TrackerRenderer {
 		if (!habit) {
 			root.createDiv({
 				cls: "th-empty",
-				text: `Abitudine "${this.opts.habitId}" non trovata in ${this.plugin.store.habitsPath}.`,
+				text: tf.habitNotFound(this.opts.habitId ?? "", this.plugin.store.habitsPath),
 			});
 			return;
 		}
@@ -214,24 +264,18 @@ export class TrackerRenderer {
 
 	private renderHabits(root: HTMLElement, data: TrackerData): void {
 		const section = root.createDiv({ cls: "th-section" });
-		section.createEl("h2", { text: "Abitudini", cls: "th-section-title" });
+		section.createEl("h2", { text: t("habits"), cls: "th-section-title" });
 
 		this.renderHabitAddForm(section);
 
 		if (data.habits.length === 0) {
-			section.createDiv({
-				cls: "th-empty",
-				text: "Nessuna abitudine definita. Aggiungila qui sopra.",
-			});
+			section.createDiv({ cls: "th-empty", text: t("noHabits") });
 			return;
 		}
 
 		const today = todayISO();
-
-		// la lista scorre (nel layout a croce): titolo e form di aggiunta restano fissi sopra
 		const list = section.createDiv({ cls: "th-habit-scroll" });
 
-		// raggruppa per icona: le abitudini che condividono un'icona formano una categoria
 		const byIcon = new Map<string, Habit[]>();
 		for (const h of data.habits) {
 			if (!h.icon) continue;
@@ -268,7 +312,7 @@ export class TrackerRenderer {
 		const nameEl = head.createEl("span", {
 			cls: "th-category-name",
 			text: name,
-			attr: { title: "Rinomina categoria" },
+			attr: { title: t("renameCategory") },
 		});
 		head.createSpan({ cls: "th-group-count", text: String(habs.length) });
 
@@ -304,7 +348,6 @@ export class TrackerRenderer {
 		}
 	}
 
-	/** API del plugin Iconize (obsidian-icon-folder), se installato: per icone custom. */
 	private iconizeApi(): { getIconByName: (n: string) => unknown; setIconForNode: (n: string, el: HTMLElement) => void } | null {
 		// `plugins` non è nei tipi pubblici di Obsidian
 		return (this.plugin.app as any).plugins?.getPlugin("obsidian-icon-folder")?.api ?? null;
@@ -333,7 +376,7 @@ export class TrackerRenderer {
 		let chosenIcon = "";
 		const iconBtn = form.createEl("button", {
 			cls: "th-icon-btn th-add-icon",
-			attr: { type: "button", "aria-label": "Scegli un'icona (opzionale)" },
+			attr: { type: "button", "aria-label": t("chooseIcon") },
 		});
 		setIcon(iconBtn, "shapes");
 		iconBtn.onclick = () => {
@@ -345,9 +388,9 @@ export class TrackerRenderer {
 		};
 		const input = form.createEl("input", {
 			cls: "th-add-text",
-			attr: { type: "text", placeholder: "Nuova abitudine…" },
+			attr: { type: "text", placeholder: t("newHabit") },
 		});
-		const btn = form.createEl("button", { cls: "th-add-btn", attr: { "aria-label": "Aggiungi abitudine" } });
+		const btn = form.createEl("button", { cls: "th-add-btn", attr: { "aria-label": t("add") } });
 		setIcon(btn, "plus");
 
 		const submit = async () => {
@@ -376,7 +419,7 @@ export class TrackerRenderer {
 
 		const check = row.createEl("button", {
 			cls: `th-check ${dates.has(today) ? "is-done" : ""}`,
-			attr: { "aria-label": `Segna ${habit.name} per oggi` },
+			attr: { "aria-label": tf.markToday(habit.name) },
 		});
 		setIcon(check, "check");
 		check.onclick = async (e) => {
@@ -386,7 +429,7 @@ export class TrackerRenderer {
 
 		const iconBtn = row.createEl("button", {
 			cls: "th-icon-btn",
-			attr: { "aria-label": `Icona di ${habit.name}` },
+			attr: { "aria-label": tf.iconOf(habit.name) },
 		});
 		this.applyHabitIcon(iconBtn, habit);
 		iconBtn.onclick = (e) => {
@@ -404,7 +447,6 @@ export class TrackerRenderer {
 			row.createSpan({ cls: "th-streak", text: `${s}×` });
 		}
 
-		// pallini degli ultimi 7 giorni
 		const strip = row.createDiv({ cls: "th-strip" });
 		for (let i = 6; i >= 0; i--) {
 			const d = addDays(today, -i);
@@ -416,12 +458,12 @@ export class TrackerRenderer {
 
 		const del = row.createEl("button", {
 			cls: "th-del",
-			attr: { "aria-label": `Elimina ${habit.name}` },
+			attr: { "aria-label": tf.deleteNamed(habit.name) },
 		});
 		setIcon(del, "x");
 		del.onclick = (e) => {
 			e.stopPropagation();
-			if (confirm(`Eliminare l'abitudine "${habit.name}"? La cronologia in Habit Log resta intatta.`)) {
+			if (confirm(tf.deleteHabitConfirm(habit.name))) {
 				void this.plugin.store.deleteHabit(habit.id);
 			}
 		};
@@ -437,16 +479,15 @@ export class TrackerRenderer {
 		}
 	}
 
-	/** Heatmap tipo GitHub: colonne = settimane (lun→dom), mesi segnati in alto,
-	 *  ultima colonna = settimana corrente. */
+	/** Heatmap tipo GitHub: colonne = settimane (lun→dom), mesi segnati in alto. */
 	private renderHeatmap(parent: HTMLElement, dates: Map<string, number>, today: string): void {
 		const weeks = this.plugin.settings.heatmapWeeks;
 		const scroller = parent.createDiv({ cls: "th-heatmap" });
 		const monthsRow = scroller.createDiv({ cls: "th-heatmap-months" });
 		const grid = scroller.createDiv({ cls: "th-heatmap-grid" });
 
-		const t = new Date();
-		const dow = (t.getDay() + 6) % 7; // 0 = lunedì
+		const t0 = new Date();
+		const dow = (t0.getDay() + 6) % 7; // 0 = lunedì
 		const mondayOfThisWeek = addDays(today, -dow);
 		const start = addDays(mondayOfThisWeek, -(weeks - 1) * 7);
 
@@ -454,7 +495,7 @@ export class TrackerRenderer {
 		let prevMonth = "";
 		for (let w = 0; w < weeks; w++) {
 			const weekStart = addDays(start, w * 7);
-			const month = weekStart.slice(0, 7); // YYYY-MM
+			const month = weekStart.slice(0, 7);
 			const label = monthsRow.createDiv({ cls: "th-heatmap-month" });
 			if (month !== prevMonth) {
 				label.setText(this.monthShort(weekStart));
@@ -475,12 +516,8 @@ export class TrackerRenderer {
 			}
 		}
 
-		parent.createDiv({
-			cls: "th-heatmap-caption",
-			text: `${done} completamenti nelle ultime ${weeks} settimane`,
-		});
+		parent.createDiv({ cls: "th-heatmap-caption", text: tf.heatmapCaption(done, weeks) });
 
-		// parti dalla settimana corrente (in fondo a destra)
 		requestAnimationFrame(() => {
 			scroller.scrollLeft = scroller.scrollWidth;
 		});
@@ -488,18 +525,17 @@ export class TrackerRenderer {
 
 	private monthShort(iso: string): string {
 		const [y, m, d] = iso.split("-").map(Number);
-		return new Date(y, m - 1, d).toLocaleDateString("it-IT", { month: "short" });
+		return new Date(y, m - 1, d).toLocaleDateString(locale(), { month: "short" });
 	}
 
-	/* ---------------- Todo ---------------- */
+	/* ---------------- Todo (per data) ---------------- */
 
 	private renderTodos(root: HTMLElement, data: TrackerData): void {
 		const section = root.createDiv({ cls: "th-section" });
-		section.createEl("h2", { text: "Todo", cls: "th-section-title" });
+		section.createEl("h2", { text: t("todos"), cls: "th-section-title" });
 
 		this.renderAddForm(section);
 
-		// la lista scorre: titolo e form di aggiunta restano fissi sopra
 		const list = section.createDiv({ cls: "th-todo-scroll" });
 
 		const today = todayISO();
@@ -509,15 +545,15 @@ export class TrackerRenderer {
 			a.priority - b.priority || (a.due ?? "9999").localeCompare(b.due ?? "9999");
 
 		const groups: [string, Todo[], string][] = [
-			["In ritardo", open.filter((t) => t.due && t.due < today), "th-group-overdue"],
-			["Oggi", open.filter((t) => t.due === today), ""],
-			["Prossimi 7 giorni", open.filter((t) => t.due && t.due > today && t.due <= week), ""],
-			["Più avanti", open.filter((t) => t.due && t.due > week), ""],
-			["Senza data", open.filter((t) => !t.due), ""],
+			[t("overdue"), open.filter((td) => td.due && td.due < today), "th-group-overdue"],
+			[t("today"), open.filter((td) => td.due === today), ""],
+			[t("next7"), open.filter((td) => td.due && td.due > today && td.due <= week), ""],
+			[t("later"), open.filter((td) => td.due && td.due > week), ""],
+			[t("noDate"), open.filter((td) => !td.due), ""],
 		];
 
 		if (open.length === 0) {
-			list.createDiv({ cls: "th-empty", text: "Tutto fatto ✨" });
+			list.createDiv({ cls: "th-empty", text: t("allDone") });
 		}
 
 		for (const [label, todos, cls] of groups) {
@@ -531,10 +567,10 @@ export class TrackerRenderer {
 			}
 		}
 
-		const doneTodos = data.todos.filter((t) => t.done);
+		const doneTodos = data.todos.filter((td) => td.done);
 		if (doneTodos.length > 0) {
 			const details = list.createEl("details", { cls: "th-done-group" });
-			details.createEl("summary", { text: `Completate (${doneTodos.length})` });
+			details.createEl("summary", { text: tf.completed(doneTodos.length) });
 			for (const todo of doneTodos
 				.sort((a, b) => (b.doneDate ?? "").localeCompare(a.doneDate ?? ""))
 				.slice(0, 30)) {
@@ -543,15 +579,61 @@ export class TrackerRenderer {
 		}
 	}
 
+	/* ---------------- Todo (a cartelle: lista → sezione) ---------------- */
+
+	private renderFolders(root: HTMLElement, data: TrackerData): void {
+		const section = root.createDiv({ cls: "th-section" });
+		section.createEl("h2", { text: t("tasks"), cls: "th-section-title" });
+		this.renderAddForm(section);
+
+		const today = todayISO();
+		const open = data.todos.filter((td) => !td.done);
+		const lists = new Map<string, Map<string, Todo[]>>();
+		for (const td of open) {
+			const l = td.list || t("inbox");
+			const s = td.section || "";
+			if (!lists.has(l)) lists.set(l, new Map());
+			const secs = lists.get(l)!;
+			if (!secs.has(s)) secs.set(s, []);
+			secs.get(s)!.push(td);
+		}
+
+		if (open.length === 0) {
+			section.createDiv({ cls: "th-empty", text: t("allDone") });
+			return;
+		}
+
+		const scroll = section.createDiv({ cls: "th-todo-scroll" });
+		for (const [listName, secs] of lists) {
+			const folder = scroll.createEl("details", { cls: "th-folder", attr: { open: "" } });
+			const sum = folder.createEl("summary", { cls: "th-folder-title" });
+			sum.createSpan({ text: listName });
+			const count = [...secs.values()].reduce((a, b) => a + b.length, 0);
+			sum.createSpan({ cls: "th-group-count", text: String(count) });
+
+			for (const [secName, todos] of secs) {
+				if (secName) {
+					const sub = folder.createEl("details", { cls: "th-subfolder", attr: { open: "" } });
+					const ssum = sub.createEl("summary", { cls: "th-subfolder-title" });
+					ssum.createSpan({ text: secName });
+					ssum.createSpan({ cls: "th-group-count", text: String(todos.length) });
+					for (const todo of todos) this.renderTodoRow(sub, todo, today);
+				} else {
+					for (const todo of todos) this.renderTodoRow(folder, todo, today);
+				}
+			}
+		}
+	}
+
 	private renderAddForm(section: HTMLElement): void {
 		const form = section.createDiv({ cls: "th-add" });
 		const input = form.createEl("input", {
 			cls: "th-add-text",
-			attr: { type: "text", placeholder: "Nuova attività…" },
+			attr: { type: "text", placeholder: t("newTask") },
 		});
 		const date = form.createEl("input", {
 			cls: "th-add-date",
-			attr: { type: "date", "aria-label": "Scadenza" },
+			attr: { type: "date", "aria-label": t("dueDate") },
 		});
 		const prio = form.createEl("select", { cls: "th-add-prio" });
 		for (const p of [
@@ -563,22 +645,18 @@ export class TrackerRenderer {
 			Priority.Highest,
 		]) {
 			prio.createEl("option", {
-				text: p === Priority.None ? "priorità" : `${PRIORITY_EMOJI[p]} ${PRIORITY_LABEL[p]}`,
+				text: p === Priority.None ? t("priority") : `${PRIORITY_EMOJI[p]} ${prioLabel(p)}`,
 				attr: { value: String(p) },
 			});
 		}
 		prio.value = String(Priority.None);
-		const btn = form.createEl("button", { cls: "th-add-btn", attr: { "aria-label": "Aggiungi" } });
+		const btn = form.createEl("button", { cls: "th-add-btn", attr: { "aria-label": t("add") } });
 		setIcon(btn, "plus");
 
 		const submit = async () => {
 			const text = input.value.trim();
 			if (!text) return;
-			await this.plugin.store.addTodo(
-				text,
-				Number(prio.value) as Priority,
-				date.value || null
-			);
+			await this.plugin.store.addTodo(text, Number(prio.value) as Priority, date.value || null);
 			input.value = "";
 		};
 		btn.onclick = submit;
@@ -588,11 +666,12 @@ export class TrackerRenderer {
 	}
 
 	private renderTodoRow(parent: HTMLElement, todo: Todo, today: string): void {
-		const row = parent.createDiv({ cls: `th-todo ${todo.done ? "is-done" : ""}` });
+		const wrap = parent.createDiv({ cls: `th-todo ${todo.done ? "is-done" : ""}` });
+		const row = wrap.createDiv({ cls: "th-todo-main" });
 
 		const check = row.createEl("button", {
 			cls: `th-check th-check-sm ${todo.done ? "is-done" : ""}`,
-			attr: { "aria-label": todo.done ? "Riapri" : "Completa" },
+			attr: { "aria-label": todo.done ? t("reopen") : t("complete") },
 		});
 		setIcon(check, "check");
 		check.onclick = () => void this.plugin.store.toggleTodo(todo);
@@ -600,43 +679,38 @@ export class TrackerRenderer {
 		if (todo.priority !== Priority.None) {
 			row.createSpan({
 				cls: `th-prio-dot ${PRIO_CLASS[todo.priority]}`,
-				attr: { "aria-label": `Priorità ${PRIORITY_LABEL[todo.priority]}` },
+				attr: { "aria-label": prioLabel(todo.priority) },
 			});
 		}
 
 		const text = row.createDiv({ cls: "th-todo-text" });
-		// evidenzia i #tag inline
-		const rest = todo.text;
-		const tagRe = /#[\w/-]+/g;
-		let last = 0;
-		for (const m of rest.matchAll(tagRe)) {
-			if (m.index! > last) text.createSpan({ text: rest.slice(last, m.index) });
-			text.createSpan({ cls: "th-tag", text: m[0] });
-			last = m.index! + m[0].length;
-		}
-		if (last < rest.length) text.createSpan({ text: rest.slice(last) });
+		renderRich(text, todo.text);
 
 		if (todo.due) {
 			const overdue = !todo.done && todo.due < today;
 			row.createSpan({
 				cls: `th-due ${overdue ? "is-overdue" : ""}`,
-				text: todo.due === today ? "oggi" : this.formatDue(todo.due),
+				text: todo.due === today ? t("dueToday") : this.formatDue(todo.due),
 			});
 		}
 
-		const del = row.createEl("button", {
-			cls: "th-del",
-			attr: { "aria-label": "Elimina" },
-		});
+		const del = row.createEl("button", { cls: "th-del", attr: { "aria-label": t("delete") } });
 		setIcon(del, "x");
 		del.onclick = () => void this.plugin.store.deleteTodo(todo);
+
+		if (todo.description) {
+			const desc = wrap.createDiv({ cls: "th-todo-desc" });
+			for (const line of todo.description.split("\n")) {
+				renderRich(desc.createDiv(), line);
+			}
+		}
 	}
 
 	private formatDue(iso: string): string {
 		const [y, m, d] = iso.split("-").map(Number);
 		const date = new Date(y, m - 1, d);
 		const sameYear = y === new Date().getFullYear();
-		return date.toLocaleDateString("it-IT", {
+		return date.toLocaleDateString(locale(), {
 			day: "numeric",
 			month: "short",
 			...(sameYear ? {} : { year: "numeric" }),
