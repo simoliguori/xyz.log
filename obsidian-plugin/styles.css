@@ -796,7 +796,11 @@
 .th-wide,
 .markdown-preview-view:has(.th-cross),
 .markdown-source-view.mod-cm6:has(.th-cross) {
+	/* Obsidian + tema Minimal (usa variabili proprie) */
 	--file-line-width: 100% !important;
+	--line-width: 100% !important;
+	--line-width-wide: 100% !important;
+	--max-width: 100% !important;
 }
 
 .th-wide .markdown-preview-sizer,
