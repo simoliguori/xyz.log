@@ -92,7 +92,8 @@
 }
 
 .th-root .th-check:hover {
-	background: var(--th-accent-soft);
+	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent, var(--th-accent-bright));
 }
 
 .th-root .th-check.is-done {
@@ -122,8 +123,8 @@
 
 .th-habit {
 	background: var(--th-bg2);
-	border: 1px solid var(--th-border);
-	border-radius: 7px;
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	border-radius: 5px;
 	padding: 4px 9px;
 	margin-bottom: 4px;
 }
@@ -245,8 +246,8 @@
 .th-root .th-add input,
 .th-root .th-add select {
 	background: var(--th-bg2);
-	border: 1px solid var(--th-border);
-	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	border-radius: 6px;
 	color: var(--th-text);
 	font-family: var(--th-mono);
 	font-size: 0.75em;
@@ -275,16 +276,16 @@
 
 .th-root .th-add input:focus,
 .th-root .th-add select:focus {
-	border-color: var(--th-accent-bright);
+	border-color: var(--interactive-accent, var(--th-accent-bright));
 	box-shadow: none;
 }
 
 .th-root .th-add-btn {
 	width: 25px;
 	height: 25px;
-	border-radius: 7px;
-	background: var(--th-accent);
-	color: var(--th-text);
+	border-radius: 6px;
+	background: var(--interactive-accent, var(--th-accent));
+	color: var(--text-on-accent, var(--th-text));
 	border: none;
 	cursor: pointer;
 	display: flex;
@@ -292,11 +293,17 @@
 	justify-content: center;
 	padding: 0;
 	box-shadow: none;
+	transition: background 0.12s ease;
+}
+
+.th-root .th-add-btn svg {
+	width: 15px;
+	height: 15px;
 }
 
 .th-root .th-add-btn:hover {
-	background: var(--th-accent-bright);
-	color: var(--th-bg);
+	background: var(--interactive-accent-hover, var(--th-accent-bright));
+	color: var(--text-on-accent, var(--th-bg));
 }
 
 .th-group {
@@ -505,13 +512,17 @@
 	align-items: center;
 	justify-content: center;
 	width: 20px;
+	height: 20px;
 	flex: 0 0 auto;
 	font-size: 1em;
 	line-height: 1;
+	border-radius: 5px;
+	transition: background 0.12s ease, color 0.12s ease;
 }
 
 .th-root .th-icon-btn:hover {
 	color: var(--th-text);
+	background: var(--background-modifier-hover);
 }
 
 .th-root .th-icon-btn svg,
@@ -544,8 +555,8 @@
 	height: 25px;
 	flex: 0 0 auto;
 	background: var(--th-bg2);
-	border: 1px solid var(--th-border);
-	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	border-radius: 6px;
 	padding: 0;
 }
 
