@@ -47,7 +47,20 @@ Rules:
 - `countable`: `true`/`false` (default `false`). Habits logged multiple times a day.
 - `start` + `duration`: fixed-term habits. `start` is an ISO date, `duration` is days
   (`0` = open-ended).
+- `reminders`: optional inline list of daily reminder times, `["HH:mm", …]` (e.g.
+  `reminders: ["09:00", "21:00"]`). The always-on clients (Windows widget, Android app)
+  fire one notification per time, every day. Empty/absent = no reminder.
 - Frontmatter order is the display order.
+
+Example of a habit taken twice a day with reminders:
+
+```yaml
+- id: lamictal
+  name: Lamictal
+  icon: lucide-pill
+  goal: 2
+  reminders: ["09:00", "21:00"]
+```
 
 ### `categories:` (optional)
 
@@ -113,9 +126,13 @@ Task fields (all optional, any order after the text):
 | Field | Syntax | Notes |
 |---|---|---|
 | Due date | `📅 YYYY-MM-DD` | |
+| Time | `⏰ HH:mm` | event time; with a due date it schedules a reminder notification |
 | Priority | `🔺` highest, `⏫` high, `🔼` medium, `🔽` low, `⏬` lowest | absent = normal |
 | Done | `✅ YYYY-MM-DD` | added automatically when checked |
 | Tag | `#tag` | shown inline |
+
+Grouping by date puts events with a **future (or today's) date above overdue/missed
+ones**, with undated tasks last.
 
 Rules:
 - Completing = `- [ ]` → `- [x]` + ` ✅ <today>` appended.
@@ -129,7 +146,8 @@ Rules:
   to reduce Obsidian Sync conflicts.
 - Independent line-based formats make merges almost always painless.
 
-> Keep parsing logic in sync across all parsers (TypeScript in the Obsidian plugin, Kotlin
-> in the Android scaffold) and in this spec. The Android parser still needs updating for
-> `icon`/`cadence`/`goal`/`countable`/`start`/`duration`, categories, and the Todo
-> sub-folders/descriptions.
+> Keep parsing logic in sync across all parsers and this spec. The canonical
+> implementation is **`packages/core`** (TypeScript), reused by the Windows widget; the
+> Obsidian plugin has its own copy and the Android app mirrors it in Kotlin
+> (`MarkdownParser.kt`). All three now cover `icon`/`cadence`/`goal`/`countable`/`start`/
+> `duration`/`reminders`, categories, Todo sub-folders/descriptions and the `⏰` time.

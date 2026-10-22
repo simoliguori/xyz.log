@@ -38,6 +38,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import dev.simol.todohabits.MainActivity
 import dev.simol.todohabits.R
+import dev.simol.todohabits.data.MarkdownParser
 import dev.simol.todohabits.data.TaskPriority
 import dev.simol.todohabits.data.Todo
 import dev.simol.todohabits.data.TrackerData
@@ -104,12 +105,9 @@ class TodoWidget : GlanceAppWidget() {
                     modifier = GlanceModifier.clickable(actionStartActivity<MainActivity>())
                 )
                 else -> {
-                    val open = data.todos
-                        .filter { !it.done }
-                        .sortedWith(
-                            compareBy<Todo, LocalDate?>(nullsLast()) { it.due }
-                                .thenBy { it.priority.ordinal }
-                        )
+                    // ordine: oggi/futuri sopra, scaduti sotto, senza data in fondo
+                    val open = MarkdownParser.groupTodos(data.todos, today)
+                        .flatMap { it.second }
                         .take(30)
                     if (open.isEmpty()) {
                         Text(
@@ -158,11 +156,12 @@ class TodoWidget : GlanceAppWidget() {
                 maxLines = 2,
                 modifier = GlanceModifier.defaultWeight()
             )
-            todo.due?.let { due ->
+            val dueLabel = listOfNotNull(todo.due?.let { formatDue(it, today) }, todo.time).joinToString(" ")
+            if (dueLabel.isNotEmpty()) {
                 Spacer(GlanceModifier.width(6.dp))
-                val overdue = due.isBefore(today)
+                val overdue = todo.due?.isBefore(today) == true
                 Text(
-                    text = formatDue(due, today),
+                    text = dueLabel,
                     style = TextStyle(
                         color = ColorProvider(if (overdue) Tokens.overdue else Tokens.muted),
                         fontSize = 11.sp,

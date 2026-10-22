@@ -8,10 +8,12 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.updateAll
 import dev.simol.todohabits.MainActivity
 import dev.simol.todohabits.data.VaultRepository
+import dev.simol.todohabits.notify.NotificationScheduler
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/** Abitudini binarie (goal 1, non countable): spunta on/off. */
 class ToggleHabitAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val habitId = parameters[HABIT_ID] ?: return
@@ -23,6 +25,21 @@ class ToggleHabitAction : ActionCallback {
 
     companion object {
         val HABIT_ID = ActionParameters.Key<String>("habitId")
+    }
+}
+
+/** Abitudini a contatore (goal>1 o countable): +1, poi azzera a goal raggiunto. */
+class TapHabitAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val habitId = parameters[HABIT_ID] ?: return
+        withContext(Dispatchers.IO) {
+            runCatching { VaultRepository(context).tapHabit(habitId, LocalDate.now()) }
+        }
+        HabitWidget().updateAll(context)
+    }
+
+    companion object {
+        val HABIT_ID = ActionParameters.Key<String>("tapHabitId")
     }
 }
 

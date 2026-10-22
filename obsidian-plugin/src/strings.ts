@@ -39,6 +39,12 @@ const S = {
 	reopen: { en: "Reopen", it: "Riapri" },
 	complete: { en: "Complete", it: "Completa" },
 	delete: { en: "Delete", it: "Elimina" },
+	settings: { en: "Settings", it: "Impostazioni" },
+	hideSettings: { en: "Hide settings", it: "Nascondi impostazioni" },
+	perDay: { en: "Times per day", it: "Volte al giorno" },
+	freeCount: { en: "Free count (unlimited)", it: "Conteggio libero (infinito)" },
+	cadence: { en: "Every N days", it: "Ogni N giorni" },
+	reminders: { en: "Reminders", it: "Promemoria" },
 	dueDate: { en: "Due date", it: "Scadenza" },
 	inbox: { en: "Inbox", it: "Inbox" },
 	// priorità
@@ -92,6 +98,8 @@ export const tf = {
 	completed: (n: number) => (LANG === "it" ? `Completate (${n})` : `Completed (${n})`),
 	markToday: (name: string) =>
 		LANG === "it" ? `Segna ${name} per oggi` : `Mark ${name} for today`,
+	decrementNamed: (name: string) =>
+		LANG === "it" ? `Togli un conteggio a ${name}` : `Remove one from ${name}`,
 	deleteNamed: (name: string) => (LANG === "it" ? `Elimina ${name}` : `Delete ${name}`),
 	iconOf: (name: string) => (LANG === "it" ? `Icona di ${name}` : `Icon of ${name}`),
 	deleteHabitConfirm: (name: string) =>

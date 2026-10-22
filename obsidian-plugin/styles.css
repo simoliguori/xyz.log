@@ -911,3 +911,275 @@
 		overflow-y: visible;
 	}
 }
+
+/* ---------- contatore "più volte al giorno" / libero ---------- */
+
+.th-root .th-count-wide {
+	width: auto;
+	min-width: 22px;
+	padding: 0 5px;
+}
+
+.th-root .th-count-minus {
+	width: 18px;
+	height: 18px;
+	min-width: 18px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	background: var(--th-bg2);
+	color: var(--th-muted);
+	cursor: pointer;
+	padding: 0;
+	font-size: 0.9em;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: -3px;
+	box-shadow: none;
+}
+
+.th-root .th-count-minus:hover {
+	color: var(--th-overdue);
+}
+
+.th-hidden {
+	display: none !important;
+}
+
+/* ---------- pannello impostazioni per abitudine ---------- */
+
+.th-root .th-habit-settings-toggle {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	color: var(--th-muted);
+	font-family: var(--th-mono);
+	font-size: 0.72em;
+	cursor: pointer;
+	padding: 8px 0 2px;
+	text-decoration: underline dotted;
+}
+
+.th-habit-settings {
+	display: flex;
+	flex-direction: column;
+	gap: 9px;
+	margin-top: 4px;
+	padding-top: 8px;
+	border-top: 1px solid var(--th-border);
+}
+
+.th-setting {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.th-setting-col {
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.th-setting-label {
+	font-family: var(--th-mono);
+	font-size: 0.75em;
+	color: var(--th-muted);
+}
+
+.th-stepper {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.th-root .th-step-btn {
+	width: 26px;
+	height: 26px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	background: var(--th-bg2);
+	color: var(--th-text);
+	cursor: pointer;
+	font-size: 0.95em;
+	line-height: 1;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: none;
+}
+
+.th-root .th-step-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+.th-step-val {
+	min-width: 18px;
+	text-align: center;
+	font-family: var(--th-mono);
+	font-size: 0.82em;
+	color: var(--th-text);
+}
+
+.th-root .th-toggle {
+	width: 40px;
+	height: 23px;
+	border-radius: 999px;
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	background: var(--th-surface);
+	position: relative;
+	cursor: pointer;
+	padding: 0;
+	box-shadow: none;
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.th-root .th-toggle.is-on {
+	background: var(--interactive-accent, var(--th-accent));
+	border-color: var(--interactive-accent, var(--th-accent));
+}
+
+.th-toggle-knob {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 17px;
+	height: 17px;
+	border-radius: 50%;
+	background: var(--th-text);
+	transition: left 0.15s ease;
+}
+
+.th-toggle.is-on .th-toggle-knob {
+	left: 19px;
+}
+
+.th-rem-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+	margin-top: 4px;
+}
+
+.th-rem-chip {
+	background: var(--th-accent-soft);
+	color: var(--th-text);
+	border-radius: 999px;
+	padding: 2px 8px 2px 10px;
+	font-family: var(--th-mono);
+	font-size: 0.75em;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.th-rem-chip-x {
+	cursor: pointer;
+	color: var(--th-muted);
+	font-size: 1.1em;
+	line-height: 1;
+}
+
+.th-rem-chip-x:hover {
+	color: var(--th-overdue);
+}
+
+.th-rem-add {
+	display: flex;
+	gap: 5px;
+	align-items: center;
+}
+
+.th-root .th-rem-input {
+	background: var(--th-bg2);
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	border-radius: 6px;
+	color: var(--th-text);
+	font-family: var(--th-mono);
+	font-size: 0.75em;
+	padding: 3px 6px;
+}
+
+.th-root .th-rem-addbtn {
+	width: 26px;
+	height: 26px;
+	border-radius: 6px;
+	border: none;
+	background: var(--interactive-accent, var(--th-accent));
+	color: var(--text-on-accent, var(--th-text));
+	cursor: pointer;
+	padding: 0;
+	font-size: 1em;
+	line-height: 1;
+	box-shadow: none;
+}
+
+/* ---------- swipe mobile: abitudini ⇄ attività ---------- */
+
+.th-swipe-tabs {
+	display: flex;
+	gap: 6px;
+	margin-bottom: 10px;
+}
+
+.th-root .th-swipe-tab {
+	flex: 1;
+	background: var(--th-bg2);
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	border-radius: 8px;
+	color: var(--th-muted);
+	font-family: var(--th-mono);
+	font-size: 0.82em;
+	padding: 9px 0;
+	cursor: pointer;
+	box-shadow: none;
+}
+
+.th-root .th-swipe-tab.is-active {
+	background: var(--interactive-accent, var(--th-accent));
+	border-color: var(--interactive-accent, var(--th-accent));
+	color: var(--text-on-accent, var(--th-text));
+}
+
+.th-swipe-track {
+	display: flex;
+	overflow-x: auto;
+	overflow-y: visible;
+	scroll-snap-type: x mandatory;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	touch-action: pan-x pan-y;
+}
+
+.th-swipe-track::-webkit-scrollbar {
+	display: none;
+}
+
+.th-swipe-pane {
+	flex: 0 0 100%;
+	width: 100%;
+	min-width: 0;
+	scroll-snap-align: start;
+	padding: 0 2px;
+}
+
+/* ---------- scroll su mobile: niente trappole d'altezza nei blocchi ---------- */
+
+.th-todo-scroll,
+.th-habit-scroll {
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior: contain;
+}
+
+.is-mobile .th-todo-scroll,
+.is-mobile .th-habit-scroll {
+	max-height: none;
+	overflow: visible;
+}
+
+.is-mobile .th-heatmap {
+	-webkit-overflow-scrolling: touch;
+}

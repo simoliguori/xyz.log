@@ -40,11 +40,17 @@ lock-in.
 - command-palette "insert block"; compact UI;
 - **i18n**: English (default) / Italian toggle in settings.
 
-**Windows desktop widget** — **planned** (see §4).
+**Shared core** (`packages/core/`, TypeScript) — **implemented**: canonical parser,
+view-model (grouping/streaks), i18n and reminder collection, with unit tests.
 
-**Android widget** (`android-widget/`, Kotlin + Glance) — **early scaffold only, not
-functional yet** (source exists but was never built/shipped). Its parser must be kept in
-sync with the format.
+**Windows desktop widget** (`apps/windows-widget/`, Tauri) — **implemented**: modular
+tile dashboard (horizontal/vertical, resizable, draggable tiles over custom tabs),
+reusing `packages/core`; native notifications with a scheduler, autostart, tray and
+desktop pinning in the Rust shell. Frontend previewable in a browser (mock backend).
+
+**Android app + widgets** (`android-widget/`, Kotlin + Glance) — **implemented**: parser
+at parity with the core; swipeable app (habits ⇄ tasks), counter habits, and AlarmManager
+notifications (channel, exact alarms, boot reschedule). Needs the Android SDK to build.
 
 **Shared format**: `docs/DATA_FORMAT.md`. **TickTick import** (CSV → `Todo.md` with
 list/section/description structure; habits → `Habits.md` + `Habit Log.md`) prototyped.
@@ -158,14 +164,19 @@ want a reminder (and at which time(s)).
 
 - **Phase 0 — done**: shared markdown format, Obsidian plugin (view, blocks, dashboard,
   folders/descriptions, i18n), TickTick import, no proprietary fonts.
-- **Phase 1 — OSS foundations**: extract `packages/core`; CI; contributor docs.
-- **Phase 2 — Windows widget MVP (Tauri)**: borderless, taskbar-less window; Habits/Tasks/
-  Today tabs reading the files.
-- **Phase 3 — interactivity**: check habits, add/complete to-dos writing back to markdown.
-- **Phase 4 — gadget**: `WorkerW` pinning, autostart, tray, transparency.
-- **Phase 5 — notifications**: optional reminders (daily habits + timed events).
-- **Phase 6 — Android**: actually build and ship the widget (currently a scaffold).
-- **Phase 7 — release**: packaging, docs, v1.0.
+- **Phase 1 — done**: extracted `packages/core` (parser, view-model, i18n, reminders) with
+  unit tests; Obsidian mobile fixes (counter habits, swipe, scroll, future-above-overdue).
+- **Phase 2 — done**: Windows widget frontend (modular tiles, tabs, interactivity) on the
+  shared core; previewable in a browser.
+- **Phase 3 — done**: write-back for habits/to-dos across all clients (incl. counter
+  habits and reminders editing).
+- **Phase 4 — done (needs on-device test)**: Rust shell — borderless taskbar-less window,
+  autostart, tray, `WorkerW` pinning, opacity. Requires `cargo` to build/verify.
+- **Phase 5 — done**: reminders — `reminders:` on habits, `⏰` on events; scheduler + native
+  toasts (Windows) and AlarmManager (Android).
+- **Phase 6 — done (needs SDK build)**: Android app rebuilt — parser parity, swipeable
+  habits ⇄ tasks, counter habits, notifications.
+- **Phase 7 — release**: CI, packaging, icons, docs, v1.0.
 
 ## 8. Open decisions
 

@@ -25,6 +25,7 @@ export const PRIORITY_LABEL: Record<Priority, string> = {
 const DATE_RE = /\d{4}-\d{2}-\d{2}/;
 const DUE_RE = new RegExp(`📅\\s*(${DATE_RE.source})`, "u");
 const DONE_RE = new RegExp(`✅\\s*(${DATE_RE.source})`, "u");
+const TIME_RE = /⏰\s*(\d{1,2}:\d{2})/u;
 const TODO_LINE_RE = /^(\s*)- \[([ xX])\]\s+(.*)$/;
 const LOG_LINE_RE = /^-\s*\[[xX]\]\s+(\d{4}-\d{2}-\d{2})\s+([a-z0-9-]+)\s*$/;
 
@@ -37,6 +38,30 @@ function unquote(s: string): string {
 		return t.slice(1, -1);
 	}
 	return t;
+}
+
+/** Normalizza "9:0" → "09:00"; scarta valori non orari. */
+export function normalizeTime(s: string): string | null {
+	const m = s.trim().match(/^(\d{1,2}):(\d{1,2})$/);
+	if (!m) return null;
+	const h = Math.min(23, Number(m[1]));
+	const min = Math.min(59, Number(m[2]));
+	return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+/** Legge una lista di orari da `reminders: ["09:00", "21:00"]` (o CSV semplice). */
+export function parseTimeList(raw: string | undefined): string[] {
+	if (!raw) return [];
+	const inner = raw.trim().replace(/^\[/, "").replace(/\]$/, "");
+	return inner
+		.split(",")
+		.map((x) => normalizeTime(unquote(x)))
+		.filter((x): x is string => x !== null);
+}
+
+/** Serializza una lista di orari come array YAML inline. */
+export function serializeTimeList(times: string[]): string {
+	return `[${times.map((t) => `"${t}"`).join(", ")}]`;
 }
 
 /** Estrae le abitudini dal frontmatter YAML di Habits.md (formato vincolato, vedi DATA_FORMAT.md) */
@@ -59,6 +84,7 @@ export function parseHabits(content: string): Habit[] {
 				duration: Math.max(0, Number(cur.duration) || 0),
 				countable: cur.countable === "true",
 				goal: Math.max(1, Number(cur.goal) || 1),
+				reminders: parseTimeList(cur.reminders),
 			});
 		}
 		cur = null;
@@ -83,7 +109,8 @@ export function parseHabits(content: string): Habit[] {
 			cur = {};
 			cur[item[1]] = unquote(item[2]);
 		} else if (field && cur) {
-			cur[field[1]] = unquote(field[2]);
+			// reminders è una lista inline: non applicare unquote
+			cur[field[1]] = field[1] === "reminders" ? field[2] : unquote(field[2]);
 		}
 	}
 	push();
@@ -132,6 +159,8 @@ export function parseTodoLine(line: string, lineNo: number): Todo | null {
 
 	const due = rest.match(DUE_RE)?.[1] ?? null;
 	const doneDate = rest.match(DONE_RE)?.[1] ?? null;
+	const timeMatch = rest.match(TIME_RE)?.[1];
+	const time = timeMatch ? normalizeTime(timeMatch) : null;
 
 	let priority = Priority.None;
 	for (const p of [
@@ -150,13 +179,14 @@ export function parseTodoLine(line: string, lineNo: number): Todo | null {
 	const text = rest
 		.replace(DUE_RE, "")
 		.replace(DONE_RE, "")
+		.replace(TIME_RE, "")
 		.replace(/[🔺⏫🔼🔽⏬]/gu, "")
 		.replace(/\s{2,}/g, " ")
 		.trim();
 
 	const tags = [...text.matchAll(/#[\w/-]+/g)].map((t) => t[0]);
 
-	return { raw: line, lineNo, done, text, due, doneDate, priority, tags };
+	return { raw: line, lineNo, done, text, due, time, doneDate, priority, tags };
 }
 
 /**
@@ -205,11 +235,13 @@ export function parseTodos(content: string): Todo[] {
 export function serializeTodo(
 	text: string,
 	priority: Priority,
-	due: string | null
+	due: string | null,
+	time: string | null = null
 ): string {
 	let line = `- [ ] ${text.trim()}`;
 	if (priority !== Priority.None) line += ` ${PRIORITY_EMOJI[priority]}`;
 	if (due) line += ` 📅 ${due}`;
+	if (time) line += ` ⏰ ${time}`;
 	return line;
 }
 
@@ -465,7 +497,10 @@ export function setHabitFieldsInFrontmatter(
 		const insert: string[] = [];
 		for (const key of keys) {
 			const v = fields[key];
-			if (v !== "" && v != null) insert.push(`    ${key}: ${yamlValue(String(v))}`);
+			if (v === "" || v == null) continue;
+			const sval = String(v);
+			// una lista già serializzata (es. reminders) passa senza virgolette
+			insert.push(`    ${key}: ${sval.startsWith("[") ? sval : yamlValue(sval)}`);
 		}
 		lines.splice(stop - removed, 0, ...insert);
 		return content.replace(fm[0], `---\n${lines.join("\n")}\n---`);

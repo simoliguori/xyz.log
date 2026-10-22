@@ -14,11 +14,20 @@
 
 ## Clients
 
+- **`packages/core/`** — shared TypeScript logic (markdown parser, view-model, i18n,
+  reminders) with unit tests. The canonical parsing/grouping lives here and is reused by
+  the Windows widget. **Implemented.**
 - **`obsidian-plugin/`** — Obsidian plugin (desktop + mobile): a dedicated view and
-  composable ` ```todo-habits ` blocks you can drop in any note. **Implemented.**
-- **widget Windows** — an always-on desktop gadget (Tauri). **Planned** — see the PLAN.
-- **`android-widget/`** — Kotlin/Glance home-screen widgets. **Early scaffold, not
-  functional yet** (code only; never built/shipped).
+  composable ` ```todo-habits ` blocks you can drop in any note. Habits can be done
+  **multiple times a day** (counter), there's a **mobile swipe** between habits and tasks,
+  and per-habit settings (times/day, free count, cadence, reminders). **Implemented.**
+- **`apps/windows-widget/`** — always-on desktop gadget (Tauri): a **modular, tile-based**
+  dashboard (horizontal/vertical, resizable, draggable tiles across custom tabs), native
+  **notifications**, autostart and desktop pinning. Frontend implemented and previewable in
+  a browser; the Rust shell builds with the Rust toolchain. **Implemented.**
+- **`android-widget/`** — Kotlin/Glance home-screen widgets **+** a **swipeable** app
+  (habits ⇄ tasks), counter habits, and **AlarmManager notifications**. Parser at parity
+  with the core. **Implemented** (needs the Android SDK/Gradle to build).
 
 All clients read and write the **same three markdown files** in a vault folder
 (default `Tracker/`), kept in sync by Obsidian Sync (or any synced folder):
@@ -80,14 +89,38 @@ Copy `main.js`, `manifest.json` and `styles.css` into
 plugins*. Open it from the ribbon icon or the "Open xyz.log" command; on first run it
 creates `Habits.md`, `Habit Log.md` and `Todo.md` in the data folder.
 
+## Build — Windows widget (Tauri)
+
+```
+cd packages/core && npm install        # logica condivisa
+cd ../../apps/windows-widget && npm install
+npm run dev                             # anteprima del frontend su http://localhost:5177
+npm run tauri dev                       # app nativa (richiede Rust: https://rustup.rs)
+npm run tauri build                     # installer .exe (NSIS)
+```
+
+The frontend runs in any browser against sample data (mock backend); the native build
+needs the **Rust toolchain**. Replace the placeholder icons with your own via
+`npm run tauri icon src-tauri/icons/icon.svg`.
+
+## Build — Android app
+
+```
+cd android-widget && ./gradlew assembleDebug   # richiede Android SDK + JDK 17
+```
+
+Grant notification permission on first run; reminders use exact alarms and survive reboot.
+
 ## Structure
 
 ```
 docs/DATA_FORMAT.md     shared markdown format spec
 docs/PLAN.md            architecture, roadmap, open-source plan
 design/tokens.json      shared palette and fonts
-obsidian-plugin/        TypeScript plugin (pure parser/renderer in src/)
-android-widget/         Kotlin scaffold (mirror parser) — not functional yet
+packages/core/          shared TypeScript logic (parser, view-model, i18n) + tests
+obsidian-plugin/        Obsidian plugin (own parser/renderer in src/)
+apps/windows-widget/    Tauri desktop gadget (TS frontend + Rust shell)
+android-widget/         Kotlin app + Glance widgets (mirror parser)
 ```
 
 ## License

@@ -12,6 +12,7 @@ import {
 	serializeTodo,
 	setCategoryNameInFrontmatter,
 	setHabitFieldsInFrontmatter,
+	serializeTimeList,
 	setHabitIconInFrontmatter,
 	slugifyHabitId,
 	todayISO,
@@ -165,6 +166,14 @@ export class Store {
 	): Promise<void> {
 		await this.process(this.habitsPath, (data) =>
 			setHabitFieldsInFrontmatter(data, id, fields)
+		);
+	}
+
+	/** Imposta gli orari di promemoria (lista vuota = rimuove il campo). */
+	async setHabitReminders(id: string, times: string[]): Promise<void> {
+		const value = times.length ? serializeTimeList(times) : "";
+		await this.process(this.habitsPath, (data) =>
+			setHabitFieldsInFrontmatter(data, id, { reminders: value })
 		);
 	}
 

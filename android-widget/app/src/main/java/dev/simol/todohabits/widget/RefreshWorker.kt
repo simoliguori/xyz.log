@@ -7,6 +7,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.glance.appwidget.updateAll
+import dev.simol.todohabits.notify.NotificationScheduler
 import java.util.concurrent.TimeUnit
 
 /**
@@ -18,6 +19,7 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
     override suspend fun doWork(): Result {
         HabitWidget().updateAll(applicationContext)
         TodoWidget().updateAll(applicationContext)
+        NotificationScheduler.scheduleNext(applicationContext)
         return Result.success()
     }
 

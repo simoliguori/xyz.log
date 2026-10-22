@@ -1,4 +1,4 @@
-import { App, getIconIds, Modal, setIcon } from "obsidian";
+import { App, getIconIds, Modal, Platform, setIcon } from "obsidian";
 import type TodoHabitsPlugin from "./main";
 import { addDays, PRIORITY_EMOJI, streak, todayISO } from "./parser";
 import { Habit, Priority, Todo } from "./types";
@@ -172,6 +172,10 @@ export class TrackerRenderer {
 	private expanded = new Set<string>();
 	/** chiavi dei gruppi/categorie chiusi, per preservare il collasso tra i render */
 	private collapsed = new Set<string>();
+	/** pannello impostazioni aperto sotto l'abitudine espansa */
+	private settingsOpen = new Set<string>();
+	/** pagina attiva dello swipe mobile (0 = abitudini, 1 = attività) */
+	private swipeIndex = 0;
 
 	constructor(
 		private plugin: TodoHabitsPlugin,
@@ -197,16 +201,63 @@ export class TrackerRenderer {
 		if (this.opts.header) this.renderHeader(root);
 		if (this.opts.habitId) {
 			this.renderSingleHabit(root, data);
-		} else if (this.opts.habits) {
-			this.renderHabits(root, data);
-		}
-		if (this.opts.folders) {
-			this.renderFolders(root, data);
-		} else if (this.opts.todos) {
-			this.renderTodos(root, data);
+		} else if (this.useSwipe()) {
+			this.renderSwipe(root, data);
+		} else {
+			if (this.opts.habits) this.renderHabits(root, data);
+			if (this.opts.folders) {
+				this.renderFolders(root, data);
+			} else if (this.opts.todos) {
+				this.renderTodos(root, data);
+			}
 		}
 
 		this.restoreScroll(scroll);
+	}
+
+	/** Su mobile, quando si mostrano sia abitudini sia attività, si passa da una
+	   all'altra con lo swipe (o i due tab in alto) invece di impilarle. */
+	private useSwipe(): boolean {
+		return (
+			Platform.isMobile &&
+			this.opts.habits &&
+			this.opts.todos &&
+			!this.opts.folders &&
+			!this.opts.cross &&
+			!this.opts.habitId
+		);
+	}
+
+	private renderSwipe(root: HTMLElement, data: TrackerData): void {
+		const wrap = root.createDiv({ cls: "th-swipe-wrap" });
+		const tabs = wrap.createDiv({ cls: "th-swipe-tabs" });
+		const tabH = tabs.createEl("button", { cls: "th-swipe-tab", text: t("habits") });
+		const tabT = tabs.createEl("button", { cls: "th-swipe-tab", text: t("todos") });
+
+		const track = wrap.createDiv({ cls: "th-swipe-track" });
+		const paneH = track.createDiv({ cls: "th-swipe-pane" });
+		const paneT = track.createDiv({ cls: "th-swipe-pane" });
+		this.renderHabits(paneH, data);
+		this.renderTodos(paneT, data);
+
+		const setActive = (i: number) => {
+			this.swipeIndex = i;
+			tabH.toggleClass("is-active", i === 0);
+			tabT.toggleClass("is-active", i === 1);
+		};
+		setActive(this.swipeIndex);
+
+		tabH.onclick = () => track.scrollTo({ left: 0, behavior: "smooth" });
+		tabT.onclick = () => track.scrollTo({ left: track.clientWidth, behavior: "smooth" });
+		track.onscroll = () => {
+			const i = track.scrollLeft > track.clientWidth / 2 ? 1 : 0;
+			if (i !== this.swipeIndex) setActive(i);
+		};
+
+		// ripristina la pagina attiva dopo il re-render (senza animazione)
+		requestAnimationFrame(() => {
+			track.scrollLeft = this.swipeIndex * track.clientWidth;
+		});
 	}
 
 	/** Posizione di scroll dei contenitori, così lo spunto non riporta in cima. */
@@ -496,27 +547,41 @@ export class TrackerRenderer {
 		dates: Map<string, number>,
 		today: string
 	): void {
-		const doneToday = !habit.countable && dates.has(today);
+		const countToday = dates.get(today) ?? 0;
+		const counterMode = habit.countable || habit.goal > 1;
+		const doneToday = !habit.countable && countToday >= habit.goal;
 		const card = parent.createDiv({ cls: `th-habit ${doneToday ? "is-done" : ""}` });
 		const row = card.createDiv({ cls: "th-habit-row" });
 
-		if (habit.countable) {
-			// abitudini "a conteggio" (es. cose brutte): mostra quante volte oggi,
-			// clic = +1, clic destro = -1
-			const count = dates.get(today) ?? 0;
+		if (counterMode) {
+			// più volte al giorno (goal > 1) o conteggio libero (countable):
+			// tap = +1; il tasto "−" accanto = −1 (funziona anche su mobile, dove
+			// non esiste il clic destro).
+			const label = habit.countable ? String(countToday) : `${countToday}/${habit.goal}`;
 			const counter = row.createEl("button", {
-				cls: `th-count ${count > 0 ? "is-done" : ""}`,
-				text: String(count),
+				cls: `th-count th-count-wide ${doneToday ? "is-done" : ""}`,
+				text: label,
 				attr: { "aria-label": tf.markToday(habit.name), title: tf.markToday(habit.name) },
 			});
+			const atGoal = !habit.countable && countToday >= habit.goal;
 			counter.onclick = (e) => {
 				e.stopPropagation();
+				if (atGoal) return; // goal raggiunto: non si va oltre
 				playCheckSound();
 				counter.addClass("th-pop");
 				void this.plugin.store.incrementHabit(habit.id, today);
 			};
 			counter.oncontextmenu = (e) => {
 				e.preventDefault();
+				e.stopPropagation();
+				if ((dates.get(today) ?? 0) > 0) void this.plugin.store.decrementHabit(habit.id, today);
+			};
+			const minus = row.createEl("button", {
+				cls: `th-count-minus ${countToday > 0 ? "" : "th-hidden"}`,
+				text: "−",
+				attr: { "aria-label": tf.decrementNamed(habit.name), title: tf.decrementNamed(habit.name) },
+			});
+			minus.onclick = (e) => {
 				e.stopPropagation();
 				if ((dates.get(today) ?? 0) > 0) void this.plugin.store.decrementHabit(habit.id, today);
 			};
@@ -585,7 +650,104 @@ export class TrackerRenderer {
 
 		if (this.expanded.has(habit.id)) {
 			this.renderHeatmap(card, dates, today);
+			this.renderHabitSettings(card, habit);
 		}
+	}
+
+	/** Pannello impostazioni dell'abitudine (sotto la heatmap, quando è espansa):
+	   quante volte al giorno, conteggio libero, cadenza e promemoria. */
+	private renderHabitSettings(card: HTMLElement, habit: Habit): void {
+		const key = `s:${habit.id}`;
+		const open = this.settingsOpen.has(key);
+		const toggle = card.createEl("button", {
+			cls: "th-habit-settings-toggle",
+			text: open ? t("hideSettings") : t("settings"),
+		});
+		toggle.onclick = (e) => {
+			e.stopPropagation();
+			if (open) this.settingsOpen.delete(key);
+			else this.settingsOpen.add(key);
+			void this.render();
+		};
+		if (!open) return;
+
+		const panel = card.createDiv({ cls: "th-habit-settings" });
+
+		// — quante volte al giorno (goal) —
+		const goalRow = panel.createDiv({ cls: "th-setting" });
+		goalRow.createSpan({ cls: "th-setting-label", text: t("perDay") });
+		const stepper = goalRow.createDiv({ cls: "th-stepper" });
+		const minusG = stepper.createEl("button", { cls: "th-step-btn", text: "−" });
+		const goalVal = stepper.createSpan({ cls: "th-step-val", text: String(habit.goal) });
+		const plusG = stepper.createEl("button", { cls: "th-step-btn", text: "+" });
+		const setGoal = (v: number) => {
+			const g = Math.max(1, v);
+			goalVal.setText(String(g));
+			void this.plugin.store.setHabitFields(habit.id, { goal: g === 1 ? "" : g });
+		};
+		minusG.onclick = (e) => { e.stopPropagation(); setGoal(habit.goal - 1); };
+		plusG.onclick = (e) => { e.stopPropagation(); setGoal(habit.goal + 1); };
+
+		// — conteggio libero (countable) —
+		const cntRow = panel.createDiv({ cls: "th-setting" });
+		cntRow.createSpan({ cls: "th-setting-label", text: t("freeCount") });
+		const cntToggle = cntRow.createEl("button", {
+			cls: `th-toggle ${habit.countable ? "is-on" : ""}`,
+			attr: { "aria-label": t("freeCount") },
+		});
+		cntToggle.createSpan({ cls: "th-toggle-knob" });
+		cntToggle.onclick = (e) => {
+			e.stopPropagation();
+			void this.plugin.store.setHabitFields(habit.id, {
+				countable: habit.countable ? "" : "true",
+			});
+		};
+
+		// — cadenza (ogni N giorni) —
+		const cadRow = panel.createDiv({ cls: "th-setting" });
+		cadRow.createSpan({ cls: "th-setting-label", text: t("cadence") });
+		const cadStep = cadRow.createDiv({ cls: "th-stepper" });
+		const minusC = cadStep.createEl("button", { cls: "th-step-btn", text: "−" });
+		const cadVal = cadStep.createSpan({ cls: "th-step-val", text: String(habit.cadence) });
+		const plusC = cadStep.createEl("button", { cls: "th-step-btn", text: "+" });
+		const setCad = (v: number) => {
+			const c = Math.max(1, v);
+			cadVal.setText(String(c));
+			void this.plugin.store.setHabitFields(habit.id, { cadence: c === 1 ? "" : c });
+		};
+		minusC.onclick = (e) => { e.stopPropagation(); setCad(habit.cadence - 1); };
+		plusC.onclick = (e) => { e.stopPropagation(); setCad(habit.cadence + 1); };
+
+		// — promemoria (notifiche) —
+		const remRow = panel.createDiv({ cls: "th-setting th-setting-col" });
+		remRow.createSpan({ cls: "th-setting-label", text: t("reminders") });
+		const chips = remRow.createDiv({ cls: "th-rem-chips" });
+		for (const time of habit.reminders) {
+			const chip = chips.createSpan({ cls: "th-rem-chip", text: time });
+			const x = chip.createSpan({ cls: "th-rem-chip-x", text: "×" });
+			x.onclick = (e) => {
+				e.stopPropagation();
+				void this.plugin.store.setHabitReminders(
+					habit.id,
+					habit.reminders.filter((r) => r !== time)
+				);
+			};
+		}
+		const addWrap = chips.createDiv({ cls: "th-rem-add" });
+		const timeInput = addWrap.createEl("input", {
+			cls: "th-rem-input",
+			attr: { type: "time" },
+		});
+		const addBtn = addWrap.createEl("button", { cls: "th-rem-addbtn", text: "+" });
+		addBtn.onclick = (e) => {
+			e.stopPropagation();
+			const v = timeInput.value.trim();
+			if (!/^\d{1,2}:\d{2}$/.test(v) || habit.reminders.includes(v)) return;
+			void this.plugin.store.setHabitReminders(
+				habit.id,
+				[...habit.reminders, v].sort()
+			);
+		};
 	}
 
 	/** Heatmap tipo GitHub: colonne = settimane (lun→dom), mesi segnati in alto. */
@@ -653,11 +815,13 @@ export class TrackerRenderer {
 		const byPrioThenDue = (a: Todo, b: Todo) =>
 			a.priority - b.priority || (a.due ?? "9999").localeCompare(b.due ?? "9999");
 
+		// Gli eventi con data futura (e di oggi) stanno sopra quelli scaduti/mancati;
+		// le task senza data chiudono in fondo.
 		const groups: [string, Todo[], string][] = [
-			[t("overdue"), open.filter((td) => td.due && td.due < today), "th-group-overdue"],
 			[t("today"), open.filter((td) => td.due === today), ""],
 			[t("next7"), open.filter((td) => td.due && td.due > today && td.due <= week), ""],
 			[t("later"), open.filter((td) => td.due && td.due > week), ""],
+			[t("overdue"), open.filter((td) => td.due && td.due < today), "th-group-overdue"],
 			[t("noDate"), open.filter((td) => !td.due), ""],
 		];
 
@@ -809,11 +973,16 @@ export class TrackerRenderer {
 		const text = row.createDiv({ cls: "th-todo-text" });
 		renderRich(text, todo.text);
 
-		if (todo.due) {
-			const overdue = !todo.done && todo.due < today;
+		if (todo.due || todo.time) {
+			const overdue = !todo.done && !!todo.due && todo.due < today;
+			const dateText = todo.due
+				? todo.due === today
+					? t("dueToday")
+					: this.formatDue(todo.due)
+				: "";
 			row.createSpan({
 				cls: `th-due ${overdue ? "is-overdue" : ""}`,
-				text: todo.due === today ? t("dueToday") : this.formatDue(todo.due),
+				text: [dateText, todo.time].filter(Boolean).join(" "),
 			});
 		}
 

@@ -105,7 +105,7 @@ class HabitWidget : GlanceAppWidget() {
                 )
                 else -> LazyColumn {
                     items(data.habits) { habit ->
-                        HabitRow(habit, data.log[habit.id] ?: emptySet(), today, accent)
+                        HabitRow(habit, data.log[habit.id] ?: emptyMap(), today, accent)
                     }
                 }
             }
@@ -122,33 +122,58 @@ class HabitWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun HabitRow(habit: Habit, dates: Set<LocalDate>, today: LocalDate, accent: Accent) {
+    private fun HabitRow(habit: Habit, counts: Map<LocalDate, Int>, today: LocalDate, accent: Accent) {
         Row(
             modifier = GlanceModifier.fillMaxWidth().padding(vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val doneToday = today in dates
-            Box(
-                modifier = GlanceModifier
-                    .size(26.dp)
-                    .clickable(
-                        actionRunCallback<ToggleHabitAction>(
-                            actionParametersOf(ToggleHabitAction.HABIT_ID to habit.id)
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    provider = ImageProvider(if (doneToday) R.drawable.circle_filled else R.drawable.circle_outline),
-                    contentDescription = habit.name,
-                    colorFilter = ColorFilter.tint(ColorProvider(if (doneToday) accent.base else accent.bright)),
-                    modifier = GlanceModifier.size(26.dp)
-                )
-                if (doneToday) {
+            val countToday = counts[today] ?: 0
+            val counterMode = habit.countable || habit.goal > 1
+            val doneToday = MarkdownParser.doneToday(habit, counts, today)
+            if (counterMode) {
+                // contatore: tap = +1 (poi azzera a goal raggiunto, vedi TapHabitAction)
+                Box(
+                    modifier = GlanceModifier
+                        .background(ColorProvider(if (doneToday) accent.base else Tokens.bg2))
+                        .cornerRadius(6.dp)
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                        .clickable(
+                            actionRunCallback<TapHabitAction>(
+                                actionParametersOf(TapHabitAction.HABIT_ID to habit.id)
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = "✓",
-                        style = TextStyle(color = ColorProvider(Tokens.text), fontSize = 13.sp)
+                        text = if (habit.countable) "$countToday" else "$countToday/${habit.goal}",
+                        style = TextStyle(
+                            color = ColorProvider(if (doneToday) Tokens.text else Tokens.muted),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace
+                        )
                     )
+                }
+            } else {
+                Box(
+                    modifier = GlanceModifier
+                        .size(26.dp)
+                        .clickable(
+                            actionRunCallback<ToggleHabitAction>(
+                                actionParametersOf(ToggleHabitAction.HABIT_ID to habit.id)
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        provider = ImageProvider(if (doneToday) R.drawable.circle_filled else R.drawable.circle_outline),
+                        contentDescription = habit.name,
+                        colorFilter = ColorFilter.tint(ColorProvider(if (doneToday) accent.base else accent.bright)),
+                        modifier = GlanceModifier.size(26.dp)
+                    )
+                    if (doneToday) {
+                        Text(text = "✓", style = TextStyle(color = ColorProvider(Tokens.text), fontSize = 13.sp))
+                    }
                 }
             }
             Spacer(GlanceModifier.width(10.dp))
@@ -164,7 +189,7 @@ class HabitWidget : GlanceAppWidget() {
                         )
                     )
             )
-            val streak = MarkdownParser.streak(dates, today)
+            val streak = MarkdownParser.streak(counts, today, habit.goal, habit.cadence)
             if (streak > 0) {
                 Text(
                     text = "$streak×",
@@ -177,7 +202,7 @@ class HabitWidget : GlanceAppWidget() {
                 )
                 Spacer(GlanceModifier.width(8.dp))
             }
-            // pallini degli ultimi 7 giorni
+            // pallini degli ultimi 7 giorni (raggiunto il goal = acceso)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 for (i in 6 downTo 0) {
                     val d = today.minusDays(i.toLong())
@@ -185,7 +210,7 @@ class HabitWidget : GlanceAppWidget() {
                         provider = ImageProvider(R.drawable.dot),
                         contentDescription = null,
                         colorFilter = ColorFilter.tint(
-                            ColorProvider(if (d in dates) accent.base else Tokens.surface)
+                            ColorProvider(if ((counts[d] ?: 0) >= habit.goal) accent.base else Tokens.surface)
                         ),
                         modifier = GlanceModifier.size(9.dp)
                     )

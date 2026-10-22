@@ -1,0 +1,21 @@
+{
+  "name": "xyzlog-windows-widget",
+  "version": "0.1.0",
+  "description": "Widget desktop Windows di xyz.log: gadget sempre attivo, modulare a riquadri, con notifiche.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.1.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.8"
+  }
+}

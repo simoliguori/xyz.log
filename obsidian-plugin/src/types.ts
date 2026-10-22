@@ -14,6 +14,8 @@ export interface Habit {
 	countable: boolean;
 	/** completamenti al giorno necessari perché il giorno sia "fatto" */
 	goal: number;
+	/** orari "HH:mm" dei promemoria giornalieri (vuoto = nessun promemoria) */
+	reminders: string[];
 }
 
 export interface Category {
@@ -43,6 +45,8 @@ export interface Todo {
 	/** testo senza i campi emoji (i #tag restano inline) */
 	text: string;
 	due: string | null;
+	/** orario "HH:mm" dell'evento (⏰), separato dalla data per compatibilità */
+	time: string | null;
 	doneDate: string | null;
 	priority: Priority;
 	tags: string[];

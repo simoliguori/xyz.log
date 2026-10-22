@@ -25,6 +25,11 @@ class Prefs(context: Context) {
         get() = sp.getString("accentHex", DEFAULT_ACCENT)!!
         set(value) = sp.edit().putString("accentHex", value).apply()
 
+    /** Notifiche di promemoria attive */
+    var notificationsEnabled: Boolean
+        get() = sp.getBoolean("notifications", true)
+        set(value) = sp.edit().putBoolean("notifications", value).apply()
+
     companion object {
         const val DEFAULT_ACCENT = "#44437A"
     }
