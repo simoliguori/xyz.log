@@ -46,4 +46,10 @@ export interface Todo {
 	doneDate: string | null;
 	priority: Priority;
 	tags: string[];
+	/** sottocartella di 1° livello (intestazione `## Lista`), es. "Inbox", "idee" */
+	list?: string;
+	/** sottocartella di 2° livello (intestazione `### Sezione`) dentro la lista */
+	section?: string;
+	/** descrizione libera (righe indentate sotto la task), può contenere link markdown */
+	description?: string;
 }

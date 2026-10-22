@@ -159,12 +159,46 @@ export function parseTodoLine(line: string, lineNo: number): Todo | null {
 	return { raw: line, lineNo, done, text, due, doneDate, priority, tags };
 }
 
+/**
+ * Legge Todo.md con sottocartelle e descrizioni:
+ * - `## Lista` → sottocartella di 1° livello
+ * - `### Sezione` → sottocartella di 2° livello
+ * - righe indentate (non-task) sotto una task → descrizione (con link markdown)
+ */
 export function parseTodos(content: string): Todo[] {
 	const todos: Todo[] = [];
-	content.split(/\r?\n/).forEach((line, i) => {
+	const lines = content.split(/\r?\n/);
+	let list = "";
+	let section = "";
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		const h2 = line.match(/^##\s+(.+?)\s*$/);
+		const h3 = line.match(/^###\s+(.+?)\s*$/);
+		if (h3) {
+			section = h3[1].trim();
+			continue;
+		}
+		if (h2) {
+			list = h2[1].trim();
+			section = "";
+			continue;
+		}
 		const t = parseTodoLine(line, i);
-		if (t) todos.push(t);
-	});
+		if (!t) continue;
+		// descrizione: righe indentate, non-task, subito sotto
+		const desc: string[] = [];
+		while (i + 1 < lines.length) {
+			const next = lines[i + 1];
+			if (next.trim() !== "" && /^\s/.test(next) && !TODO_LINE_RE.test(next)) {
+				desc.push(next.replace(/^\s+/, ""));
+				i++;
+			} else break;
+		}
+		if (list) t.list = list;
+		if (section) t.section = section;
+		if (desc.length) t.description = desc.join("\n");
+		todos.push(t);
+	}
 	return todos;
 }
 

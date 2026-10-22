@@ -682,13 +682,22 @@
 	max-width: 55%;
 }
 
-/* nota con dashboard → larghezza piena (via cssclasses "th-wide" o rilevando il blocco),
-   oltre la "lunghezza di riga leggibile" di Obsidian */
+/* nota a larghezza piena: opt-in con cssclasses "th-wide" oppure rilevando un blocco
+   dashboard. Agisce su reading e live preview e neutralizza --file-line-width. */
+.th-wide,
+.markdown-preview-view:has(.th-cross),
+.markdown-source-view.mod-cm6:has(.th-cross) {
+	--file-line-width: 100% !important;
+}
+
 .th-wide .markdown-preview-sizer,
 .th-wide .cm-sizer,
-.markdown-preview-sizer:has(.th-cross),
-.cm-sizer:has(.th-cross) {
+.th-wide .cm-content,
+.markdown-preview-view:has(.th-cross) .markdown-preview-sizer,
+.markdown-source-view.mod-cm6:has(.th-cross) .cm-sizer,
+.markdown-source-view.mod-cm6:has(.th-cross) .cm-content {
 	max-width: none !important;
+	width: 100% !important;
 }
 
 @media (max-width: 700px) {
