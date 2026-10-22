@@ -153,14 +153,14 @@ un habit → “Vuoi un promemoria?” con uno o più orari (es. 2/giorno per mi
 
 ## 6. Open source
 
-- **Licenza**: MIT (massima adozione) o GPL-3.0 (copyleft). Da decidere.
+- **Licenza**: **MIT** (vedi `LICENSE`) — massima adozione e libertà di contribuire.
 - **Font**: risolto per il plugin (Space Grotesk/OFL). Resta da ripulire l'asset NType82
   lato Android prima della pubblicazione (già `gitignored`).
 - **CI**: GitHub Actions per buildare plugin + widget e pubblicare le release.
 - **Contribuzione**: `CONTRIBUTING.md`, issue template, `DATA_FORMAT.md` come contratto
   tra i parser (va tenuto allineato in TS e Kotlin).
-- **Repo**: creata su GitHub come [`simoliguori/xyz.log`](https://github.com/simoliguori/xyz.log),
-  **privata** per ora → diventa pubblica quando si sceglie la licenza e si aggiunge `LICENSE`.
+- **Repo**: [`simoliguori/xyz.log`](https://github.com/simoliguori/xyz.log) — **pubblica**,
+  licenza MIT.
 
 ## 7. Roadmap a fasi
 
@@ -180,6 +180,6 @@ un habit → “Vuoi un promemoria?” con uno o più orari (es. 2/giorno per mi
 ## 8. Decisioni aperte
 
 1. **Nome**: **xyz.log** (deciso).
-2. **Licenza**: MIT o GPL-3.0?
-3. **Repo GitHub**: creata privata — quando passarla a pubblica (serve la licenza)?
+2. **Licenza**: **MIT** (deciso).
+3. **Repo GitHub**: **pubblica** (deciso).
 4. **Idee TickTick** (59 appunti): nota di riferimento separata o import come todo?
