@@ -32,7 +32,7 @@ html,
 body {
 	margin: 0;
 	height: 100%;
-	background: var(--xl-bg);
+	background: transparent;
 	overflow: hidden;
 	font-family: var(--xl-mono);
 	color: var(--xl-text);
@@ -46,6 +46,11 @@ body {
 	height: 100vh;
 	background: var(--xl-bg);
 	overflow: hidden;
+}
+
+/* durante l'intro il contenitore è trasparente: lo splash glass sfoca il desktop */
+.xl-app.xl-splashing {
+	background: transparent;
 }
 
 /* ---------- top bar ---------- */
@@ -1130,7 +1135,10 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(--xl-bg);
+	/* glassmorphica: semi-opaca così resta leggibile + sfocatura del desktop dietro */
+	background: rgba(24, 24, 27, 0.82);
+	-webkit-backdrop-filter: blur(22px) saturate(1.1);
+	backdrop-filter: blur(22px) saturate(1.1);
 	-webkit-app-region: drag;
 	z-index: 50;
 }

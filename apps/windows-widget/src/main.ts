@@ -166,6 +166,9 @@ class App {
 		// smonta eventuali timer dei riquadri (header clock)
 		this.root.querySelectorAll(".xl-tile-body").forEach((n) => n.dispatchEvent(new Event("xl-dispose")));
 		clear(this.root);
+		// durante l'intro il contenitore è trasparente, così lo splash glass
+		// può sfocare il desktop dietro; dopo torna pieno (app leggibile).
+		this.root.classList.toggle("xl-splashing", !this.started);
 		if (!this.started) {
 			this.renderSplash();
 			return;
