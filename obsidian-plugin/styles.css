@@ -21,7 +21,7 @@
 	--th-prio-lowest: #5d7264;
 	--th-mono: "Roboto Mono", var(--font-monospace), monospace;
 	/* font dei titoli: Space Grotesk (OFL), caricato da Google Fonts in cima al file */
-	--th-serif: "Space Grotesk", var(--font-text), system-ui, sans-serif;
+	--th-serif: "NType82-Headline", "NType82 Headline", "NType 82", "Space Grotesk", var(--font-text), system-ui, sans-serif;
 
 	font-family: var(--th-mono);
 	color: var(--th-text);
@@ -880,22 +880,17 @@
 	height: 8px;
 }
 
-/* nota a larghezza piena: opt-in con cssclasses "th-wide" oppure rilevando un blocco
-   dashboard. Agisce su reading e live preview e neutralizza --file-line-width. */
-/* Larghezza piena OPT-IN per nota: solo chi mette `cssclasses: th-wide`.
-   (compatibile col tema Minimal, che usa variabili proprie) */
+/* Larghezza piena OPT-IN per nota: `cssclasses: th-wide`. Versione "gentile":
+   allarga solo la larghezza-riga leggibile tramite la variabile standard di
+   Obsidian, senza forzare width/!important sul contenuto dell'editor (che poteva
+   sballare il layout del workspace, es. la sidebar che non si chiudeva). I temi
+   come Minimal con le loro classi `wide`/`max` continuano a funzionare. */
 .th-wide {
-	--file-line-width: 100% !important;
-	--line-width: 100% !important;
-	--line-width-wide: 100% !important;
-	--max-width: 100% !important;
+	--file-line-width: 100%;
 }
 
-.th-wide .markdown-preview-sizer,
-.th-wide .cm-sizer,
-.th-wide .cm-content {
-	max-width: none !important;
-	width: 100% !important;
+.th-wide .markdown-preview-sizer {
+	max-width: none;
 }
 
 @media (max-width: 700px) {

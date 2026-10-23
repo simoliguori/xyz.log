@@ -33,6 +33,8 @@ export interface AppConfig {
 	folder: string;
 	lang: "it" | "en";
 	accent: string;
+	/** sincronizza l'accent col colore di Obsidian (appearance.json) */
+	syncAccent: boolean;
 	opacity: number;
 	pinned: boolean;
 	autostart: boolean;
@@ -73,29 +75,31 @@ export function newTile(type: TileType): Tile {
 }
 
 export function defaultTabs(): TabLayout[] {
+	// Dashboard come il plugin Obsidian: data in alto, attività a sinistra (alta),
+	// abitudini in alto a destra e cronologia sotto. Niente riquadro statistiche.
 	return [
 		{
 			id: uid(),
 			name: "Oggi",
 			tiles: [
 				{ id: uid(), type: "header", w: COLS, h: 1 },
-				{ id: uid(), type: "stats", w: COLS, h: 1 },
+				{ id: uid(), type: "todos", w: 2, h: 5 },
 				{ id: uid(), type: "habits", w: 2, h: 3 },
-				{ id: uid(), type: "todos", w: 2, h: 3 },
+				{ id: uid(), type: "history", w: 2, h: 2 },
 			],
 		},
 		{
 			id: uid(),
 			name: "Abitudini",
 			tiles: [
-				{ id: uid(), type: "habits", w: 2, h: 4 },
-				{ id: uid(), type: "history", w: 2, h: 4 },
+				{ id: uid(), type: "habits", w: COLS, h: 3 },
+				{ id: uid(), type: "history", w: COLS, h: 3 },
 			],
 		},
 		{
 			id: uid(),
 			name: "Attività",
-			tiles: [{ id: uid(), type: "folders", w: COLS, h: 5 }],
+			tiles: [{ id: uid(), type: "folders", w: COLS, h: 6 }],
 		},
 	];
 }

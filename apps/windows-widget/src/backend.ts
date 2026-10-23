@@ -27,6 +27,10 @@ export interface Backend {
 	setOpacity(pct: number): Promise<void>;
 	setPinned(on: boolean): Promise<void>;
 	setAutostart(on: boolean): Promise<void>;
+	/** accent color corrente di Obsidian (da appearance.json), o null */
+	obsidianAccent(): Promise<string | null>;
+	minimizeWindow(): Promise<void>;
+	closeWindow(): Promise<void>;
 	readonly isReal: boolean;
 }
 
@@ -38,6 +42,7 @@ const DEFAULT_CONFIG = (): AppConfig => ({
 	pinned: false,
 	autostart: true,
 	notifications: true,
+	syncAccent: true,
 	tabs: defaultTabs(),
 });
 
@@ -112,6 +117,18 @@ class TauriBackend implements Backend {
 	async setAutostart(on: boolean): Promise<void> {
 		await this.ready;
 		await this.invoke("set_autostart", { on });
+	}
+	async obsidianAccent(): Promise<string | null> {
+		await this.ready;
+		return this.invoke<string | null>("obsidian_accent");
+	}
+	async minimizeWindow(): Promise<void> {
+		await this.ready;
+		await this.invoke("minimize_window");
+	}
+	async closeWindow(): Promise<void> {
+		await this.ready;
+		await this.invoke("close_window");
 	}
 }
 
@@ -241,6 +258,11 @@ class MockBackend implements Backend {
 	async setOpacity(_pct: number): Promise<void> {}
 	async setPinned(_on: boolean): Promise<void> {}
 	async setAutostart(_on: boolean): Promise<void> {}
+	async obsidianAccent(): Promise<string | null> {
+		return null;
+	}
+	async minimizeWindow(): Promise<void> {}
+	async closeWindow(): Promise<void> {}
 }
 
 function load<T>(key: string): T | null {

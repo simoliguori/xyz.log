@@ -23,8 +23,9 @@ pub fn set_opacity(window: &WebviewWindow, pct: u32) {
 }
 
 pub fn set_pinned(window: &WebviewWindow, on: bool) {
-    // sul desktop vero vogliamo comunque che non rubi il focus e stia in fondo
-    let _ = window.set_always_on_bottom(true);
+    // in modalità gadget la finestra resta in fondo (sul desktop); disattivandola
+    // torna normale. Si tiene l'icona nella taskbar così non va mai "persa".
+    let _ = window.set_always_on_bottom(on);
     #[cfg(windows)]
     {
         if let Ok(h) = window.hwnd() {

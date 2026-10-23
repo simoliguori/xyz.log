@@ -18,7 +18,8 @@
 	--xl-prio-lowest: #5d7264;
 	--xl-opacity: 0.9;
 	--xl-mono: "Roboto Mono", ui-monospace, monospace;
-	--xl-serif: "Space Grotesk", system-ui, sans-serif;
+	/* header come nelle note Obsidian: NType82 se installato, poi Space Grotesk */
+	--xl-serif: "NType82-Headline", "NType82 Headline", "NType 82", "Space Grotesk", system-ui, sans-serif;
 	--xl-gap: 10px;
 	--xl-row: 92px;
 }
@@ -31,7 +32,7 @@ html,
 body {
 	margin: 0;
 	height: 100%;
-	background: transparent;
+	background: var(--xl-bg);
 	overflow: hidden;
 	font-family: var(--xl-mono);
 	color: var(--xl-text);
@@ -43,8 +44,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	height: 100vh;
-	background: color-mix(in srgb, var(--xl-bg) calc(var(--xl-opacity) * 100%), transparent);
-	border-radius: 16px;
+	background: var(--xl-bg);
 	overflow: hidden;
 }
 
@@ -1078,4 +1078,178 @@ body {
 	.xl-tile {
 		grid-column: span 1 !important;
 	}
+}
+
+/* ======================= intro, onboarding, finestra ======================= */
+
+/* --- controlli finestra (niente barra di Windows) --- */
+.xl-win-btn {
+	width: 30px;
+	height: 30px;
+	border-radius: 8px;
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--xl-muted);
+	cursor: pointer;
+	font-size: 14px;
+	line-height: 1;
+}
+.xl-win-btn:hover {
+	background: var(--xl-bg2);
+	color: var(--xl-text);
+}
+.xl-win-close:hover {
+	background: var(--xl-overdue);
+	color: #fff;
+}
+
+/* --- logo --- */
+.xl-logo-svg {
+	width: 92px;
+	height: 92px;
+}
+.xl-logo-bg {
+	fill: var(--xl-accent);
+	transform-origin: center;
+	animation: xl-logo-pop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.xl-logo-check {
+	stroke: var(--xl-text);
+	stroke-width: 9;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-dasharray: 92;
+	stroke-dashoffset: 92;
+	animation: xl-draw 0.5s ease 0.35s forwards;
+}
+
+/* --- intro a tutto schermo --- */
+.xl-splash {
+	position: fixed;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--xl-bg);
+	-webkit-app-region: drag;
+	z-index: 50;
+}
+.xl-splash-inner {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 18px;
+}
+.xl-splash-word {
+	font-family: var(--xl-serif);
+	font-size: 34px;
+	letter-spacing: 0.02em;
+	color: var(--xl-text);
+	opacity: 0;
+	animation: xl-fade-up 0.5s ease 0.6s forwards;
+}
+
+/* --- onboarding --- */
+.xl-onboard {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+.xl-onboard-bar {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 8px 10px;
+	-webkit-app-region: drag;
+}
+.xl-onboard-bar .xl-win-btn {
+	-webkit-app-region: no-drag;
+}
+.xl-onboard-barspace {
+	flex: 1;
+}
+.xl-onboard-card {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	padding: 0 32px 40px;
+	text-align: center;
+}
+.xl-onboard-logo .xl-logo-svg {
+	width: 76px;
+	height: 76px;
+}
+.xl-onboard-title {
+	font-family: var(--xl-serif);
+	font-size: 30px;
+	color: var(--xl-text);
+}
+.xl-onboard-sub {
+	font-size: 13px;
+	color: var(--xl-muted);
+	margin-bottom: 8px;
+}
+.xl-onboard-btn {
+	background: var(--xl-accent);
+	border: none;
+	border-radius: 10px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 14px;
+	padding: 11px 20px;
+	cursor: pointer;
+}
+.xl-onboard-btn:hover {
+	background: var(--xl-accent-bright);
+	color: var(--xl-bg);
+}
+.xl-onboard-hint {
+	font-size: 11px;
+	color: var(--xl-muted);
+	margin-bottom: 10px;
+}
+.xl-onboard-card .xl-setting {
+	width: min(320px, 80vw);
+}
+.xl-onboard-foot {
+	margin-top: 16px;
+	font-size: 11px;
+	color: var(--xl-muted);
+	max-width: 320px;
+}
+
+/* --- animazioni spunta / contatore / collasso --- */
+@keyframes xl-logo-pop {
+	0% { transform: scale(0.4); opacity: 0; }
+	60% { transform: scale(1.08); }
+	100% { transform: scale(1); opacity: 1; }
+}
+@keyframes xl-draw {
+	to { stroke-dashoffset: 0; }
+}
+@keyframes xl-fade-up {
+	from { opacity: 0; transform: translateY(8px); }
+	to { opacity: 1; transform: none; }
+}
+@keyframes xl-pop {
+	0% { transform: scale(1); }
+	40% { transform: scale(1.28); }
+	100% { transform: scale(1); }
+}
+.xl-pop {
+	animation: xl-pop 0.3s ease;
+}
+.xl-todo {
+	transition: max-height 0.22s ease, opacity 0.18s ease, padding 0.22s ease, margin 0.22s ease;
+}
+.xl-collapsing {
+	max-height: 0 !important;
+	opacity: 0;
+	padding-top: 0;
+	padding-bottom: 0;
+	margin-top: 0;
+	margin-bottom: 0;
 }

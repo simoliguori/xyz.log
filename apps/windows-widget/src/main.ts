@@ -23,6 +23,12 @@ import { clear, el } from "./dom";
 import { COLS, MAX_H, newTile, Tile, TILE_META, TileType, uid, type AppConfig, type TabLayout } from "./layout";
 import { renderTileBody, type RenderCtx, type Store } from "./render";
 
+/** Logo: quadrato arrotondato con spunta, usato nell'intro e nell'onboarding. */
+const LOGO_SVG = `<svg class="xl-logo-svg" viewBox="0 0 120 120" aria-hidden="true">
+	<rect x="10" y="10" width="100" height="100" rx="26" class="xl-logo-bg" />
+	<path d="M38 62 L53 77 L84 42" class="xl-logo-check" fill="none" />
+</svg>`;
+
 class App {
 	private backend: Backend = createBackend();
 	private config!: AppConfig;
@@ -31,6 +37,8 @@ class App {
 	private activeTab = 0;
 	private edit = false;
 	private showSettings = false;
+	private started = false;
+	private obsAccent: string | null = null;
 	private expanded = new Set<string>();
 	private settingsOpen = new Set<string>();
 	private root: HTMLElement;
@@ -42,15 +50,29 @@ class App {
 	async init(): Promise<void> {
 		this.config = await this.backend.getConfig();
 		this.applyTheme();
+		this.renderSplash();
 		this.backend.onFilesChanged(() => void this.reload());
-		await this.reload();
+		await this.loadData();
+		if (this.config.syncAccent) {
+			this.obsAccent = await this.backend.obsidianAccent();
+			this.applyTheme();
+		}
+		// lascia girare l'intro un attimo, poi mostra l'app
+		window.setTimeout(() => {
+			this.started = true;
+			this.render();
+		}, 1900);
 	}
 
-	private async reload(): Promise<void> {
+	private async loadData(): Promise<void> {
 		this.files = await this.backend.readFiles();
 		this.parse();
 		void this.backend.syncReminders(collectReminders(this.data));
-		this.render();
+	}
+
+	private async reload(): Promise<void> {
+		await this.loadData();
+		if (this.started) this.render();
 	}
 
 	private parse(): void {
@@ -62,9 +84,14 @@ class App {
 		};
 	}
 
+	/** accent effettivo: quello di Obsidian se la sync è attiva, altrimenti il custom */
+	private effectiveAccent(): string {
+		return this.config.syncAccent && this.obsAccent ? this.obsAccent : this.config.accent;
+	}
+
 	private applyTheme(): void {
 		const r = document.documentElement;
-		r.style.setProperty("--xl-accent", this.config.accent);
+		r.style.setProperty("--xl-accent", this.effectiveAccent());
 		r.style.setProperty("--xl-opacity", String(this.config.opacity / 100));
 		document.documentElement.lang = this.config.lang;
 	}
@@ -139,10 +166,90 @@ class App {
 		// smonta eventuali timer dei riquadri (header clock)
 		this.root.querySelectorAll(".xl-tile-body").forEach((n) => n.dispatchEvent(new Event("xl-dispose")));
 		clear(this.root);
+		if (!this.started) {
+			this.renderSplash();
+			return;
+		}
+		if (!this.config.folder) {
+			this.root.appendChild(this.onboarding());
+			return;
+		}
 		this.root.appendChild(this.topBar());
 		if (this.edit) this.root.appendChild(this.addTileBar());
 		this.root.appendChild(this.grid());
 		if (this.showSettings) this.root.appendChild(this.settingsOverlay());
+	}
+
+	/* ---------- intro animata ---------- */
+
+	private renderSplash(): void {
+		clear(this.root);
+		const splash = el("div", { cls: "xl-splash" });
+		const inner = el("div", { cls: "xl-splash-inner", html: `${LOGO_SVG}<div class="xl-splash-word">xyz.log</div>` });
+		splash.appendChild(inner);
+		this.root.appendChild(splash);
+	}
+
+	/* ---------- controlli finestra (niente barra di Windows) ---------- */
+
+	private winButtons(): HTMLElement[] {
+		const min = el("button", { cls: "xl-win-btn", text: "–", attr: { title: this.config.lang === "it" ? "Riduci a icona" : "Minimize" } });
+		min.onclick = () => void this.backend.minimizeWindow();
+		const close = el("button", { cls: "xl-win-btn xl-win-close", text: "✕", attr: { title: this.config.lang === "it" ? "Chiudi" : "Close" } });
+		close.onclick = () => void this.backend.closeWindow();
+		return [min, close];
+	}
+
+	/* ---------- onboarding ---------- */
+
+	private onboarding(): HTMLElement {
+		const T = (it: string, en: string) => (this.config.lang === "it" ? it : en);
+		const wrap = el("div", { cls: "xl-onboard" });
+
+		const bar = el("div", { cls: "xl-onboard-bar" });
+		const spacer = el("div", { cls: "xl-onboard-barspace" });
+		bar.append(spacer, ...this.winButtons());
+		wrap.appendChild(bar);
+
+		const card = el("div", { cls: "xl-onboard-card" });
+		card.appendChild(el("div", { cls: "xl-onboard-logo", html: LOGO_SVG }));
+		card.appendChild(el("div", { cls: "xl-onboard-title", text: "xyz.log" }));
+		card.appendChild(el("div", { cls: "xl-onboard-sub", text: T("Abitudini e attività, sempre sul desktop.", "Habits and tasks, always on your desktop.") }));
+
+		const link = el("button", { cls: "xl-onboard-btn", text: T("Collega il tuo vault Obsidian", "Link your Obsidian vault") });
+		link.onclick = async () => {
+			const f = await this.backend.pickFolder();
+			if (!f) return;
+			this.config.folder = f;
+			this.saveConfig();
+			if (this.config.syncAccent) {
+				this.obsAccent = await this.backend.obsidianAccent();
+				this.applyTheme();
+			}
+			await this.loadData();
+			this.render();
+		};
+		card.appendChild(link);
+		card.appendChild(el("div", { cls: "xl-onboard-hint", text: T("Scegli la cartella «Tracker» dentro il tuo vault.", "Pick the “Tracker” folder inside your vault.") }));
+
+		card.appendChild(
+			this.toggleRow(T("Avvia all'accensione", "Start on boot"), this.config.autostart, (on) => {
+				this.config.autostart = on;
+				this.saveConfig();
+				void this.backend.setAutostart(on);
+			})
+		);
+		card.appendChild(
+			this.toggleRow(T("Resta sul desktop", "Stay on the desktop"), this.config.pinned, (on) => {
+				this.config.pinned = on;
+				this.saveConfig();
+				void this.backend.setPinned(on);
+			})
+		);
+
+		card.appendChild(el("div", { cls: "xl-onboard-foot", text: T("Funziona interamente in Markdown, sincronizzato con Obsidian.", "Works entirely in Markdown, synced with Obsidian.") }));
+		wrap.appendChild(card);
+		return wrap;
 	}
 
 	private topBar(): HTMLElement {
@@ -185,7 +292,7 @@ class App {
 			this.showSettings = true;
 			this.render();
 		};
-		actions.append(editBtn, gear);
+		actions.append(editBtn, gear, ...this.winButtons());
 		bar.appendChild(actions);
 		return bar;
 	}
@@ -442,17 +549,28 @@ class App {
 			})
 		);
 
-		// accent
-		const accentRow = el("div", { cls: "xl-set-row" });
-		accentRow.appendChild(el("span", { cls: "xl-set-label", text: T("Colore accento", "Accent color") }));
-		const color = el("input", { attr: { type: "color", value: this.config.accent } }) as HTMLInputElement;
-		color.oninput = () => {
-			this.config.accent = color.value;
-			this.applyTheme();
-		};
-		color.onchange = () => this.saveConfig();
-		accentRow.appendChild(color);
-		panel.appendChild(accentRow);
+		// accent: sincronizzato con Obsidian oppure personalizzato
+		panel.appendChild(
+			this.toggleRow(T("Accent come Obsidian", "Accent from Obsidian"), this.config.syncAccent, async (on) => {
+				this.config.syncAccent = on;
+				this.saveConfig();
+				if (on) this.obsAccent = await this.backend.obsidianAccent();
+				this.applyTheme();
+				this.render();
+			})
+		);
+		if (!this.config.syncAccent) {
+			const accentRow = el("div", { cls: "xl-set-row" });
+			accentRow.appendChild(el("span", { cls: "xl-set-label", text: T("Colore accento", "Accent color") }));
+			const color = el("input", { attr: { type: "color", value: this.config.accent } }) as HTMLInputElement;
+			color.oninput = () => {
+				this.config.accent = color.value;
+				this.applyTheme();
+			};
+			color.onchange = () => this.saveConfig();
+			accentRow.appendChild(color);
+			panel.appendChild(accentRow);
+		}
 
 		// opacità
 		panel.appendChild(

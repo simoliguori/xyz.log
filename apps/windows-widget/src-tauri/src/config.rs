@@ -19,6 +19,9 @@ pub struct AppConfig {
     pub autostart: bool,
     #[serde(default = "default_true")]
     pub notifications: bool,
+    /// sincronizza l'accent col colore di Obsidian (letto da appearance.json)
+    #[serde(default = "default_true")]
+    pub sync_accent: bool,
     #[serde(default)]
     pub tabs: serde_json::Value,
 }
@@ -46,6 +49,7 @@ impl Default for AppConfig {
             pinned: false,
             autostart: true,
             notifications: true,
+            sync_accent: true,
             tabs: serde_json::Value::Null,
         }
     }

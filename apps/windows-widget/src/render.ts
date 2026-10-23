@@ -19,6 +19,16 @@ import {
 	type TodoGroupId,
 } from "@xyzlog/core";
 import { clear, el, renderRich } from "./dom";
+import { playComplete } from "./sfx";
+
+/** Collassa l'elemento (altezza → 0) e poi esegue `fn`, come nel plugin. */
+function collapseThenRun(node: HTMLElement, fn: () => void): void {
+	node.style.maxHeight = `${node.scrollHeight}px`;
+	node.style.overflow = "hidden";
+	void node.offsetHeight; // reflow
+	node.classList.add("xl-collapsing");
+	window.setTimeout(fn, 220);
+}
 
 /** Azioni di scrittura: implementate in main.ts su file + core, poi backend. */
 export interface Store {
@@ -170,6 +180,8 @@ function habitRow(v: HabitView, ctx: RenderCtx): HTMLElement {
 		counter.onclick = (e) => {
 			e.stopPropagation();
 			if (atGoal) return;
+			playComplete();
+			counter.classList.add("xl-pop");
 			ctx.store.incrementHabit(habit.id, ctx.today);
 		};
 		counter.oncontextmenu = (e) => {
@@ -190,6 +202,10 @@ function habitRow(v: HabitView, ctx: RenderCtx): HTMLElement {
 		const check = el("button", { cls: `xl-check ${v.doneToday ? "is-done" : ""}`, text: v.doneToday ? "✓" : "" });
 		check.onclick = (e) => {
 			e.stopPropagation();
+			if (!v.doneToday) {
+				playComplete();
+				check.classList.add("xl-pop");
+			}
 			ctx.store.toggleHabit(habit.id, ctx.today);
 		};
 		row.appendChild(check);
@@ -476,7 +492,16 @@ function todoRow(todo: Todo, ctx: RenderCtx): HTMLElement {
 	const wrap = el("div", { cls: `xl-todo ${todo.done ? "is-done" : ""}` });
 	const row = el("div", { cls: "xl-todo-main" });
 	const check = el("button", { cls: `xl-check xl-check-sm ${todo.done ? "is-done" : ""}`, text: todo.done ? "✓" : "" });
-	check.onclick = () => ctx.store.toggleTodo(todo);
+	check.onclick = () => {
+		if (todo.done) {
+			ctx.store.toggleTodo(todo);
+			return;
+		}
+		playComplete();
+		check.classList.add("is-done", "xl-pop");
+		check.textContent = "✓";
+		collapseThenRun(wrap, () => ctx.store.toggleTodo(todo));
+	};
 	row.appendChild(check);
 
 	if (todo.priority !== Priority.None) {

@@ -53,10 +53,29 @@ fn write_file(state: State<AppState>, which: String, content: String) -> Result<
 #[tauri::command]
 fn pick_folder(app: AppHandle) -> Option<String> {
     use tauri_plugin_dialog::DialogExt;
-    app.dialog()
-        .file()
-        .blocking_pick_folder()
-        .map(|p| p.to_string())
+    // dialog NON bloccante: il comando gira fuori dal thread della UI, quindi
+    // aspettare la scelta qui non congela la finestra (il blocking_* sì).
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.dialog().file().pick_folder(move |path| {
+        let _ = tx.send(path);
+    });
+    rx.recv().ok().flatten().map(|p| p.to_string())
+}
+
+#[tauri::command]
+fn obsidian_accent(state: State<AppState>) -> Option<String> {
+    let folder = state.config.lock().unwrap().folder.clone();
+    vault::obsidian_accent(&folder)
+}
+
+#[tauri::command]
+fn minimize_window(window: WebviewWindow) {
+    let _ = window.minimize();
+}
+
+#[tauri::command]
+fn close_window(window: WebviewWindow) {
+    let _ = window.close();
 }
 
 #[tauri::command]
@@ -183,7 +202,10 @@ pub fn run() {
             notify_now,
             set_opacity,
             set_pinned,
-            set_autostart
+            set_autostart,
+            obsidian_accent,
+            minimize_window,
+            close_window
         ])
         .setup(|app| {
             let dir = app.path().app_config_dir()?;
@@ -194,7 +216,7 @@ pub fn run() {
                 if cfg.pinned {
                     gadget::set_pinned(&window, true);
                 } else {
-                    let _ = window.set_always_on_bottom(true);
+                    let _ = window.set_always_on_bottom(false);
                 }
             }
 
