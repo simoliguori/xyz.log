@@ -194,11 +194,29 @@
 }
 
 .th-heatmap {
-	display: block;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end; /* ancorata a destra: oggi a filo destro */
 	margin-top: 12px;
 	padding-top: 12px;
+	padding-bottom: 4px;
 	border-top: 1px solid var(--th-border);
 	overflow-x: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--th-border) transparent;
+}
+.th-heatmap::-webkit-scrollbar {
+	height: 6px;
+}
+.th-heatmap::-webkit-scrollbar-track {
+	background: transparent;
+}
+.th-heatmap::-webkit-scrollbar-thumb {
+	background: var(--th-border);
+	border-radius: 3px;
+}
+.th-heatmap::-webkit-scrollbar-thumb:hover {
+	background: var(--th-muted);
 }
 
 .th-heatmap-months {

@@ -37,7 +37,10 @@ class App {
 	private activeTab = 0;
 	private edit = false;
 	private showSettings = false;
-	private started = false;
+	private intro = true;
+	private docked = false;
+	private brand: HTMLElement | null = null;
+	private veil: HTMLElement | null = null;
 	private obsAccent: string | null = null;
 	private expanded = new Set<string>();
 	private settingsOpen = new Set<string>();
@@ -50,18 +53,44 @@ class App {
 	async init(): Promise<void> {
 		this.config = await this.backend.getConfig();
 		this.applyTheme();
-		this.renderSplash();
 		this.backend.onFilesChanged(() => void this.reload());
+		// dati pronti PRIMA del primo disegno: niente schermata vuota
 		await this.loadData();
 		if (this.config.syncAccent) {
 			this.obsAccent = await this.backend.obsidianAccent();
 			this.applyTheme();
 		}
-		// lascia girare l'intro un attimo, poi mostra l'app
+		this.ensureBrand();
+		this.render();
+		this.playIntro();
+	}
+
+	private ensureBrand(): void {
+		if (this.brand) return;
+		this.brand = el("div", { cls: "xl-brand", html: LOGO_SVG });
+		document.body.appendChild(this.brand);
+	}
+
+	/** Intro coreografata: logo dal centro all'header + contenuto che entra
+	   insieme, sotto un velo "liquid glass" che si dissolve. */
+	private playIntro(): void {
+		const veil = el("div", { cls: "xl-veil" });
+		this.veil = veil;
+		document.body.appendChild(veil);
+		// il logo si aggancia in alto mentre il contenuto è già entrato
 		window.setTimeout(() => {
-			this.started = true;
-			this.render();
-		}, 1900);
+			this.docked = true;
+			this.brand?.classList.add("is-docked");
+		}, 560);
+		// fine intro: niente più classe d'entrata, il velo sfuma e viene rimosso
+		window.setTimeout(() => {
+			this.intro = false;
+			this.root.classList.remove("xl-intro");
+			window.setTimeout(() => {
+				veil.remove();
+				if (this.veil === veil) this.veil = null;
+			}, 200);
+		}, 1500);
 	}
 
 	private async loadData(): Promise<void> {
@@ -72,7 +101,7 @@ class App {
 
 	private async reload(): Promise<void> {
 		await this.loadData();
-		if (this.started) this.render();
+		this.render();
 	}
 
 	private parse(): void {
@@ -166,13 +195,9 @@ class App {
 		// smonta eventuali timer dei riquadri (header clock)
 		this.root.querySelectorAll(".xl-tile-body").forEach((n) => n.dispatchEvent(new Event("xl-dispose")));
 		clear(this.root);
-		// durante l'intro il contenitore è trasparente, così lo splash glass
-		// può sfocare il desktop dietro; dopo torna pieno (app leggibile).
-		this.root.classList.toggle("xl-splashing", !this.started);
-		if (!this.started) {
-			this.renderSplash();
-			return;
-		}
+		this.ensureBrand();
+		this.root.classList.toggle("xl-intro", this.intro);
+		this.brand?.classList.toggle("is-docked", this.docked);
 		if (!this.config.folder) {
 			this.root.appendChild(this.onboarding());
 			return;
@@ -181,16 +206,6 @@ class App {
 		if (this.edit) this.root.appendChild(this.addTileBar());
 		this.root.appendChild(this.grid());
 		if (this.showSettings) this.root.appendChild(this.settingsOverlay());
-	}
-
-	/* ---------- intro animata ---------- */
-
-	private renderSplash(): void {
-		clear(this.root);
-		const splash = el("div", { cls: "xl-splash" });
-		const inner = el("div", { cls: "xl-splash-inner", html: `${LOGO_SVG}<div class="xl-splash-word">xyz.log</div>` });
-		splash.appendChild(inner);
-		this.root.appendChild(splash);
 	}
 
 	/* ---------- controlli finestra (niente barra di Windows) ---------- */
@@ -215,9 +230,22 @@ class App {
 		wrap.appendChild(bar);
 
 		const card = el("div", { cls: "xl-onboard-card" });
-		card.appendChild(el("div", { cls: "xl-onboard-logo", html: LOGO_SVG }));
+		// niente logo qui: l'intro mostra già il logo che sale, evitando il doppione
 		card.appendChild(el("div", { cls: "xl-onboard-title", text: "xyz.log" }));
-		card.appendChild(el("div", { cls: "xl-onboard-sub", text: T("Abitudini e attività, sempre sul desktop.", "Habits and tasks, always on your desktop.") }));
+		card.appendChild(
+			el("div", {
+				cls: "xl-onboard-sub",
+				text: T(
+					"Un tracker modulare di abitudini e attività, costruito su semplici file .md.",
+					"A modular habit & task tracker, built on plain .md files."
+				),
+			})
+		);
+		const chips = el("div", { cls: "xl-onboard-chips" });
+		for (const label of [T("Modulare", "Modular"), "Markdown", T("Locale", "Local-first"), "Obsidian"]) {
+			chips.appendChild(el("span", { cls: "xl-onboard-chip", text: label }));
+		}
+		card.appendChild(chips);
 
 		const link = el("button", { cls: "xl-onboard-btn", text: T("Collega il tuo vault Obsidian", "Link your Obsidian vault") });
 		link.onclick = async () => {
@@ -257,6 +285,8 @@ class App {
 
 	private topBar(): HTMLElement {
 		const bar = el("div", { cls: "xl-topbar" });
+		// spazio riservato dove si "solidifica" il logo dell'intro, poi il nome
+		bar.appendChild(el("div", { cls: "xl-logo-slot" }));
 		bar.appendChild(el("div", { cls: "xl-logo", text: "xyz.log" }));
 
 		const tabs = el("div", { cls: "xl-tabs" });

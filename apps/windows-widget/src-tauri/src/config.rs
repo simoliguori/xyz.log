@@ -27,7 +27,7 @@ pub struct AppConfig {
 }
 
 fn default_lang() -> String {
-    "it".into()
+    "en".into()
 }
 fn default_accent() -> String {
     "#44437a".into()
@@ -43,7 +43,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         AppConfig {
             folder: String::new(),
-            lang: default_lang(),
+            lang: "en".into(),
             accent: default_accent(),
             opacity: default_opacity(),
             pinned: false,

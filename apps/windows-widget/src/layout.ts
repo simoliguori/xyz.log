@@ -80,25 +80,20 @@ export function defaultTabs(): TabLayout[] {
 	return [
 		{
 			id: uid(),
-			name: "Oggi",
+			name: "Today",
 			tiles: [
-				{ id: uid(), type: "header", w: COLS, h: 1 },
-				{ id: uid(), type: "todos", w: 2, h: 5 },
-				{ id: uid(), type: "habits", w: 2, h: 3 },
-				{ id: uid(), type: "history", w: 2, h: 2 },
+				{ id: uid(), type: "todos", w: 2, h: 6 },
+				{ id: uid(), type: "habits", w: 2, h: 6 },
 			],
 		},
 		{
 			id: uid(),
-			name: "Abitudini",
-			tiles: [
-				{ id: uid(), type: "habits", w: COLS, h: 3 },
-				{ id: uid(), type: "history", w: COLS, h: 3 },
-			],
+			name: "Habits",
+			tiles: [{ id: uid(), type: "habits", w: COLS, h: 6 }],
 		},
 		{
 			id: uid(),
-			name: "Attività",
+			name: "Tasks",
 			tiles: [{ id: uid(), type: "folders", w: COLS, h: 6 }],
 		},
 	];

@@ -548,8 +548,26 @@ body {
 .xl-heatmap {
 	margin-top: 10px;
 	padding-top: 10px;
+	padding-bottom: 4px;
 	border-top: 1px solid var(--xl-border);
+	display: flex;
+	justify-content: flex-end; /* ancorata a destra: oggi a filo destro */
 	overflow-x: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--xl-border) transparent;
+}
+.xl-heatmap::-webkit-scrollbar {
+	height: 6px;
+}
+.xl-heatmap::-webkit-scrollbar-track {
+	background: transparent;
+}
+.xl-heatmap::-webkit-scrollbar-thumb {
+	background: var(--xl-border);
+	border-radius: 3px;
+}
+.xl-heatmap::-webkit-scrollbar-thumb:hover {
+	background: var(--xl-muted);
 }
 
 .xl-heatmap-grid {
@@ -1116,7 +1134,8 @@ body {
 .xl-logo-bg {
 	fill: var(--xl-accent);
 	transform-origin: center;
-	animation: xl-logo-pop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	/* comparsa morbida (easeOutQuint, curva "gaussiana") con rimbalzo lieve */
+	animation: xl-logo-pop 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .xl-logo-check {
 	stroke: var(--xl-text);
@@ -1125,28 +1144,92 @@ body {
 	stroke-linejoin: round;
 	stroke-dasharray: 92;
 	stroke-dashoffset: 92;
-	animation: xl-draw 0.5s ease 0.35s forwards;
+	animation: xl-draw 0.6s cubic-bezier(0.33, 1, 0.68, 1) 0.42s forwards;
 }
 
-/* --- intro a tutto schermo --- */
+/* --- intro a tutto schermo (glassmorphica che rifrange il backdrop) --- */
 .xl-splash {
 	position: fixed;
 	inset: 0;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	/* glassmorphica: semi-opaca così resta leggibile + sfocatura del desktop dietro */
-	background: rgba(24, 24, 27, 0.82);
-	-webkit-backdrop-filter: blur(22px) saturate(1.1);
-	backdrop-filter: blur(22px) saturate(1.1);
+	overflow: hidden;
+	/* vetro: semi-trasparente così il desktop sfocato traspare, ma leggibile */
+	background: rgba(20, 20, 24, 0.52);
+	/* "liquid glass" reale su Chromium/WebView2: rifrazione via filtro SVG */
+	backdrop-filter: url(#xl-glass) saturate(1.4) brightness(1.06);
+	/* fallback (Safari/Firefox): frosted blur */
+	-webkit-backdrop-filter: blur(24px) saturate(1.4) brightness(1.06);
+	/* "lit edge" + bordo luminoso come i materiali Apple */
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 	-webkit-app-region: drag;
 	z-index: 50;
+	animation: xl-splash-out 0.45s ease 1.95s both;
+}
+@media (prefers-reduced-transparency: reduce) {
+	.xl-splash {
+		background: var(--xl-bg);
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.xl-splash,
+	.xl-splash::before,
+	.xl-splash::after,
+	.xl-splash-inner,
+	.xl-splash-word,
+	.xl-logo-bg,
+	.xl-logo-check {
+		animation: none;
+	}
+	.xl-splash-word { opacity: 1; }
+	.xl-logo-check { stroke-dashoffset: 0; }
+}
+/* rifrazioni di luce: highlight bianchi translucidi + lieve tinta accent, tutti
+   semi-trasparenti così restano coerenti col backdrop sfocato dietro. */
+.xl-splash::before {
+	content: "";
+	position: absolute;
+	inset: -25%;
+	background:
+		radial-gradient(38% 38% at 28% 26%, rgba(255, 255, 255, 0.1), transparent 70%),
+		radial-gradient(42% 42% at 78% 72%, color-mix(in srgb, var(--xl-accent-bright) 30%, transparent), transparent 72%),
+		radial-gradient(45% 45% at 62% 20%, color-mix(in srgb, var(--xl-accent) 24%, transparent), transparent 75%);
+	filter: blur(34px);
+	opacity: 0.55;
+	animation: xl-refract 7s ease-in-out infinite alternate;
+	pointer-events: none;
+}
+/* lampo di luce diagonale che attraversa il vetro una volta */
+.xl-splash::after {
+	content: "";
+	position: absolute;
+	top: -60%;
+	left: -30%;
+	width: 55%;
+	height: 220%;
+	background: linear-gradient(
+		100deg,
+		transparent,
+		rgba(255, 255, 255, 0.14) 48%,
+		rgba(255, 255, 255, 0.04) 52%,
+		transparent
+	);
+	transform: rotate(8deg) translateX(-40vw);
+	animation: xl-sheen 1.8s cubic-bezier(0.33, 1, 0.68, 1) 0.5s both;
+	pointer-events: none;
 }
 .xl-splash-inner {
+	position: relative;
+	z-index: 1;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	gap: 18px;
+	/* parte al centro e sale dolcemente verso la fine dell'intro */
+	animation: xl-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.2s both;
 }
 .xl-splash-word {
 	font-family: var(--xl-serif);
@@ -1154,7 +1237,7 @@ body {
 	letter-spacing: 0.02em;
 	color: var(--xl-text);
 	opacity: 0;
-	animation: xl-fade-up 0.5s ease 0.6s forwards;
+	animation: xl-fade-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.65s both;
 }
 
 /* --- onboarding --- */
@@ -1231,12 +1314,32 @@ body {
 
 /* --- animazioni spunta / contatore / collasso --- */
 @keyframes xl-logo-pop {
-	0% { transform: scale(0.4); opacity: 0; }
-	60% { transform: scale(1.08); }
+	0% { transform: scale(0.35); opacity: 0; }
+	55% { transform: scale(1.07); opacity: 1; }
+	75% { transform: scale(0.98); }
 	100% { transform: scale(1); opacity: 1; }
 }
 @keyframes xl-draw {
 	to { stroke-dashoffset: 0; }
+}
+/* il gruppo logo+testo parte al centro e sale dolcemente */
+@keyframes xl-rise {
+	from { transform: translateY(0); }
+	to { transform: translateY(-48px); }
+}
+/* luci del vetro che derivano lentamente (rifrazione) */
+@keyframes xl-refract {
+	0% { transform: translate3d(-4%, -3%, 0) scale(1); opacity: 0.45; }
+	100% { transform: translate3d(5%, 4%, 0) scale(1.1); opacity: 0.62; }
+}
+/* lampo di luce che attraversa una volta */
+@keyframes xl-sheen {
+	from { transform: rotate(8deg) translateX(-40vw); }
+	to { transform: rotate(8deg) translateX(170vw); }
+}
+/* dissolvenza finale dell'intro, per uno stacco morbido */
+@keyframes xl-splash-out {
+	to { opacity: 0; }
 }
 @keyframes xl-fade-up {
 	from { opacity: 0; transform: translateY(8px); }
@@ -1260,4 +1363,89 @@ body {
 	padding-bottom: 0;
 	margin-top: 0;
 	margin-bottom: 0;
+}
+
+/* ===== intro coordinata: logo persistente + velo glass + entrata contenuto ===== */
+
+/* logo che parte dal centro e si "solidifica" nell'header */
+.xl-brand {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	width: 92px;
+	height: 92px;
+	transform: translate(-50%, -50%) scale(1);
+	transform-origin: center;
+	transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+	z-index: 60;
+	pointer-events: none;
+}
+.xl-brand .xl-logo-svg {
+	width: 92px;
+	height: 92px;
+}
+.xl-brand.is-docked {
+	/* centro del logo (92px) portato a ~(24,22) in alto a sinistra, poi rimpicciolito */
+	transform: translate(calc(-50vw - 22px), calc(-50vh - 24px)) scale(0.26);
+}
+
+/* velo "liquid glass" dell'intro che si dissolve mentre il contenuto entra */
+.xl-veil {
+	position: fixed;
+	inset: 0;
+	z-index: 40;
+	pointer-events: none;
+	background: rgba(20, 20, 24, 0.5);
+	backdrop-filter: url(#xl-glass) saturate(1.4) brightness(1.06);
+	-webkit-backdrop-filter: blur(24px) saturate(1.4) brightness(1.06);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+	animation: xl-veil-out 1.5s ease forwards;
+}
+@keyframes xl-veil-out {
+	0% { opacity: 1; }
+	55% { opacity: 0.55; }
+	100% { opacity: 0; }
+}
+
+/* spazio nella topbar dove si aggancia il logo */
+.xl-logo-slot {
+	width: 30px;
+	flex: 0 0 auto;
+}
+
+/* entrata coordinata del contenuto (insieme al logo) */
+.xl-app.xl-intro .xl-topbar,
+.xl-app.xl-intro .xl-grid,
+.xl-app.xl-intro .xl-onboard {
+	animation: xl-content-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+@keyframes xl-content-in {
+	from { opacity: 0; transform: translateY(16px) scale(0.985); }
+	to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.xl-brand { transition: none; }
+	.xl-veil { animation: none; opacity: 0; }
+	.xl-app.xl-intro .xl-topbar,
+	.xl-app.xl-intro .xl-grid,
+	.xl-app.xl-intro .xl-onboard { animation: none; }
+}
+
+/* chip di valori nell'onboarding (modulare, markdown, ...) */
+.xl-onboard-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	justify-content: center;
+	margin: 2px 0 12px;
+}
+.xl-onboard-chip {
+	font-family: var(--xl-mono);
+	font-size: 11px;
+	color: var(--xl-accent-bright);
+	background: var(--xl-accent-soft);
+	border: 1px solid color-mix(in srgb, var(--xl-accent) 45%, transparent);
+	border-radius: 999px;
+	padding: 3px 10px;
 }

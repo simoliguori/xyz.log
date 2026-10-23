@@ -36,7 +36,7 @@ export interface Backend {
 
 const DEFAULT_CONFIG = (): AppConfig => ({
 	folder: "",
-	lang: "it",
+	lang: "en",
 	accent: "#44437a",
 	opacity: 90,
 	pinned: false,
