@@ -828,22 +828,24 @@ export class TrackerRenderer {
 		const open = data.todos.filter((t) => !t.done);
 		const byPrioThenDue = (a: Todo, b: Todo) =>
 			a.priority - b.priority || (a.due ?? "9999").localeCompare(b.due ?? "9999");
+		// senza data: più nuove in alto (ordine d'inserimento invertito)
+		const byNewest = (a: Todo, b: Todo) => b.lineNo - a.lineNo;
 
 		// Gli eventi con data futura (e di oggi) stanno sopra quelli scaduti/mancati;
-		// le task senza data chiudono in fondo.
-		const groups: [string, Todo[], string][] = [
-			[t("today"), open.filter((td) => td.due === today), ""],
-			[t("next7"), open.filter((td) => td.due && td.due > today && td.due <= week), ""],
-			[t("later"), open.filter((td) => td.due && td.due > week), ""],
-			[t("overdue"), open.filter((td) => td.due && td.due < today), "th-group-overdue"],
-			[t("noDate"), open.filter((td) => !td.due), ""],
+		// le task senza data chiudono in fondo (ordinate dalla più nuova).
+		const groups: [string, Todo[], string, (a: Todo, b: Todo) => number][] = [
+			[t("today"), open.filter((td) => td.due === today), "", byPrioThenDue],
+			[t("next7"), open.filter((td) => td.due && td.due > today && td.due <= week), "", byPrioThenDue],
+			[t("later"), open.filter((td) => td.due && td.due > week), "", byPrioThenDue],
+			[t("overdue"), open.filter((td) => td.due && td.due < today), "th-group-overdue", byPrioThenDue],
+			[t("noDate"), open.filter((td) => !td.due), "", byNewest],
 		];
 
 		if (open.length === 0) {
 			list.createDiv({ cls: "th-empty", text: t("allDone") });
 		}
 
-		for (const [label, todos, cls] of groups) {
+		for (const [label, todos, cls, sortFn] of groups) {
 			if (todos.length === 0) continue;
 			const key = `g:${label}`;
 			const group = list.createEl("details", {
@@ -854,7 +856,7 @@ export class TrackerRenderer {
 			const h = group.createEl("summary", { cls: "th-group-title" });
 			h.createSpan({ text: label });
 			h.createSpan({ cls: "th-group-count", text: String(todos.length) });
-			for (const todo of todos.sort(byPrioThenDue)) {
+			for (const todo of todos.sort(sortFn)) {
 				this.renderTodoRow(group, todo, today);
 			}
 		}

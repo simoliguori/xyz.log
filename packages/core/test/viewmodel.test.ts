@@ -44,6 +44,16 @@ test("groupTodos ordina gli eventi datati per data e ora", () => {
 	assert.deepEqual(later.todos.map((t) => t.text), ["B"]);
 });
 
+test("groupTodos: le task senza data vanno dalla più nuova alla più vecchia", () => {
+	const todos = [
+		parseTodoLine("- [ ] vecchia", 2)!,
+		parseTodoLine("- [ ] media", 5)!,
+		parseTodoLine("- [ ] nuova", 9)!,
+	];
+	const nodate = groupTodos(todos, today).find((g) => g.id === "nodate")!;
+	assert.deepEqual(nodate.todos.map((t) => t.text), ["nuova", "media", "vecchia"]);
+});
+
 test("collectReminders raccoglie promemoria di abitudini ed eventi", () => {
 	const habit: Habit = {
 		id: "lamictal",

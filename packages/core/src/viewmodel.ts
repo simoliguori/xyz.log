@@ -29,10 +29,6 @@ function sortDated(a: Todo, b: Todo): number {
 	return a.priority - b.priority;
 }
 
-function sortByPriority(a: Todo, b: Todo): number {
-	return a.priority - b.priority || (a.time ?? "99:99").localeCompare(b.time ?? "99:99");
-}
-
 /** Raggruppa le task aperte per scadenza, col nuovo ordinamento (futuro sopra i missati). */
 export function groupTodos(todos: Todo[], today: string): TodoGroup[] {
 	const week = addDays(today, 7);
@@ -48,7 +44,10 @@ export function groupTodos(todos: Todo[], today: string): TodoGroup[] {
 	for (const id of GROUP_ORDER) {
 		const list = buckets[id];
 		if (list.length === 0) continue;
-		list.sort(id === "nodate" ? sortByPriority : sortDated);
+		// "senza data": più nuove in alto (ordine d'inserimento invertito);
+		// gli altri gruppi per data/ora.
+		if (id === "nodate") list.sort((a, b) => b.lineNo - a.lineNo);
+		else list.sort(sortDated);
 		groups.push({ id, todos: list, overdue: id === "overdue" });
 	}
 	return groups;

@@ -305,7 +305,8 @@ object MarkdownParser {
         return buckets.entries
             .filter { it.value.isNotEmpty() }
             .map { (g, list) ->
-                g to if (g == TodoGroup.NODATE) list.sortedBy { it.priority.ordinal }
+                // senza data: più nuove in alto (le nuove task sono aggiunte in fondo al file)
+                g to if (g == TodoGroup.NODATE) list.reversed()
                 else list.sortedBy { datedSort(it) }
             }
     }

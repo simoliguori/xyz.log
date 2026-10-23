@@ -28,6 +28,12 @@
 	font-size: 0.9em;
 	padding: 10px 12px 18px;
 	overflow-y: auto;
+	/* il contenuto non deve mai allargare la scheda/pane oltre lo spazio
+	   disponibile (evita overflow orizzontali che sballano il workspace) */
+	max-width: 100%;
+	min-width: 0;
+	overflow-x: hidden;
+	box-sizing: border-box;
 }
 
 /* blocco incorporato nelle note: niente padding da vista, sezioni più compatte */
@@ -898,15 +904,11 @@
 	height: 8px;
 }
 
-/* Larghezza piena OPT-IN per nota: `cssclasses: th-wide`. Versione "gentile":
-   allarga solo la larghezza-riga leggibile tramite la variabile standard di
-   Obsidian, senza forzare width/!important sul contenuto dell'editor (che poteva
-   sballare il layout del workspace, es. la sidebar che non si chiudeva). I temi
-   come Minimal con le loro classi `wide`/`max` continuano a funzionare. */
-.th-wide {
-	--file-line-width: 100%;
-}
-
+/* Larghezza piena OPT-IN per nota: `cssclasses: th-wide`. Volutamente minimale:
+   allarga solo il sizer in reading view e NON tocca le variabili di line-width
+   del tema (Minimal gestisce le sue con `wide`/`max`). Toccarle poteva creare
+   conflitti di layout a livello di workspace (es. la sidebar sinistra che non si
+   chiudeva). Se usi Minimal, le sue classi `wide`/`max` bastano da sole. */
 .th-wide .markdown-preview-sizer {
 	max-width: none;
 }
