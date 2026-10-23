@@ -1,13 +1,13 @@
-package dev.simol.todohabits.notify
+package dev.simol.xyzlog.notify
 
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import dev.simol.todohabits.data.MarkdownParser
-import dev.simol.todohabits.data.Prefs
-import dev.simol.todohabits.data.Reminder
-import dev.simol.todohabits.data.VaultRepository
+import dev.simol.xyzlog.data.MarkdownParser
+import dev.simol.xyzlog.data.Prefs
+import dev.simol.xyzlog.data.Reminder
+import dev.simol.xyzlog.data.VaultRepository
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -72,5 +72,5 @@ object NotificationScheduler {
         )
     }
 
-    const val ACTION_FIRE = "dev.simol.todohabits.REMINDER_FIRE"
+    const val ACTION_FIRE = "dev.simol.xyzlog.REMINDER_FIRE"
 }

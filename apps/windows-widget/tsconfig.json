@@ -11,7 +11,7 @@
     "lib": ["ES2021", "DOM", "DOM.Iterable"],
     "types": [],
     "paths": {
-      "@todo-habits/core": ["../../packages/core/src/index.ts"]
+      "@xyzlog/core": ["../../packages/core/src/index.ts"]
     }
   },
   "include": ["src"]

@@ -1,5 +1,5 @@
 import { App, getIconIds, Modal, Platform, setIcon } from "obsidian";
-import type TodoHabitsPlugin from "./main";
+import type XyzlogPlugin from "./main";
 import { addDays, PRIORITY_EMOJI, streak, todayISO } from "./parser";
 import { Habit, Priority, Todo } from "./types";
 import { TrackerData } from "./store";
@@ -165,7 +165,7 @@ class IconPickerModal extends Modal {
 }
 
 /**
- * Rendering condiviso tra la vista dedicata e i code block `todo-habits`
+ * Rendering condiviso tra la vista dedicata e i code block `xyz.log`
  * incorporati nelle note.
  */
 export class TrackerRenderer {
@@ -178,7 +178,7 @@ export class TrackerRenderer {
 	private swipeIndex = 0;
 
 	constructor(
-		private plugin: TodoHabitsPlugin,
+		private plugin: XyzlogPlugin,
 		private root: HTMLElement,
 		private opts: RenderOptions
 	) {

@@ -1,11 +1,11 @@
-package dev.simol.todohabits.notify
+package dev.simol.xyzlog.notify
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import dev.simol.todohabits.data.MarkdownParser
-import dev.simol.todohabits.data.Prefs
-import dev.simol.todohabits.data.VaultRepository
+import dev.simol.xyzlog.data.MarkdownParser
+import dev.simol.xyzlog.data.Prefs
+import dev.simol.xyzlog.data.VaultRepository
 import java.time.LocalDateTime
 
 /** Scatta all'orario programmato: mostra i promemoria dovuti e riprogramma. */

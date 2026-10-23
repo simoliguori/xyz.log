@@ -1,9 +1,9 @@
-package dev.simol.todohabits.data
+package dev.simol.xyzlog.data
 
 import android.content.Context
 
 class Prefs(context: Context) {
-    private val sp = context.getSharedPreferences("todo_habits", Context.MODE_PRIVATE)
+    private val sp = context.getSharedPreferences("xyzlog", Context.MODE_PRIVATE)
 
     /** URI SAF (tree) della radice del vault */
     var treeUri: String?

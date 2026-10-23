@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type TodoHabitsPlugin from "./main";
+import type XyzlogPlugin from "./main";
 import { Lang, setLang, t } from "./strings";
 
 export interface TrackerSettings {
@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: TrackerSettings = {
 };
 
 export class TrackerSettingTab extends PluginSettingTab {
-	constructor(app: App, private plugin: TodoHabitsPlugin) {
+	constructor(app: App, private plugin: XyzlogPlugin) {
 		super(app, plugin);
 	}
 

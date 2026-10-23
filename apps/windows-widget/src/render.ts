@@ -17,7 +17,7 @@ import {
 	ui,
 	groupLabel,
 	type TodoGroupId,
-} from "@todo-habits/core";
+} from "@xyzlog/core";
 import { clear, el, renderRich } from "./dom";
 
 /** Azioni di scrittura: implementate in main.ts su file + core, poi backend. */

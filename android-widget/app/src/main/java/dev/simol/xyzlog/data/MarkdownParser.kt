@@ -1,4 +1,4 @@
-package dev.simol.todohabits.data
+package dev.simol.xyzlog.data
 
 import java.time.LocalDate
 

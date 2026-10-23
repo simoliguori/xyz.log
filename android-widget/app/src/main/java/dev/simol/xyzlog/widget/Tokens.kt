@@ -1,4 +1,4 @@
-package dev.simol.todohabits.widget
+package dev.simol.xyzlog.widget
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color
@@ -40,7 +40,7 @@ fun accentFromHex(hex: String): Accent {
 }
 
 fun accentOf(context: Context): Accent =
-    accentFromHex(dev.simol.todohabits.data.Prefs(context).accentHex)
+    accentFromHex(dev.simol.xyzlog.data.Prefs(context).accentHex)
 
 private fun Color.mix(other: Color, fraction: Float): Color = Color(
     red = red + (other.red - red) * fraction,

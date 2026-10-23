@@ -10,7 +10,7 @@
 
 Modularity is **the core focus**. Every function (habits, to-dos, history, a single
 habit, …) is an **independent module** you compose freely: in the plugin as a
-` ```todo-habits ` block with options, in the widget as a tab. The same applies to the
+` ```xyz.log ` block with options, in the widget as a tab. The same applies to the
 code (`packages/core`, reused by every client) and to the repo: isolated features,
 combinable, testable on their own. A "homepage" is just **a composition of modules**, not
 a monolith.
@@ -27,7 +27,7 @@ lock-in.
 ## 2. Current status
 
 **Obsidian plugin** (`obsidian-plugin/`, TypeScript) — **implemented**:
-- dedicated view + embeddable ` ```todo-habits ` block (options `habits`, `todos`,
+- dedicated view + embeddable ` ```xyz.log ` block (options `habits`, `todos`,
   `folders`/`cartelle`, `cross`/`croce`, `habit:<id>`, `header`);
 - habits with icons (lucide/Iconize), **categories** by icon, **cadence streaks**,
   **GitHub-style heatmap**, **countable** habits (goal N/day);

@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "dev.simol.todohabits"
+    namespace = "dev.simol.xyzlog"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "dev.simol.todohabits"
+        applicationId = "dev.simol.xyzlog"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

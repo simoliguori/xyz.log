@@ -8,7 +8,7 @@ export default defineConfig({
 	clearScreen: false,
 	resolve: {
 		alias: {
-			"@todo-habits/core": fileURLToPath(
+			"@xyzlog/core": fileURLToPath(
 				new URL("../../packages/core/src/index.ts", import.meta.url)
 			),
 		},

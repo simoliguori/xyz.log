@@ -1,5 +1,5 @@
 {
-	"name": "todo-habits",
+	"name": "xyzlog-obsidian",
 	"version": "0.1.0",
 	"description": "Habit tracker e todo list per Obsidian, condivisi con il widget Android",
 	"main": "main.js",

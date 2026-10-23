@@ -1,4 +1,4 @@
-package dev.simol.todohabits.notify
+package dev.simol.xyzlog.notify
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,8 +8,8 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import dev.simol.todohabits.MainActivity
-import dev.simol.todohabits.R
+import dev.simol.xyzlog.MainActivity
+import dev.simol.xyzlog.R
 
 /** Canale e invio delle notifiche di promemoria. */
 object Notifications {

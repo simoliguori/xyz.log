@@ -1,5 +1,5 @@
 {
-  "name": "@todo-habits/core",
+  "name": "@xyzlog/core",
   "version": "0.1.0",
   "description": "Logica condivisa (parser markdown, view-model, i18n) di xyz.log, riusata da tutti i client.",
   "license": "MIT",

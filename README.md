@@ -18,7 +18,7 @@
   reminders) with unit tests. The canonical parsing/grouping lives here and is reused by
   the Windows widget. **Implemented.**
 - **`obsidian-plugin/`** — Obsidian plugin (desktop + mobile): a dedicated view and
-  composable ` ```todo-habits ` blocks you can drop in any note. Habits can be done
+  composable ` ```xyz.log ` blocks you can drop in any note. Habits can be done
   **multiple times a day** (counter), there's a **mobile swipe** between habits and tasks,
   and per-habit settings (times/day, free count, cadence, reminders). **Implemented.**
 - **`apps/windows-widget/`** — always-on desktop gadget (Tauri): a **modular, tile-based**
@@ -44,7 +44,7 @@ File format: [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md) · Shared design tokens:
 
 Drop a code block in any note and compose what you need (one option per line):
 
-```todo-habits
+```xyz.log
 header
 habits
 todos
@@ -60,7 +60,8 @@ todos
 | `header` | a heading with today's date |
 
 Empty block = habits + todos. Each block is interactive and live-updates when the files
-change.
+change. The block language is `xyz.log`; `xyzlog` and the legacy `todo-habits` are kept as
+aliases, so existing notes keep working.
 
 ## Language
 

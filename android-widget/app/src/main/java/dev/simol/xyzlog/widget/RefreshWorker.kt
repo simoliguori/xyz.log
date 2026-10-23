@@ -1,4 +1,4 @@
-package dev.simol.todohabits.widget
+package dev.simol.xyzlog.widget
 
 import android.content.Context
 import androidx.work.CoroutineWorker
@@ -7,7 +7,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.glance.appwidget.updateAll
-import dev.simol.todohabits.notify.NotificationScheduler
+import dev.simol.xyzlog.notify.NotificationScheduler
 import java.util.concurrent.TimeUnit
 
 /**
@@ -27,7 +27,7 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         fun schedule(context: Context) {
             val request = PeriodicWorkRequestBuilder<RefreshWorker>(30, TimeUnit.MINUTES).build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                "todo-habits-refresh",
+                "xyzlog-refresh",
                 ExistingPeriodicWorkPolicy.KEEP,
                 request
             )

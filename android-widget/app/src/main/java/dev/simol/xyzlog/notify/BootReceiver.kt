@@ -1,4 +1,4 @@
-package dev.simol.todohabits.notify
+package dev.simol.xyzlog.notify
 
 import android.content.BroadcastReceiver
 import android.content.Context

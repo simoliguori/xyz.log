@@ -1,4 +1,4 @@
-package dev.simol.todohabits.widget
+package dev.simol.xyzlog.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
@@ -36,13 +36,13 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import dev.simol.todohabits.MainActivity
-import dev.simol.todohabits.R
-import dev.simol.todohabits.data.MarkdownParser
-import dev.simol.todohabits.data.TaskPriority
-import dev.simol.todohabits.data.Todo
-import dev.simol.todohabits.data.TrackerData
-import dev.simol.todohabits.data.VaultRepository
+import dev.simol.xyzlog.MainActivity
+import dev.simol.xyzlog.R
+import dev.simol.xyzlog.data.MarkdownParser
+import dev.simol.xyzlog.data.TaskPriority
+import dev.simol.xyzlog.data.Todo
+import dev.simol.xyzlog.data.TrackerData
+import dev.simol.xyzlog.data.VaultRepository
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -60,7 +60,7 @@ class TodoWidget : GlanceAppWidget() {
         val data = if (repo.isConfigured()) {
             withContext(Dispatchers.IO) { runCatching { repo.readData() }.getOrNull() }
         } else null
-        val alpha = dev.simol.todohabits.data.Prefs(context).widgetAlpha
+        val alpha = dev.simol.xyzlog.data.Prefs(context).widgetAlpha
         val accent = accentOf(context)
 
         provideContent { Content(data, alpha, accent) }

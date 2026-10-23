@@ -1,4 +1,4 @@
-package dev.simol.todohabits.widget
+package dev.simol.xyzlog.widget
 
 import android.content.Context
 import android.content.Intent
@@ -6,9 +6,9 @@ import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.updateAll
-import dev.simol.todohabits.MainActivity
-import dev.simol.todohabits.data.VaultRepository
-import dev.simol.todohabits.notify.NotificationScheduler
+import dev.simol.xyzlog.MainActivity
+import dev.simol.xyzlog.data.VaultRepository
+import dev.simol.xyzlog.notify.NotificationScheduler
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

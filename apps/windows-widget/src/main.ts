@@ -17,7 +17,7 @@ import {
 	toggleLog,
 	toggleTodoLine,
 	TrackerData,
-} from "@todo-habits/core";
+} from "@xyzlog/core";
 import { createBackend, type Backend, type FileKey, type VaultFiles } from "./backend";
 import { clear, el } from "./dom";
 import { COLS, MAX_H, newTile, Tile, TILE_META, TileType, uid, type AppConfig, type TabLayout } from "./layout";

@@ -1,11 +1,11 @@
-import { debounce, Editor, MarkdownRenderChild, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { debounce, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Plugin, TFile, WorkspaceLeaf } from "obsidian";
 import { TrackerRenderer, RenderOptions } from "./renderer";
 import { DEFAULT_SETTINGS, TrackerSettings, TrackerSettingTab } from "./settings";
 import { Store } from "./store";
 import { setLang, t } from "./strings";
 import { TrackerView, VIEW_TYPE } from "./view";
 
-export default class TodoHabitsPlugin extends Plugin {
+export default class XyzlogPlugin extends Plugin {
 	settings: TrackerSettings;
 	store: Store;
 
@@ -29,15 +29,16 @@ export default class TodoHabitsPlugin extends Plugin {
 			id: "insert-block",
 			name: t("insertBlock"),
 			editorCallback: (editor: Editor) => {
-				const block = "```todo-habits\nheader\nhabits\ntodos\n```\n";
+				const block = "```xyz.log\nheader\nhabits\ntodos\n```\n";
 				editor.replaceSelection(block);
 			},
 		});
 
 		this.addSettingTab(new TrackerSettingTab(this.app, this));
 
-		// blocco ```todo-habits``` incorporabile in qualsiasi nota
-		this.registerMarkdownCodeBlockProcessor("todo-habits", (source, el, ctx) => {
+		// blocco ```xyz.log``` incorporabile in qualsiasi nota
+		// (alias retrocompatibili: `xyzlog` e il vecchio `todo-habits`)
+		const blockHandler = (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
 			const opts = parseEmbedOptions(source);
 			el.addClass("th-embed");
 			const renderer = new TrackerRenderer(this, el, opts);
@@ -54,7 +55,10 @@ export default class TodoHabitsPlugin extends Plugin {
 			);
 
 			void renderer.render();
-		});
+		};
+		for (const lang of ["xyz.log", "xyzlog", "todo-habits"]) {
+			this.registerMarkdownCodeBlockProcessor(lang, blockHandler);
+		}
 
 		// ri-renderizza quando uno dei tre file cambia (edit manuale o Obsidian Sync)
 		this.registerEvent(
@@ -99,7 +103,7 @@ export default class TodoHabitsPlugin extends Plugin {
 }
 
 /**
- * Opzioni del blocco ```todo-habits```, una per riga:
+ * Opzioni del blocco ```xyz.log```, una per riga:
  * `habits`, `todos`, `header`, `habit: <id>`. Vuoto = habits + todos.
  */
 function parseEmbedOptions(source: string): RenderOptions {

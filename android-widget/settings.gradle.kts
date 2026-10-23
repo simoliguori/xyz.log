@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "todo-habits-widget"
+rootProject.name = "xyzlog-android"
 include(":app")

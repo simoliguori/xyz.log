@@ -1,4 +1,4 @@
-import type { Reminder } from "@todo-habits/core";
+import type { Reminder } from "@xyzlog/core";
 import type { AppConfig, TabLayout } from "./layout";
 import { defaultTabs } from "./layout";
 
