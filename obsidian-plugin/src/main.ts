@@ -25,14 +25,25 @@ export default class XyzlogPlugin extends Plugin {
 			callback: () => void this.activateView(),
 		});
 
-		this.addCommand({
-			id: "insert-block",
-			name: t("insertBlock"),
-			editorCallback: (editor: Editor) => {
-				const block = "```xyz.log\nheader\nhabits\ntodos\n```\n";
-				editor.replaceSelection(block);
-			},
-		});
+		// un comando per ogni blocco, individuabili nella palette come "xyz.log - …"
+		const blocks: [string, string, string][] = [
+			["dashboard", "Dashboard (tasks + habits)", "cross"],
+			["tasks", "Tasks by date", "todos"],
+			["folders", "Tasks by folder", "folders"],
+			["habits", "Habits", "habits"],
+			["single-habit", "Single habit (heatmap)", "habit: <id>"],
+			["header", "Header (today's date)", "header"],
+			["full", "Full (header + habits + tasks)", "header\nhabits\ntodos"],
+		];
+		for (const [id, label, body] of blocks) {
+			this.addCommand({
+				id: `insert-${id}`,
+				name: `- ${label}`,
+				editorCallback: (editor: Editor) => {
+					editor.replaceSelection("```xyz.log\n" + body + "\n```\n");
+				},
+			});
+		}
 
 		this.addSettingTab(new TrackerSettingTab(this.app, this));
 

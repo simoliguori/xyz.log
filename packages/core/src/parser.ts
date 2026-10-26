@@ -233,6 +233,27 @@ export function serializeTodo(
 	return line;
 }
 
+/** Riscrive la riga di una task con nuovi campi, preservando indentazione,
+   stato di completamento e data di completamento (la descrizione, su righe a
+   parte, non viene toccata). I campi non passati restano quelli attuali. */
+export function updateTodoLine(
+	todo: Todo,
+	fields: { text?: string; priority?: Priority; due?: string | null; time?: string | null }
+): string {
+	const indent = todo.raw.match(/^(\s*)/)?.[1] ?? "";
+	const box = todo.done ? "x" : " ";
+	const text = (fields.text ?? todo.text).trim();
+	const priority = fields.priority ?? todo.priority;
+	const due = fields.due !== undefined ? fields.due : todo.due;
+	const time = fields.time !== undefined ? fields.time : todo.time;
+	let line = `${indent}- [${box}] ${text}`;
+	if (priority !== Priority.None) line += ` ${PRIORITY_EMOJI[priority]}`;
+	if (due) line += ` 📅 ${due}`;
+	if (time) line += ` ⏰ ${time}`;
+	if (todo.done && todo.doneDate) line += ` ✅ ${todo.doneDate}`;
+	return line;
+}
+
 /** Inverte lo stato di completamento di una riga task. `today` in formato ISO. */
 export function toggleTodoLine(line: string, today: string): string {
 	const m = line.match(TODO_LINE_RE);

@@ -7,6 +7,8 @@ import {
 	parseHabits,
 	parseLog,
 	parseTodos,
+	PRIORITY_EMOJI,
+	Priority,
 	removeHabitFromFrontmatter,
 	replaceLine,
 	serializeTimeList,
@@ -16,7 +18,9 @@ import {
 	todayISO,
 	toggleLog,
 	toggleTodoLine,
+	Todo,
 	TrackerData,
+	updateTodoLine,
 } from "@xyzlog/core";
 import { createBackend, type Backend, type FileKey, type VaultFiles } from "./backend";
 import { clear, el } from "./dom";
@@ -44,6 +48,7 @@ class App {
 	private obsAccent: string | null = null;
 	private expanded = new Set<string>();
 	private settingsOpen = new Set<string>();
+	private editing: Todo | null = null;
 	private root: HTMLElement;
 
 	constructor(root: HTMLElement) {
@@ -149,6 +154,8 @@ class App {
 		toggleTodo: (todo) =>
 			void this.mutate("todo", replaceLine(this.files.todo, todo.raw, (l) => toggleTodoLine(l, todayISO()))),
 		deleteTodo: (todo) => void this.mutate("todo", replaceLine(this.files.todo, todo.raw, () => null)),
+		updateTodo: (todo, fields) =>
+			void this.mutate("todo", replaceLine(this.files.todo, todo.raw, () => updateTodoLine(todo, fields))),
 		addTodo: (text, prio, due, time) =>
 			void this.mutate("todo", appendLine(this.files.todo, serializeTodo(text, prio, due, time))),
 		addHabit: (name) => {
@@ -178,6 +185,10 @@ class App {
 			settingsOpen: this.settingsOpen,
 			heatmapWeeks: 52,
 			rerender: () => this.render(),
+			editTodo: (todo) => {
+				this.editing = todo;
+				this.render();
+			},
 		};
 	}
 
@@ -206,6 +217,64 @@ class App {
 		if (this.edit) this.root.appendChild(this.addTileBar());
 		this.root.appendChild(this.grid());
 		if (this.showSettings) this.root.appendChild(this.settingsOverlay());
+		if (this.editing) this.root.appendChild(this.taskModal(this.editing));
+	}
+
+	/* ---------- popup modifica task (glass) ---------- */
+
+	private taskModal(todo: Todo): HTMLElement {
+		const T = (it: string, en: string) => (this.config.lang === "it" ? it : en);
+		const close = () => {
+			this.editing = null;
+			this.render();
+		};
+		const overlay = el("div", { cls: "xl-overlay" });
+		overlay.onclick = (e) => {
+			if (e.target === overlay) close();
+		};
+		const panel = el("div", { cls: "xl-task-modal" });
+		panel.appendChild(el("div", { cls: "xl-tm-title", text: T("Modifica attività", "Edit task") }));
+
+		const textInput = el("input", { cls: "xl-tm-text", attr: { type: "text", value: todo.text } }) as HTMLInputElement;
+		panel.appendChild(textInput);
+
+		const row = el("div", { cls: "xl-tm-row" });
+		const dateInput = el("input", { cls: "xl-tm-date", attr: { type: "date", value: todo.due ?? "" } }) as HTMLInputElement;
+		const timeInput = el("input", { cls: "xl-tm-time", attr: { type: "time", value: todo.time ?? "" } }) as HTMLInputElement;
+		const prio = el("select", { cls: "xl-tm-prio" }) as HTMLSelectElement;
+		for (const p of [Priority.None, Priority.Lowest, Priority.Low, Priority.Medium, Priority.High, Priority.Highest]) {
+			const opt = el("option", { text: p === Priority.None ? "—" : PRIORITY_EMOJI[p], attr: { value: String(p) } });
+			if (p === todo.priority) opt.setAttribute("selected", "");
+			prio.appendChild(opt);
+		}
+		prio.value = String(todo.priority);
+		row.append(dateInput, timeInput, prio);
+		panel.appendChild(row);
+
+		const actions = el("div", { cls: "xl-tm-actions" });
+		const cancel = el("button", { cls: "xl-tm-cancel", text: T("Annulla", "Cancel") });
+		cancel.onclick = close;
+		const save = el("button", { cls: "xl-tm-save", text: T("Salva", "Save") });
+		const commit = () => {
+			this.store.updateTodo(todo, {
+				text: textInput.value.trim() || todo.text,
+				priority: Number(prio.value) as Priority,
+				due: dateInput.value || null,
+				time: timeInput.value || null,
+			});
+			this.editing = null;
+			this.render();
+		};
+		save.onclick = commit;
+		textInput.onkeydown = (e) => {
+			if (e.key === "Enter") commit();
+			if (e.key === "Escape") close();
+		};
+		actions.append(cancel, save);
+		panel.appendChild(actions);
+		overlay.appendChild(panel);
+		requestAnimationFrame(() => textInput.focus());
+		return overlay;
 	}
 
 	/* ---------- controlli finestra (niente barra di Windows) ---------- */

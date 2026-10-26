@@ -21,6 +21,27 @@ import {
 import { clear, el, renderRich } from "./dom";
 import { playComplete } from "./sfx";
 
+/** Rinomina inline: sostituisce il testo con un input, salva su Invio/blur. */
+function startRename(textEl: HTMLElement, todo: Todo, ctx: RenderCtx): void {
+	const input = el("input", { cls: "xl-todo-rename", attr: { type: "text", value: todo.text } }) as HTMLInputElement;
+	textEl.replaceWith(input);
+	input.focus();
+	input.select();
+	let done = false;
+	const commit = (save: boolean) => {
+		if (done) return;
+		done = true;
+		const v = input.value.trim();
+		if (save && v && v !== todo.text) ctx.store.updateTodo(todo, { text: v });
+		else ctx.rerender();
+	};
+	input.onkeydown = (e) => {
+		if (e.key === "Enter") commit(true);
+		if (e.key === "Escape") commit(false);
+	};
+	input.onblur = () => commit(true);
+}
+
 /** Collassa l'elemento (altezza → 0) e poi esegue `fn`, come nel plugin. */
 function collapseThenRun(node: HTMLElement, fn: () => void): void {
 	node.style.maxHeight = `${node.scrollHeight}px`;
@@ -37,6 +58,10 @@ export interface Store {
 	decrementHabit(id: string, date: string): void;
 	toggleTodo(todo: Todo): void;
 	deleteTodo(todo: Todo): void;
+	updateTodo(
+		todo: Todo,
+		fields: { text?: string; priority?: Priority; due?: string | null; time?: string | null }
+	): void;
 	addTodo(text: string, prio: Priority, due: string | null, time: string | null): void;
 	addHabit(name: string): void;
 	deleteHabit(id: string): void;
@@ -53,6 +78,8 @@ export interface RenderCtx {
 	settingsOpen: Set<string>;
 	heatmapWeeks: number;
 	rerender: () => void;
+	/** apre il popup di modifica di una task (implementato dall'app) */
+	editTodo: (todo: Todo) => void;
 }
 
 const PRIO_CLASS: Record<Priority, string> = {
@@ -492,7 +519,8 @@ function todoRow(todo: Todo, ctx: RenderCtx): HTMLElement {
 	const wrap = el("div", { cls: `xl-todo ${todo.done ? "is-done" : ""}` });
 	const row = el("div", { cls: "xl-todo-main" });
 	const check = el("button", { cls: `xl-check xl-check-sm ${todo.done ? "is-done" : ""}`, text: todo.done ? "✓" : "" });
-	check.onclick = () => {
+	check.onclick = (e) => {
+		e.stopPropagation();
 		if (todo.done) {
 			ctx.store.toggleTodo(todo);
 			return;
@@ -507,9 +535,17 @@ function todoRow(todo: Todo, ctx: RenderCtx): HTMLElement {
 	if (todo.priority !== Priority.None) {
 		row.appendChild(el("span", { cls: `xl-prio-dot ${PRIO_CLASS[todo.priority]}` }));
 	}
-	const text = el("div", { cls: "xl-todo-text" });
+	const text = el("div", { cls: "xl-todo-text", attr: { title: ctx.lang === "it" ? "Clicca per rinominare" : "Click to rename" } });
 	renderRich(text, todo.text);
+	// clic sul testo = rinomina inline (ma non sui link)
+	text.onclick = (e) => {
+		if ((e.target as HTMLElement).closest("a")) return;
+		e.stopPropagation();
+		startRename(text, todo, ctx);
+	};
 	row.appendChild(text);
+	// clic nello spazio vuoto della riga = popup di modifica
+	row.onclick = () => ctx.editTodo(todo);
 
 	if (todo.due || todo.time) {
 		const overdue = !todo.done && !!todo.due && todo.due < ctx.today;
@@ -517,7 +553,10 @@ function todoRow(todo: Todo, ctx: RenderCtx): HTMLElement {
 		row.appendChild(el("span", { cls: `xl-due ${overdue ? "is-overdue" : ""}`, text: [dateText, todo.time].filter(Boolean).join(" ") }));
 	}
 	const del = el("button", { cls: "xl-del", text: "×" });
-	del.onclick = () => ctx.store.deleteTodo(todo);
+	del.onclick = (e) => {
+		e.stopPropagation();
+		ctx.store.deleteTodo(todo);
+	};
 	row.appendChild(del);
 	wrap.appendChild(row);
 

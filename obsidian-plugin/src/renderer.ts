@@ -1,6 +1,6 @@
 import { App, getIconIds, Modal, Platform, setIcon } from "obsidian";
 import type XyzlogPlugin from "./main";
-import { addDays, PRIORITY_EMOJI, streak, todayISO } from "./parser";
+import { addDays, PRIORITY_EMOJI, serializeTodo, streak, todayISO } from "./parser";
 import { Habit, Priority, Todo } from "./types";
 import { TrackerData } from "./store";
 import { locale, prioLabel, t, tf } from "./strings";
@@ -178,6 +178,73 @@ class IconPickerModal extends Modal {
 	}
 }
 
+/** Popup (traslucente) per modificare testo, data, ora e priorità di una task. */
+class TaskEditModal extends Modal {
+	constructor(private plugin: XyzlogPlugin, private todo: Todo) {
+		super(plugin.app);
+	}
+
+	onOpen(): void {
+		this.modalEl.addClass("th-task-modal");
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.createEl("h3", { cls: "th-tm-title", text: t("editTask") });
+
+		const textInput = contentEl.createEl("input", {
+			cls: "th-tm-text",
+			attr: { type: "text", value: this.todo.text, placeholder: t("newTask") },
+		});
+
+		const dateRow = contentEl.createDiv({ cls: "th-tm-row" });
+		const dateInput = dateRow.createEl("input", {
+			cls: "th-tm-date",
+			attr: { type: "date", value: this.todo.due ?? "" },
+		});
+		const timeInput = dateRow.createEl("input", {
+			cls: "th-tm-time",
+			attr: { type: "time", value: this.todo.time ?? "" },
+		});
+		const prio = dateRow.createEl("select", { cls: "th-tm-prio" });
+		for (const p of [
+			Priority.None,
+			Priority.Lowest,
+			Priority.Low,
+			Priority.Medium,
+			Priority.High,
+			Priority.Highest,
+		]) {
+			prio.createEl("option", {
+				text: p === Priority.None ? t("priority") : `${PRIORITY_EMOJI[p]} ${prioLabel(p)}`,
+				attr: { value: String(p) },
+			});
+		}
+		prio.value = String(this.todo.priority);
+
+		const actions = contentEl.createDiv({ cls: "th-tm-actions" });
+		const cancel = actions.createEl("button", { cls: "th-tm-cancel", text: t("cancel") });
+		cancel.onclick = () => this.close();
+		const save = actions.createEl("button", { cls: "th-tm-save", text: t("save") });
+		const commit = () => {
+			void this.plugin.store.updateTodo(this.todo, {
+				text: textInput.value.trim() || this.todo.text,
+				priority: Number(prio.value) as Priority,
+				due: dateInput.value || null,
+				time: timeInput.value || null,
+			});
+			this.close();
+		};
+		save.onclick = commit;
+		textInput.onkeydown = (e) => {
+			if (e.key === "Enter") commit();
+		};
+		textInput.focus();
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+}
+
 /**
  * Rendering condiviso tra la vista dedicata e i code block `xyz.log`
  * incorporati nelle note.
@@ -190,6 +257,8 @@ export class TrackerRenderer {
 	private settingsOpen = new Set<string>();
 	/** pagina attiva dello swipe mobile (0 = abitudini, 1 = attività) */
 	private swipeIndex = 0;
+	/** riga della task appena creata, per animarne la comparsa */
+	private pendingNew: string | null = null;
 
 	constructor(
 		private plugin: XyzlogPlugin,
@@ -318,17 +387,14 @@ export class TrackerRenderer {
 
 	private renderCross(root: HTMLElement, data: TrackerData): void {
 		root.addClass("th-cross");
-		if (this.opts.header) this.renderHeader(root);
-		const today = todayISO();
-
+		// dashboard split: attività a sinistra, abitudini a destra. Niente data in
+		// alto e niente cronologia (ridondante: le abitudini si espandono già).
 		const grid = root.createDiv({ cls: "th-cross-grid" });
 		const todoCell = grid.createDiv({ cls: "th-cross-cell th-cross-cell--todo" });
 		const habitsCell = grid.createDiv({ cls: "th-cross-cell th-cross-cell--habits" });
-		const historyCell = grid.createDiv({ cls: "th-cross-cell th-cross-cell--history" });
 
 		this.renderTodos(todoCell, data);
 		this.renderHabits(habitsCell, data);
-		this.renderHistoryCell(historyCell, data, today);
 	}
 
 	/** Panoramica cronologia: una riga compatta per abitudine, raggruppata per categoria. */
@@ -459,7 +525,9 @@ export class TrackerRenderer {
 			text: name,
 			attr: { title: t("renameCategory") },
 		});
-		head.createSpan({ cls: "th-group-count", text: String(habs.length) });
+		// chevron animato per minimizzare/espandere la categoria (al posto del contatore)
+		const chevron = head.createDiv({ cls: "th-cat-chevron", attr: { "aria-hidden": "true" } });
+		setIcon(chevron, "chevron-down");
 
 		nameEl.onclick = (e) => {
 			e.preventDefault();
@@ -950,7 +1018,10 @@ export class TrackerRenderer {
 		const submit = async () => {
 			const text = input.value.trim();
 			if (!text) return;
-			await this.plugin.store.addTodo(text, Number(prio.value) as Priority, date.value || null);
+			const p = Number(prio.value) as Priority;
+			// riga attesa, per animarne la comparsa al prossimo render
+			this.pendingNew = serializeTodo(text, p, date.value || null);
+			await this.plugin.store.addTodo(text, p, date.value || null);
 			input.value = "";
 		};
 		btn.onclick = submit;
@@ -961,6 +1032,11 @@ export class TrackerRenderer {
 
 	private renderTodoRow(parent: HTMLElement, todo: Todo, today: string): void {
 		const wrap = parent.createDiv({ cls: `th-todo ${todo.done ? "is-done" : ""}` });
+		// comparsa animata della task appena creata (inverso del collasso)
+		if (this.pendingNew && todo.raw === this.pendingNew) {
+			wrap.addClass("th-appear");
+			this.pendingNew = null;
+		}
 		const row = wrap.createDiv({ cls: "th-todo-main" });
 
 		const check = row.createEl("button", {
@@ -968,15 +1044,18 @@ export class TrackerRenderer {
 			attr: { "aria-label": todo.done ? t("reopen") : t("complete") },
 		});
 		setIcon(check, "check");
-		check.onclick = () => {
+		check.onclick = (e) => {
+			e.stopPropagation();
 			if (todo.done) {
 				void this.plugin.store.toggleTodo(todo);
 				return;
 			}
+			// prima l'animazione del quadratino che si riempie (+ suono),
+			// poi, finita, il collasso con la curva gaussiana
 			playCheckSound();
 			check.addClass("is-done");
 			check.addClass("th-pop");
-			collapseThenRun(wrap, () => void this.plugin.store.toggleTodo(todo));
+			window.setTimeout(() => collapseThenRun(wrap, () => void this.plugin.store.toggleTodo(todo)), 300);
 		};
 
 		if (todo.priority !== Priority.None) {
@@ -986,8 +1065,14 @@ export class TrackerRenderer {
 			});
 		}
 
-		const text = row.createDiv({ cls: "th-todo-text" });
+		const text = row.createDiv({ cls: "th-todo-text", attr: { title: t("clickToRename") } });
 		renderRich(text, todo.text);
+		// clic sul testo = rinomina inline (ma non sui link dentro il testo)
+		text.onclick = (e) => {
+			if ((e.target as HTMLElement).closest("a")) return;
+			e.stopPropagation();
+			this.startRename(text, todo);
+		};
 
 		if (todo.due || todo.time) {
 			const overdue = !todo.done && !!todo.due && todo.due < today;
@@ -1004,7 +1089,13 @@ export class TrackerRenderer {
 
 		const del = row.createEl("button", { cls: "th-del", attr: { "aria-label": t("delete") } });
 		setIcon(del, "x");
-		del.onclick = () => void this.plugin.store.deleteTodo(todo);
+		del.onclick = (e) => {
+			e.stopPropagation();
+			void this.plugin.store.deleteTodo(todo);
+		};
+
+		// clic nello spazio vuoto della riga = popup di modifica (data/ora/priorità)
+		row.onclick = () => new TaskEditModal(this.plugin, todo).open();
 
 		if (todo.description) {
 			const desc = wrap.createDiv({ cls: "th-todo-desc" });
@@ -1012,6 +1103,33 @@ export class TrackerRenderer {
 				renderRich(desc.createDiv(), line);
 			}
 		}
+	}
+
+	/** Rinomina inline: sostituisce il testo con un input, salva su Invio/blur. */
+	private startRename(el: HTMLElement, todo: Todo): void {
+		const input = document.createElement("input");
+		input.type = "text";
+		input.value = todo.text;
+		input.className = "th-todo-rename";
+		el.replaceWith(input);
+		input.focus();
+		input.select();
+		let done = false;
+		const commit = (save: boolean) => {
+			if (done) return;
+			done = true;
+			const v = input.value.trim();
+			if (save && v && v !== todo.text) {
+				void this.plugin.store.updateTodo(todo, { text: v });
+			} else {
+				void this.render();
+			}
+		};
+		input.onkeydown = (e) => {
+			if (e.key === "Enter") commit(true);
+			if (e.key === "Escape") commit(false);
+		};
+		input.onblur = () => commit(true);
 	}
 
 	private formatDue(iso: string): string {

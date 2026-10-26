@@ -18,6 +18,7 @@ import {
 	todayISO,
 	toggleLog,
 	toggleTodoLine,
+	updateTodoLine,
 } from "./parser";
 import { Category, Habit, HabitLog, Priority, Todo } from "./types";
 
@@ -110,6 +111,16 @@ export class Store {
 	async toggleTodo(todo: Todo): Promise<void> {
 		await this.process(this.todoPath, (data) =>
 			replaceLine(data, todo.raw, (l) => toggleTodoLine(l, todayISO()))
+		);
+	}
+
+	/** Modifica i campi di una task (testo, priorità, data, ora). */
+	async updateTodo(
+		todo: Todo,
+		fields: { text?: string; priority?: Priority; due?: string | null; time?: string | null }
+	): Promise<void> {
+		await this.process(this.todoPath, (data) =>
+			replaceLine(data, todo.raw, () => updateTodoLine(todo, fields))
 		);
 	}
 
