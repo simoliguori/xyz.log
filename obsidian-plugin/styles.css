@@ -439,10 +439,12 @@
 	border-radius: 4px;
 	border: 1.5px solid var(--background-modifier-border, var(--th-border));
 	background: var(--th-bg2);
-	color: var(--th-muted);
+	/* numero minimal e tenue */
+	color: color-mix(in srgb, var(--th-muted) 70%, var(--th-bg));
 	font-family: var(--th-mono);
-	font-size: 0.7em;
-	font-weight: 700;
+	font-size: 0.68em;
+	font-weight: 400;
+	letter-spacing: 0.01em;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1336,3 +1338,11 @@
 	flex: 0 0 auto;
 	max-width: 120px;
 }
+
+/* ---------- contatore a frazione (box di dimensione fissa, stile ½) ---------- */
+.th-root .th-count-frac { line-height: 1; overflow: hidden; }
+.th-root .th-count sup,
+.th-root .th-count sub { font-size: 7px; line-height: 1; }
+.th-root .th-count sup { vertical-align: 0.3em; }
+.th-root .th-count sub { vertical-align: -0.2em; }
+.th-root .th-count .th-frac-slash { font-size: 9px; margin: 0 -1px; opacity: 0.85; }

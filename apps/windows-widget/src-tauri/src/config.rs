@@ -4,6 +4,7 @@ use std::path::PathBuf;
 /// Configurazione persistente del widget. `tabs` è opaco (la forma dei riquadri
 /// vive nel frontend TypeScript): lo conserviamo così com'è.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppConfig {
     #[serde(default)]
     pub folder: String,
@@ -22,6 +23,9 @@ pub struct AppConfig {
     /// sincronizza l'accent col colore di Obsidian (letto da appearance.json)
     #[serde(default = "default_true")]
     pub sync_accent: bool,
+    /// indice della tab lasciata aperta
+    #[serde(default)]
+    pub active_tab: u32,
     #[serde(default)]
     pub tabs: serde_json::Value,
 }
@@ -50,6 +54,7 @@ impl Default for AppConfig {
             autostart: true,
             notifications: true,
             sync_accent: true,
+            active_tab: 0,
             tabs: serde_json::Value::Null,
         }
     }

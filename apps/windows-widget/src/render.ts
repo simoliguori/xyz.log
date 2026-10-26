@@ -219,8 +219,14 @@ function habitRow(v: HabitView, ctx: RenderCtx): HTMLElement {
 
 	const counterMode = habit.countable || habit.goal > 1;
 	if (counterMode) {
-		const label = habit.countable ? String(v.countToday) : `${v.countToday}/${habit.goal}`;
-		const counter = el("button", { cls: `xl-count ${v.doneToday ? "is-done" : ""}`, text: label });
+		const counter = el("button", { cls: `xl-count ${v.doneToday ? "is-done" : ""}` });
+		if (habit.goal > 1) {
+			// frazione compatta (stile ½): attuale sopra, obiettivo sotto
+			counter.classList.add("xl-count-frac");
+			counter.innerHTML = `<sup>${v.countToday}</sup><span class="xl-frac-slash">⁄</span><sub>${habit.goal}</sub>`;
+		} else {
+			counter.textContent = String(v.countToday);
+		}
 		const atGoal = !habit.countable && v.countToday >= habit.goal;
 		counter.onclick = (e) => {
 			e.stopPropagation();
@@ -256,16 +262,7 @@ function habitRow(v: HabitView, ctx: RenderCtx): HTMLElement {
 		row.appendChild(check);
 	}
 
-	const iconSvg = habit.icon ? lucideSvg(habit.icon, 14) : null;
-	const iconEl = iconSvg
-		? el("span", { cls: "xl-habit-icon xl-habit-icon-btn", html: iconSvg })
-		: el("span", { cls: "xl-habit-icon xl-habit-icon-btn", text: habit.emoji || "•" });
-	iconEl.title = ctx.lang === "it" ? "Cambia icona" : "Change icon";
-	iconEl.onclick = (e) => {
-		e.stopPropagation();
-		ctx.pickIcon(habit.icon, (icon) => ctx.store.setHabitFields(habit.id, { icon }));
-	};
-	row.appendChild(iconEl);
+	// niente icona per la singola abitudine: le icone sono solo per la categoria
 	row.appendChild(el("span", { cls: "xl-habit-name", text: habit.name, attr: { title: habit.name } }));
 	if (v.streak > 0) row.appendChild(el("span", { cls: "xl-streak", text: `${v.streak}×` }));
 

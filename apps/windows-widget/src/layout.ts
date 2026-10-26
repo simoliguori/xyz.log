@@ -39,6 +39,8 @@ export interface AppConfig {
 	pinned: boolean;
 	autostart: boolean;
 	notifications: boolean;
+	/** indice della tab lasciata aperta, ricordata tra un avvio e l'altro */
+	activeTab: number;
 	tabs: TabLayout[];
 }
 

@@ -61,7 +61,9 @@ class App {
 
 	async init(): Promise<void> {
 		this.config = await this.backend.getConfig();
+		this.activeTab = Math.max(0, Math.min(this.config.activeTab ?? 0, this.config.tabs.length - 1));
 		this.applyTheme();
+		this.setupAutoHide();
 		this.backend.onFilesChanged(() => void this.reload());
 		// dati pronti PRIMA del primo disegno: niente schermata vuota
 		await this.loadData();
@@ -78,6 +80,17 @@ class App {
 		if (this.brand) return;
 		this.brand = el("div", { cls: "xl-brand", html: LOGO_SVG });
 		document.body.appendChild(this.brand);
+	}
+
+	/** La barra in alto (logo + tab + pulsanti) scompare quando il cursore non è
+	   vicino al bordo superiore, e ricompare passandoci sopra. */
+	private setupAutoHide(): void {
+		window.addEventListener("mousemove", (e) => {
+			document.body.classList.toggle("xl-reveal", e.clientY < 46);
+		});
+		// all'avvio resta visibile un attimo, poi si nasconde
+		document.body.classList.add("xl-reveal");
+		window.setTimeout(() => document.body.classList.remove("xl-reveal"), 2600);
 	}
 
 	/** Intro: il logo compare DA SOLO al centro per un attimo, poi il contenuto
@@ -472,6 +485,8 @@ class App {
 				if (i === this.activeTab) return;
 				this.slideDir = i > this.activeTab ? 1 : -1;
 				this.activeTab = i;
+				this.config.activeTab = i;
+				this.saveConfig();
 				this.render();
 			};
 			if (this.edit) {

@@ -679,12 +679,19 @@ export class TrackerRenderer {
 			// più volte al giorno (goal > 1) o conteggio libero (countable):
 			// tap = +1; il tasto "−" accanto = −1 (funziona anche su mobile, dove
 			// non esiste il clic destro).
-			const label = habit.countable ? String(countToday) : `${countToday}/${habit.goal}`;
 			const counter = row.createEl("button", {
-				cls: `th-count th-count-wide ${doneToday ? "is-done" : ""}`,
-				text: label,
+				cls: `th-count ${doneToday ? "is-done" : ""}`,
 				attr: { "aria-label": tf.markToday(habit.name), title: tf.markToday(habit.name) },
 			});
+			if (habit.goal > 1) {
+				// frazione compatta (stile ½): attuale sopra, obiettivo sotto
+				counter.addClass("th-count-frac");
+				counter.createEl("sup", { text: String(countToday) });
+				counter.createSpan({ cls: "th-frac-slash", text: "⁄" });
+				counter.createEl("sub", { text: String(habit.goal) });
+			} else {
+				counter.setText(String(countToday));
+			}
 			const atGoal = !habit.countable && countToday >= habit.goal;
 			counter.onclick = (e) => {
 				e.stopPropagation();
@@ -723,18 +730,7 @@ export class TrackerRenderer {
 			};
 		}
 
-		const iconBtn = row.createEl("button", {
-			cls: "th-icon-btn",
-			attr: { "aria-label": tf.iconOf(habit.name) },
-		});
-		this.applyHabitIcon(iconBtn, habit);
-		iconBtn.onclick = (e) => {
-			e.stopPropagation();
-			new IconPickerModal(this.plugin.app, (iconId) =>
-				void this.plugin.store.setHabitIcon(habit.id, iconId)
-			).open();
-		};
-
+		// niente icona per la singola abitudine: le icone sono solo per la categoria
 		const name = row.createDiv({ cls: "th-habit-name" });
 		name.createSpan({ text: habit.name });
 

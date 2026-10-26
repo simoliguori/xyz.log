@@ -47,6 +47,7 @@ const DEFAULT_CONFIG = (): AppConfig => ({
 	autostart: true,
 	notifications: true,
 	syncAccent: true,
+	activeTab: 0,
 	tabs: defaultTabs(),
 });
 

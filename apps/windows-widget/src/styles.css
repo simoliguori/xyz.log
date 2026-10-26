@@ -418,15 +418,38 @@ body {
 	border-radius: 5px;
 	border: 1.5px solid var(--xl-accent-bright);
 	background: transparent;
-	color: var(--xl-text);
+	/* numero minimal e tenue */
+	color: color-mix(in srgb, var(--xl-muted) 80%, var(--xl-bg));
 	font-family: var(--xl-mono);
-	font-size: 10px;
-	font-weight: 700;
+	font-size: 9.5px;
+	font-weight: 400;
+	letter-spacing: 0.01em;
 	cursor: pointer;
-	padding: 0 4px;
+	padding: 0;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	overflow: hidden;
+}
+/* frazione compatta dentro un box di dimensione fissa (come il check) */
+.xl-count-frac {
+	line-height: 1;
+}
+.xl-count sup,
+.xl-count sub {
+	font-size: 8.5px;
+	line-height: 1;
+}
+.xl-count sup {
+	vertical-align: 0.32em;
+}
+.xl-count sub {
+	vertical-align: -0.22em;
+}
+.xl-count .xl-frac-slash {
+	font-size: 11px;
+	margin: 0 -1px;
+	opacity: 0.85;
 }
 
 .xl-count.is-done {
@@ -1382,9 +1405,14 @@ body {
 	/* transform costante (solo centratura): niente vw/vh da ricalcolare al drag */
 	transform: translate(-50%, -50%);
 	transition: top 0.8s cubic-bezier(0.22, 1, 0.36, 1), left 0.8s cubic-bezier(0.22, 1, 0.36, 1),
-		width 0.8s cubic-bezier(0.22, 1, 0.36, 1), height 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+		width 0.8s cubic-bezier(0.22, 1, 0.36, 1), height 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+		opacity 0.25s ease;
 	z-index: 60;
 	pointer-events: none;
+	opacity: 0;
+}
+body.xl-reveal .xl-brand {
+	opacity: 1;
 }
 .xl-brand .xl-logo-svg {
 	width: 100%;
@@ -1697,4 +1725,21 @@ body {
 	font-size: 11px;
 	cursor: pointer;
 	margin-top: 4px;
+}
+
+/* ---------- barra superiore ad auto-hide ---------- */
+.xl-topbar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 30;
+	background: var(--xl-bg);
+	transform: translateY(-110%);
+	opacity: 0;
+	transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+}
+body.xl-reveal .xl-topbar {
+	transform: none;
+	opacity: 1;
 }
