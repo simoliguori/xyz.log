@@ -30,7 +30,7 @@
   with the core. **Implemented** (needs the Android SDK/Gradle to build).
 
 All clients read and write the **same three markdown files** in a vault folder
-(default `Tracker/`), kept in sync by Obsidian Sync (or any synced folder):
+(default `xyz.log/`), kept in sync by Obsidian Sync (or any synced folder):
 
 - `Habits.md` — habit definitions (YAML frontmatter)
 - `Habit Log.md` — history (`- [x] YYYY-MM-DD <id>`); streaks and heatmaps are derived

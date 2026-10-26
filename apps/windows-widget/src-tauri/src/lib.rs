@@ -63,6 +63,16 @@ fn pick_folder(app: AppHandle) -> Option<String> {
 }
 
 #[tauri::command]
+fn locate_data_folder(vault: String) -> Option<String> {
+    vault::locate_data_folder(&vault)
+}
+
+#[tauri::command]
+fn create_data_folder(parent: String) -> Result<String, String> {
+    vault::create_data_folder(&parent).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn obsidian_accent(state: State<AppState>) -> Option<String> {
     let folder = state.config.lock().unwrap().folder.clone();
     vault::obsidian_accent(&folder)
@@ -204,6 +214,8 @@ pub fn run() {
             set_pinned,
             set_autostart,
             obsidian_accent,
+            locate_data_folder,
+            create_data_folder,
             minimize_window,
             close_window
         ])

@@ -24,6 +24,7 @@ import {
 } from "@xyzlog/core";
 import { createBackend, type Backend, type FileKey, type VaultFiles } from "./backend";
 import { clear, el } from "./dom";
+import { lucideIconNames, lucideSvg } from "./icons";
 import { COLS, MAX_H, newTile, Tile, TILE_META, TileType, uid, type AppConfig, type TabLayout } from "./layout";
 import { renderTileBody, type RenderCtx, type Store } from "./render";
 
@@ -43,12 +44,15 @@ class App {
 	private showSettings = false;
 	private intro = true;
 	private docked = false;
+	private logoOnly = true;
+	private slideDir = 0;
 	private brand: HTMLElement | null = null;
-	private veil: HTMLElement | null = null;
 	private obsAccent: string | null = null;
 	private expanded = new Set<string>();
 	private settingsOpen = new Set<string>();
 	private editing: Todo | null = null;
+	private iconPicker: { current: string; onChoose: (icon: string) => void } | null = null;
+	private onboardVault: string | null = null;
 	private root: HTMLElement;
 
 	constructor(root: HTMLElement) {
@@ -76,26 +80,19 @@ class App {
 		document.body.appendChild(this.brand);
 	}
 
-	/** Intro coreografata: logo dal centro all'header + contenuto che entra
-	   insieme, sotto un velo "liquid glass" che si dissolve. */
+	/** Intro: il logo compare DA SOLO al centro per un attimo, poi il contenuto
+	   entra (pop) e il logo si aggancia in alto. Nessun overlay sul contenuto. */
 	private playIntro(): void {
-		const veil = el("div", { cls: "xl-veil" });
-		this.veil = veil;
-		document.body.appendChild(veil);
-		// il logo si aggancia in alto mentre il contenuto è già entrato
 		window.setTimeout(() => {
+			this.logoOnly = false;
 			this.docked = true;
-			this.brand?.classList.add("is-docked");
-		}, 560);
-		// fine intro: niente più classe d'entrata, il velo sfuma e viene rimosso
+			this.intro = true;
+			this.render();
+		}, 750);
 		window.setTimeout(() => {
 			this.intro = false;
 			this.root.classList.remove("xl-intro");
-			window.setTimeout(() => {
-				veil.remove();
-				if (this.veil === veil) this.veil = null;
-			}, 200);
-		}, 1500);
+		}, 1700);
 	}
 
 	private async loadData(): Promise<void> {
@@ -158,13 +155,13 @@ class App {
 			void this.mutate("todo", replaceLine(this.files.todo, todo.raw, () => updateTodoLine(todo, fields))),
 		addTodo: (text, prio, due, time) =>
 			void this.mutate("todo", appendLine(this.files.todo, serializeTodo(text, prio, due, time))),
-		addHabit: (name) => {
+		addHabit: (name, icon) => {
 			const existing = parseHabits(this.files.habits);
 			const base = slugifyHabitId(name);
 			let id = base;
 			let n = 2;
 			while (existing.some((h) => h.id === id)) id = `${base}-${n++}`;
-			void this.mutate("habits", addHabitToFrontmatter(this.files.habits, { id, name }));
+			void this.mutate("habits", addHabitToFrontmatter(this.files.habits, { id, name, icon }));
 		},
 		deleteHabit: (id) => void this.mutate("habits", removeHabitFromFrontmatter(this.files.habits, id)),
 		setHabitFields: (id, fields) => void this.mutate("habits", setHabitFieldsInFrontmatter(this.files.habits, id, fields)),
@@ -189,6 +186,10 @@ class App {
 				this.editing = todo;
 				this.render();
 			},
+			pickIcon: (current, onChoose) => {
+				this.iconPicker = { current, onChoose };
+				this.render();
+			},
 		};
 	}
 
@@ -207,8 +208,10 @@ class App {
 		this.root.querySelectorAll(".xl-tile-body").forEach((n) => n.dispatchEvent(new Event("xl-dispose")));
 		clear(this.root);
 		this.ensureBrand();
-		this.root.classList.toggle("xl-intro", this.intro);
 		this.brand?.classList.toggle("is-docked", this.docked);
+		// fase "logo da solo": contenitore vuoto, solo il logo al centro
+		if (this.logoOnly) return;
+		this.root.classList.toggle("xl-intro", this.intro);
 		if (!this.config.folder) {
 			this.root.appendChild(this.onboarding());
 			return;
@@ -218,6 +221,58 @@ class App {
 		this.root.appendChild(this.grid());
 		if (this.showSettings) this.root.appendChild(this.settingsOverlay());
 		if (this.editing) this.root.appendChild(this.taskModal(this.editing));
+		if (this.iconPicker) this.root.appendChild(this.iconPickerOverlay());
+	}
+
+	/* ---------- selettore icone lucide (come Obsidian) ---------- */
+
+	private iconPickerOverlay(): HTMLElement {
+		const T = (it: string, en: string) => (this.config.lang === "it" ? it : en);
+		const pk = this.iconPicker!;
+		const close = () => {
+			this.iconPicker = null;
+			this.render();
+		};
+		const overlay = el("div", { cls: "xl-overlay" });
+		overlay.onclick = (e) => {
+			if (e.target === overlay) close();
+		};
+		const panel = el("div", { cls: "xl-icon-modal" });
+		const top = el("div", { cls: "xl-icon-top" });
+		const search = el("input", { cls: "xl-icon-search", attr: { type: "text", placeholder: T("Cerca un'icona…", "Search an icon…") } }) as HTMLInputElement;
+		const none = el("button", { cls: "xl-icon-none", text: T("Nessuna", "None") });
+		none.onclick = () => {
+			pk.onChoose("");
+			close();
+		};
+		top.append(search, none);
+		panel.appendChild(top);
+
+		const grid = el("div", { cls: "xl-icon-grid" });
+		const names = lucideIconNames();
+		const draw = (filter: string) => {
+			clear(grid);
+			const f = filter.trim().toLowerCase();
+			let shown = 0;
+			for (const name of names) {
+				if (f && !name.includes(f)) continue;
+				if (shown++ > 400) break; // limita per performance
+				const svg = lucideSvg(name, 18);
+				if (!svg) continue;
+				const b = el("button", { cls: "xl-icon-tile", attr: { title: name }, html: svg });
+				b.onclick = () => {
+					pk.onChoose("lucide-" + name);
+					close();
+				};
+				grid.appendChild(b);
+			}
+		};
+		draw("");
+		search.oninput = () => draw(search.value);
+		panel.appendChild(grid);
+		overlay.appendChild(panel);
+		requestAnimationFrame(() => search.focus());
+		return overlay;
 	}
 
 	/* ---------- popup modifica task (glass) ---------- */
@@ -316,21 +371,61 @@ class App {
 		}
 		card.appendChild(chips);
 
-		const link = el("button", { cls: "xl-onboard-btn", text: T("Collega il tuo vault Obsidian", "Link your Obsidian vault") });
-		link.onclick = async () => {
-			const f = await this.backend.pickFolder();
-			if (!f) return;
-			this.config.folder = f;
-			this.saveConfig();
-			if (this.config.syncAccent) {
-				this.obsAccent = await this.backend.obsidianAccent();
-				this.applyTheme();
-			}
-			await this.loadData();
-			this.render();
-		};
-		card.appendChild(link);
-		card.appendChild(el("div", { cls: "xl-onboard-hint", text: T("Scegli la cartella «Tracker» dentro il tuo vault.", "Pick the “Tracker” folder inside your vault.") }));
+		if (this.onboardVault) {
+			// passo 2: nessuna cartella trovata nel vault → chiedi di crearla
+			card.appendChild(
+				el("div", {
+					cls: "xl-onboard-hint",
+					text: T(
+						`Nessuna cartella «xyz.log» trovata nel vault.`,
+						`No “xyz.log” folder found in the vault.`
+					),
+				})
+			);
+			const createHere = el("button", { cls: "xl-onboard-btn", text: T("Crea «xyz.log» nel vault", "Create “xyz.log” in the vault") });
+			createHere.onclick = async () => {
+				const path = await this.backend.createDataFolder(this.onboardVault!);
+				await this.setFolder(path);
+			};
+			card.appendChild(createHere);
+			const elsewhere = el("button", { cls: "xl-onboard-btn2", text: T("Scegli un'altra posizione…", "Choose another location…") });
+			elsewhere.onclick = async () => {
+				const parent = await this.backend.pickFolder();
+				if (!parent) return;
+				const path = await this.backend.createDataFolder(parent);
+				await this.setFolder(path);
+			};
+			card.appendChild(elsewhere);
+			const back = el("button", { cls: "xl-onboard-back", text: T("← indietro", "← back") });
+			back.onclick = () => {
+				this.onboardVault = null;
+				this.render();
+			};
+			card.appendChild(back);
+		} else {
+			const link = el("button", { cls: "xl-onboard-btn", text: T("Collega il tuo vault Obsidian", "Link your Obsidian vault") });
+			link.onclick = async () => {
+				const vault = await this.backend.pickFolder();
+				if (!vault) return;
+				const found = await this.backend.locateDataFolder(vault);
+				if (found) {
+					await this.setFolder(found);
+					return;
+				}
+				this.onboardVault = vault;
+				this.render();
+			};
+			card.appendChild(link);
+			card.appendChild(
+				el("div", {
+					cls: "xl-onboard-hint",
+					text: T(
+						"Scegli l'intero vault Obsidian: cerco la cartella «xyz.log».",
+						"Pick your whole Obsidian vault: I'll find the “xyz.log” folder."
+					),
+				})
+			);
+		}
 
 		card.appendChild(
 			this.toggleRow(T("Avvia all'accensione", "Start on boot"), this.config.autostart, (on) => {
@@ -352,16 +447,30 @@ class App {
 		return wrap;
 	}
 
+	/** Imposta la cartella dati risolta e passa all'app. */
+	private async setFolder(path: string): Promise<void> {
+		this.config.folder = path;
+		this.onboardVault = null;
+		this.saveConfig();
+		if (this.config.syncAccent) {
+			this.obsAccent = await this.backend.obsidianAccent();
+			this.applyTheme();
+		}
+		await this.loadData();
+		this.render();
+	}
+
 	private topBar(): HTMLElement {
 		const bar = el("div", { cls: "xl-topbar" });
-		// spazio riservato dove si "solidifica" il logo dell'intro, poi il nome
-		bar.appendChild(el("div", { cls: "xl-logo-slot" }));
+		// il nome lascia spazio a sinistra dove si "solidifica" il logo dell'intro
 		bar.appendChild(el("div", { cls: "xl-logo", text: "xyz.log" }));
 
 		const tabs = el("div", { cls: "xl-tabs" });
 		this.config.tabs.forEach((t, i) => {
 			const tab = el("button", { cls: `xl-tab ${i === this.activeTab ? "is-active" : ""}`, text: t.name });
 			tab.onclick = () => {
+				if (i === this.activeTab) return;
+				this.slideDir = i > this.activeTab ? 1 : -1;
 				this.activeTab = i;
 				this.render();
 			};
@@ -416,7 +525,9 @@ class App {
 	}
 
 	private grid(): HTMLElement {
-		const grid = el("div", { cls: `xl-grid ${this.edit ? "is-edit" : ""}` });
+		const slide = this.slideDir > 0 ? "xl-slide-r" : this.slideDir < 0 ? "xl-slide-l" : "";
+		this.slideDir = 0;
+		const grid = el("div", { cls: `xl-grid ${this.edit ? "is-edit" : ""} ${slide}` });
 		grid.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
 		const tiles = this.tab().tiles;
 		tiles.forEach((tile, i) => grid.appendChild(this.tileEl(tile, i)));
@@ -640,6 +751,20 @@ class App {
 		};
 		folderRow.append(folderVal, pick);
 		panel.appendChild(folderRow);
+
+		if (this.config.folder) {
+			const unlinkRow = el("div", { cls: "xl-set-row" });
+			unlinkRow.appendChild(el("span", { cls: "xl-set-label", text: T("Scollega il vault", "Unlink vault") }));
+			const unlink = el("button", { cls: "xl-set-btn xl-set-danger", text: T("Scollega", "Unlink") });
+			unlink.onclick = () => {
+				this.config.folder = "";
+				this.saveConfig();
+				this.showSettings = false;
+				this.render();
+			};
+			unlinkRow.appendChild(unlink);
+			panel.appendChild(unlinkRow);
+		}
 
 		// lingua
 		panel.appendChild(

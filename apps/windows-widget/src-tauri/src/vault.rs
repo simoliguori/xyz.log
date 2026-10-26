@@ -55,6 +55,52 @@ pub fn write_file(folder: &str, which: &str, content: &str) -> std::io::Result<(
     std::fs::write(path, content)
 }
 
+/// Cerca nel vault una cartella chiamata "xyz.log" (ricorsiva, profondità limitata,
+/// salta cartelle nascoste e node_modules). Ritorna il percorso della prima trovata.
+pub fn locate_data_folder(vault: &str) -> Option<String> {
+    if vault.trim().is_empty() {
+        return None;
+    }
+    let mut stack = vec![(Path::new(vault).to_path_buf(), 0usize)];
+    while let Some((dir, depth)) = stack.pop() {
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if !p.is_dir() {
+                continue;
+            }
+            let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if name.eq_ignore_ascii_case("xyz.log") {
+                return Some(p.to_string_lossy().to_string());
+            }
+            if depth < 5 && !name.starts_with('.') && name != "node_modules" {
+                stack.push((p, depth + 1));
+            }
+        }
+    }
+    None
+}
+
+/// Crea `<parent>/xyz.log` con i tre file del tracker (se mancano). Ritorna il percorso.
+pub fn create_data_folder(parent: &str) -> std::io::Result<String> {
+    let dir = Path::new(parent).join("xyz.log");
+    std::fs::create_dir_all(&dir)?;
+    let seed = |name: &str, content: &str| -> std::io::Result<()> {
+        let f = dir.join(name);
+        if !f.exists() {
+            std::fs::write(f, content)?;
+        }
+        Ok(())
+    };
+    seed(HABITS_FILE, "---\nhabits:\n---\n\n# Habits\n")?;
+    seed(LOG_FILE, "# Habit history\n\n")?;
+    seed(TODO_FILE, "# Todo\n\n")?;
+    Ok(dir.to_string_lossy().to_string())
+}
+
 /// Legge l'accent color di Obsidian risalendo dalla cartella dati fino a trovare
 /// `.obsidian/appearance.json`. Ritorna un esadecimale `#rrggbb` o None.
 pub fn obsidian_accent(folder: &str) -> Option<String> {

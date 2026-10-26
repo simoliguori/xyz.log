@@ -9,7 +9,7 @@ export interface TrackerSettings {
 }
 
 export const DEFAULT_SETTINGS: TrackerSettings = {
-	folder: "Tracker",
+	folder: "xyz.log",
 	heatmapWeeks: 52,
 	lang: "en",
 };
@@ -45,10 +45,10 @@ export class TrackerSettingTab extends PluginSettingTab {
 			.setDesc(t("setFolderDesc"))
 			.addText((text) =>
 				text
-					.setPlaceholder("Tracker")
+					.setPlaceholder("xyz.log")
 					.setValue(this.plugin.settings.folder)
 					.onChange(async (value) => {
-						this.plugin.settings.folder = value.trim() || "Tracker";
+						this.plugin.settings.folder = value.trim() || "xyz.log";
 						await this.plugin.saveSettings();
 						this.plugin.refreshView();
 					})

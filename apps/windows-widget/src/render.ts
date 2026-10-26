@@ -19,6 +19,7 @@ import {
 	type TodoGroupId,
 } from "@xyzlog/core";
 import { clear, el, renderRich } from "./dom";
+import { lucideSvg } from "./icons";
 import { playComplete } from "./sfx";
 
 /** Rinomina inline: sostituisce il testo con un input, salva su Invio/blur. */
@@ -63,7 +64,7 @@ export interface Store {
 		fields: { text?: string; priority?: Priority; due?: string | null; time?: string | null }
 	): void;
 	addTodo(text: string, prio: Priority, due: string | null, time: string | null): void;
-	addHabit(name: string): void;
+	addHabit(name: string, icon?: string): void;
 	deleteHabit(id: string): void;
 	setHabitFields(id: string, fields: Record<string, string | number>): void;
 	setHabitReminders(id: string, times: string[]): void;
@@ -80,6 +81,8 @@ export interface RenderCtx {
 	rerender: () => void;
 	/** apre il popup di modifica di una task (implementato dall'app) */
 	editTodo: (todo: Todo) => void;
+	/** apre il selettore di icone lucide (implementato dall'app) */
+	pickIcon: (current: string, onChoose: (icon: string) => void) => void;
 }
 
 const PRIO_CLASS: Record<Priority, string> = {
@@ -157,6 +160,9 @@ export function renderHabits(host: HTMLElement, ctx: RenderCtx, withAdd = true):
 			const cat = el("div", { cls: "xl-category" });
 			cat.appendChild(
 				el("div", { cls: "xl-category-head" }, [
+					lucideSvg(group.category.icon, 13)
+						? el("span", { cls: "xl-category-icon", html: lucideSvg(group.category.icon, 13)! })
+						: null,
 					el("span", { cls: "xl-category-name", text: group.category.name }),
 					el("span", { cls: "xl-group-count", text: String(group.habits.length) }),
 				])
@@ -175,6 +181,16 @@ export function renderHabits(host: HTMLElement, ctx: RenderCtx, withAdd = true):
 
 function habitAddForm(ctx: RenderCtx): HTMLElement {
 	const form = el("div", { cls: "xl-add" });
+	let chosenIcon = "";
+	const iconBtn = el("button", { cls: "xl-add-icon", attr: { title: ctx.lang === "it" ? "Scegli un'icona" : "Choose an icon" } });
+	const refreshIcon = () => {
+		const svg = chosenIcon ? lucideSvg(chosenIcon, 15) : null;
+		if (svg) iconBtn.innerHTML = svg;
+		else iconBtn.textContent = "◆";
+	};
+	refreshIcon();
+	iconBtn.onclick = () => ctx.pickIcon(chosenIcon, (icon) => { chosenIcon = icon; refreshIcon(); });
+
 	const input = el("input", {
 		cls: "xl-add-text",
 		attr: { type: "text", placeholder: ui("newHabit", ctx.lang) },
@@ -183,14 +199,16 @@ function habitAddForm(ctx: RenderCtx): HTMLElement {
 	const submit = () => {
 		const name = input.value.trim();
 		if (!name) return;
-		ctx.store.addHabit(name);
+		ctx.store.addHabit(name, chosenIcon || undefined);
 		input.value = "";
+		chosenIcon = "";
+		refreshIcon();
 	};
 	btn.onclick = submit;
 	input.onkeydown = (e) => {
 		if (e.key === "Enter") submit();
 	};
-	form.append(input, btn);
+	form.append(iconBtn, input, btn);
 	return form;
 }
 
@@ -238,7 +256,16 @@ function habitRow(v: HabitView, ctx: RenderCtx): HTMLElement {
 		row.appendChild(check);
 	}
 
-	row.appendChild(el("span", { cls: "xl-habit-icon", text: habit.emoji || "•" }));
+	const iconSvg = habit.icon ? lucideSvg(habit.icon, 14) : null;
+	const iconEl = iconSvg
+		? el("span", { cls: "xl-habit-icon xl-habit-icon-btn", html: iconSvg })
+		: el("span", { cls: "xl-habit-icon xl-habit-icon-btn", text: habit.emoji || "•" });
+	iconEl.title = ctx.lang === "it" ? "Cambia icona" : "Change icon";
+	iconEl.onclick = (e) => {
+		e.stopPropagation();
+		ctx.pickIcon(habit.icon, (icon) => ctx.store.setHabitFields(habit.id, { icon }));
+	};
+	row.appendChild(iconEl);
 	row.appendChild(el("span", { cls: "xl-habit-name", text: habit.name, attr: { title: habit.name } }));
 	if (v.streak > 0) row.appendChild(el("span", { cls: "xl-streak", text: `${v.streak}×` }));
 

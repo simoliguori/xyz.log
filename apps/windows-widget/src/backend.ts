@@ -18,6 +18,10 @@ export interface Backend {
 	getConfig(): Promise<AppConfig>;
 	setConfig(cfg: AppConfig): Promise<void>;
 	pickFolder(): Promise<string | null>;
+	/** cerca una cartella "xyz.log" dentro il vault; null se non c'è */
+	locateDataFolder(vault: string): Promise<string | null>;
+	/** crea `<parent>/xyz.log` con i file del tracker; ritorna il percorso */
+	createDataFolder(parent: string): Promise<string>;
 	/** notifica il backend quando uno dei file cambia (edit esterno / sync) */
 	onFilesChanged(cb: () => void): void;
 	/** passa al backend l'elenco dei promemoria da programmare come notifiche */
@@ -38,7 +42,7 @@ const DEFAULT_CONFIG = (): AppConfig => ({
 	folder: "",
 	lang: "en",
 	accent: "#44437a",
-	opacity: 90,
+	opacity: 95,
 	pinned: false,
 	autostart: true,
 	notifications: true,
@@ -94,6 +98,14 @@ class TauriBackend implements Backend {
 	async pickFolder(): Promise<string | null> {
 		await this.ready;
 		return this.invoke<string | null>("pick_folder");
+	}
+	async locateDataFolder(vault: string): Promise<string | null> {
+		await this.ready;
+		return this.invoke<string | null>("locate_data_folder", { vault });
+	}
+	async createDataFolder(parent: string): Promise<string> {
+		await this.ready;
+		return this.invoke<string>("create_data_folder", { parent });
 	}
 	onFilesChanged(cb: () => void): void {
 		void this.ready.then(() => this.changeEvent("vault-changed", cb));
@@ -232,7 +244,7 @@ class MockBackend implements Backend {
 	async getConfig(): Promise<AppConfig> {
 		const saved = load<AppConfig>(LS_CONFIG);
 		const cfg = { ...DEFAULT_CONFIG(), ...saved };
-		cfg.folder = cfg.folder || "(anteprima) vault/Tracker";
+		cfg.folder = cfg.folder || "(anteprima) vault/xyz.log";
 		if (!cfg.tabs?.length) cfg.tabs = defaultTabs();
 		return cfg;
 	}
@@ -240,7 +252,13 @@ class MockBackend implements Backend {
 		save(LS_CONFIG, cfg);
 	}
 	async pickFolder(): Promise<string | null> {
-		return "(anteprima) vault/Tracker";
+		return "(anteprima) vault";
+	}
+	async locateDataFolder(vault: string): Promise<string | null> {
+		return `${vault}/xyz.log`;
+	}
+	async createDataFolder(parent: string): Promise<string> {
+		return `${parent}/xyz.log`;
 	}
 	onFilesChanged(cb: () => void): void {
 		this.listeners.push(cb);

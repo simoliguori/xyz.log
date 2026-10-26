@@ -44,6 +44,8 @@ const S = {
 	save: { en: "Save", it: "Salva" },
 	cancel: { en: "Cancel", it: "Annulla" },
 	clickToRename: { en: "Click to rename", it: "Clicca per rinominare" },
+	category: { en: "Category", it: "Categoria" },
+	noCategory: { en: "No category", it: "Nessuna categoria" },
 	hideSettings: { en: "Hide settings", it: "Nascondi impostazioni" },
 	perDay: { en: "Times per day", it: "Volte al giorno" },
 	freeCount: { en: "Free count (unlimited)", it: "Conteggio libero (infinito)" },

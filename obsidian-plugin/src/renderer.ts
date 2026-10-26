@@ -475,7 +475,7 @@ export class TrackerRenderer {
 		const section = root.createDiv({ cls: "th-section" });
 		section.createEl("h2", { text: t("habits"), cls: "th-section-title" });
 
-		this.renderHabitAddForm(section);
+		this.renderHabitAddForm(section, data);
 
 		if (data.habits.length === 0) {
 			section.createDiv({ cls: "th-empty", text: t("noHabits") });
@@ -586,7 +586,28 @@ export class TrackerRenderer {
 		}
 	}
 
-	private renderHabitAddForm(section: HTMLElement): void {
+	/** Categorie esistenti (icona condivisa da ≥2 abitudini o nominate nel frontmatter). */
+	private existingCategories(data: TrackerData): { icon: string; name: string }[] {
+		const count = new Map<string, number>();
+		for (const h of data.habits) if (h.icon) count.set(h.icon, (count.get(h.icon) ?? 0) + 1);
+		const cats: { icon: string; name: string }[] = [];
+		const seen = new Set<string>();
+		for (const c of (data.categories ?? [])) {
+			if (c.icon && !seen.has(c.icon)) {
+				seen.add(c.icon);
+				cats.push({ icon: c.icon, name: c.name || c.icon.replace(/^lucide-/, "") });
+			}
+		}
+		for (const [icon, n] of count) {
+			if (n >= 2 && !seen.has(icon)) {
+				seen.add(icon);
+				cats.push({ icon, name: icon.replace(/^lucide-/, "") });
+			}
+		}
+		return cats;
+	}
+
+	private renderHabitAddForm(section: HTMLElement, data: TrackerData): void {
 		const form = section.createDiv({ cls: "th-add th-habit-add" });
 		let chosenIcon = "";
 		const iconBtn = form.createEl("button", {
@@ -594,11 +615,30 @@ export class TrackerRenderer {
 			attr: { type: "button", "aria-label": t("chooseIcon") },
 		});
 		setIcon(iconBtn, "shapes");
+
+		const cats = this.existingCategories(data);
+		const catSel = form.createEl("select", {
+			cls: "th-add-cat",
+			attr: { "aria-label": t("category") },
+		});
+		catSel.createEl("option", { text: t("noCategory"), attr: { value: "" } });
+		for (const c of cats) {
+			catSel.createEl("option", { text: c.name, attr: { value: c.icon } });
+		}
+		const setIconBtn = (icon: string) => {
+			iconBtn.empty();
+			setIcon(iconBtn, icon || "shapes");
+		};
+		catSel.onchange = () => {
+			chosenIcon = catSel.value;
+			setIconBtn(chosenIcon);
+		};
+
 		iconBtn.onclick = () => {
 			new IconPickerModal(this.plugin.app, (iconId) => {
 				chosenIcon = iconId;
-				iconBtn.empty();
-				setIcon(iconBtn, iconId || "shapes");
+				catSel.value = cats.some((c) => c.icon === iconId) ? iconId : "";
+				setIconBtn(iconId);
 			}).open();
 		};
 		const input = form.createEl("input", {
@@ -614,8 +654,8 @@ export class TrackerRenderer {
 			await this.plugin.store.addHabit(name, "", chosenIcon);
 			input.value = "";
 			chosenIcon = "";
-			iconBtn.empty();
-			setIcon(iconBtn, "shapes");
+			catSel.value = "";
+			setIconBtn("");
 		};
 		btn.onclick = submit;
 		input.onkeydown = (e) => {
@@ -1058,6 +1098,14 @@ export class TrackerRenderer {
 			window.setTimeout(() => collapseThenRun(wrap, () => void this.plugin.store.toggleTodo(todo)), 300);
 		};
 
+		// tasto matita accanto all'icona: appare all'hover, apre il popup di modifica
+		const editBtn = row.createEl("button", { cls: "th-edit", attr: { "aria-label": t("editTask") } });
+		setIcon(editBtn, "pencil");
+		editBtn.onclick = (e) => {
+			e.stopPropagation();
+			new TaskEditModal(this.plugin, todo).open();
+		};
+
 		if (todo.priority !== Priority.None) {
 			row.createSpan({
 				cls: `th-prio-dot ${PRIO_CLASS[todo.priority]}`,
@@ -1093,9 +1141,6 @@ export class TrackerRenderer {
 			e.stopPropagation();
 			void this.plugin.store.deleteTodo(todo);
 		};
-
-		// clic nello spazio vuoto della riga = popup di modifica (data/ora/priorità)
-		row.onclick = () => new TaskEditModal(this.plugin, todo).open();
 
 		if (todo.description) {
 			const desc = wrap.createDiv({ cls: "th-todo-desc" });

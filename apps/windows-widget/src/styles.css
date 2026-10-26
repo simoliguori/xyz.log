@@ -74,6 +74,8 @@ body {
 	font-size: 15px;
 	color: var(--xl-accent-bright);
 	letter-spacing: 0.02em;
+	/* spazio per il logo dell'intro che si aggancia qui a sinistra */
+	margin-left: 30px;
 }
 
 .xl-tabs {
@@ -411,17 +413,20 @@ body {
 }
 
 .xl-count {
-	min-width: 22px;
+	min-width: 18px;
 	height: 18px;
 	border-radius: 5px;
-	border: 1.5px solid var(--xl-border);
-	background: var(--xl-bg);
-	color: var(--xl-muted);
+	border: 1.5px solid var(--xl-accent-bright);
+	background: transparent;
+	color: var(--xl-text);
 	font-family: var(--xl-mono);
 	font-size: 10px;
 	font-weight: 700;
 	cursor: pointer;
-	padding: 0 5px;
+	padding: 0 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .xl-count.is-done {
@@ -1374,19 +1379,23 @@ body {
 	left: 50%;
 	width: 92px;
 	height: 92px;
-	transform: translate(-50%, -50%) scale(1);
-	transform-origin: center;
-	transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+	/* transform costante (solo centratura): niente vw/vh da ricalcolare al drag */
+	transform: translate(-50%, -50%);
+	transition: top 0.8s cubic-bezier(0.22, 1, 0.36, 1), left 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+		width 0.8s cubic-bezier(0.22, 1, 0.36, 1), height 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 	z-index: 60;
 	pointer-events: none;
 }
 .xl-brand .xl-logo-svg {
-	width: 92px;
-	height: 92px;
+	width: 100%;
+	height: 100%;
 }
 .xl-brand.is-docked {
-	/* centro del logo (92px) portato a ~(24,22) in alto a sinistra, poi rimpicciolito */
-	transform: translate(calc(-50vw - 22px), calc(-50vh - 24px)) scale(0.26);
+	/* piccolo, in alto a sinistra: posizione fissa in px (rigida al trascinamento) */
+	top: 23px;
+	left: 24px;
+	width: 24px;
+	height: 24px;
 }
 
 /* velo "liquid glass" dell'intro che si dissolve mentre il contenuto entra */
@@ -1535,4 +1544,157 @@ body {
 	padding: 8px 14px;
 	cursor: pointer;
 	font-family: var(--xl-mono);
+}
+
+/* ---------- fix di polish (icone, +, scrollbar, slide, unlink) ---------- */
+
+/* icone lucide delle abitudini e delle categorie */
+.xl-habit-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--xl-muted);
+}
+.xl-habit-icon svg { width: 14px; height: 14px; }
+.xl-category-icon {
+	display: inline-flex;
+	align-items: center;
+	color: var(--xl-accent-bright);
+}
+.xl-category-icon svg { width: 13px; height: 13px; }
+
+/* bottoni "+" centrati */
+.xl-add-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+}
+
+/* spazio tra le task e la scrollbar del riquadro */
+.xl-tile-body { padding-right: 6px; }
+.xl-todo-scroll { padding-right: 2px; }
+
+/* bottone pericoloso (unlink) */
+.xl-set-danger {
+	background: var(--xl-surface) !important;
+	color: var(--xl-overdue) !important;
+	border: 1px solid var(--xl-border);
+}
+.xl-set-danger:hover {
+	background: var(--xl-overdue) !important;
+	color: #fff !important;
+}
+
+/* animazione di cambio tab (slide + fade) */
+@keyframes xl-slide-r {
+	from { opacity: 0; transform: translateX(26px); }
+	to { opacity: 1; transform: none; }
+}
+@keyframes xl-slide-l {
+	from { opacity: 0; transform: translateX(-26px); }
+	to { opacity: 1; transform: none; }
+}
+.xl-grid.xl-slide-r { animation: xl-slide-r 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.xl-grid.xl-slide-l { animation: xl-slide-l 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* ---------- selettore icone lucide ---------- */
+.xl-icon-modal {
+	width: min(520px, 92vw);
+	max-height: 80vh;
+	background: rgba(24, 24, 28, 0.8);
+	-webkit-backdrop-filter: blur(22px) saturate(1.3);
+	backdrop-filter: blur(22px) saturate(1.3);
+	border: 1px solid var(--xl-border);
+	border-radius: 16px;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 24px 70px rgba(0, 0, 0, 0.5);
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	overflow: hidden;
+}
+.xl-icon-top { display: flex; gap: 8px; }
+.xl-icon-search {
+	flex: 1;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 8px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 13px;
+	padding: 8px 10px;
+}
+.xl-icon-none {
+	background: var(--xl-surface);
+	border: 1px solid var(--xl-border);
+	border-radius: 8px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 12px;
+	padding: 0 12px;
+	cursor: pointer;
+}
+.xl-icon-grid {
+	display: flex;
+	flex-wrap: wrap;
+	align-content: flex-start;
+	gap: 4px;
+	overflow-y: auto;
+	max-height: 56vh;
+}
+.xl-icon-tile {
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	cursor: pointer;
+	color: var(--xl-text);
+}
+.xl-icon-tile:hover { background: var(--xl-bg2); border-color: var(--xl-border); }
+.xl-icon-tile svg { width: 18px; height: 18px; }
+
+/* bottone icona nel form "nuova abitudine" + icona cliccabile */
+.xl-add-icon {
+	width: 27px;
+	height: 27px;
+	flex: 0 0 auto;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 6px;
+	color: var(--xl-muted);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 13px;
+}
+.xl-add-icon:hover { border-color: var(--xl-accent-bright); color: var(--xl-text); }
+.xl-add-icon svg { width: 15px; height: 15px; }
+.xl-habit-icon-btn { cursor: pointer; }
+
+/* onboarding: bottoni secondari */
+.xl-onboard-btn2 {
+	background: var(--xl-surface);
+	border: 1px solid var(--xl-border);
+	border-radius: 10px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 12px;
+	padding: 8px 16px;
+	cursor: pointer;
+}
+.xl-onboard-btn2:hover { border-color: var(--xl-accent-bright); }
+.xl-onboard-back {
+	background: transparent;
+	border: none;
+	color: var(--xl-muted);
+	font-family: var(--xl-mono);
+	font-size: 11px;
+	cursor: pointer;
+	margin-top: 4px;
 }

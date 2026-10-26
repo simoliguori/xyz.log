@@ -33,7 +33,7 @@ fn default_accent() -> String {
     "#44437a".into()
 }
 fn default_opacity() -> u32 {
-    90
+    95
 }
 fn default_true() -> bool {
     true

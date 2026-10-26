@@ -1302,3 +1302,37 @@
 	cursor: pointer;
 	font-family: var(--th-mono);
 }
+
+/* ---------- tasto matita di modifica (hover vicino all'icona) ---------- */
+.th-root .th-edit {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	color: var(--th-muted);
+	cursor: pointer;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 16px;
+	opacity: 0;
+	transition: opacity 0.12s ease, color 0.12s ease;
+}
+.th-todo:hover .th-edit {
+	opacity: 0.7;
+}
+.th-root .th-edit:hover {
+	color: var(--th-accent-bright);
+	opacity: 1;
+}
+.th-root .th-edit svg {
+	width: 12px;
+	height: 12px;
+}
+
+/* selettore categoria nel form "nuova abitudine" */
+.th-root .th-add-cat {
+	flex: 0 0 auto;
+	max-width: 120px;
+}

@@ -1,6 +1,6 @@
 # Shared data format
 
-All data lives in **three markdown files** inside a vault folder (default: `Tracker/`).
+All data lives in **three markdown files** inside a vault folder (default: `xyz.log/`).
 Both the Obsidian plugin and the other clients read and write these files; a synced folder
 (Obsidian Sync or otherwise) keeps PC and phone aligned. No database: markdown is the only
 source of truth.

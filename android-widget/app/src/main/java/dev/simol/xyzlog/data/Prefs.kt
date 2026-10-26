@@ -12,8 +12,8 @@ class Prefs(context: Context) {
 
     /** Sottocartella dei dati dentro il vault (stessa impostazione del plugin Obsidian) */
     var folder: String
-        get() = sp.getString("folder", "Tracker")!!
-        set(value) = sp.edit().putString("folder", value.trim().ifEmpty { "Tracker" }).apply()
+        get() = sp.getString("folder", "xyz.log")!!
+        set(value) = sp.edit().putString("folder", value.trim().ifEmpty { "xyz.log" }).apply()
 
     /** Opacità dello sfondo dei widget, 0–100 (il testo resta sempre opaco) */
     var widgetAlpha: Int
