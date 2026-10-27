@@ -1,6 +1,0 @@
-Copia qui il file del font di Nothing, con questo nome esatto:
-
-    NType82-Headline.otf
-
-Il font è proprietario e non può essere incluso nel repository.
-Se il file manca, l'app usa il sans-serif di sistema come fallback.

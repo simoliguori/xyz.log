@@ -1,0 +1,22 @@
+{
+  "name": "xyzlog-windows-widget",
+  "version": "0.1.0",
+  "description": "xyz.log Windows desktop widget: an always-on, modular tile-based gadget with notifications.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.1.1",
+    "lucide": "^1.61.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.8"
+  }
+}

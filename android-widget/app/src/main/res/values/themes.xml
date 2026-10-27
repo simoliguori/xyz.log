@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.TodoHabits" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.Xyzlog" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/th_bg</item>
         <item name="android:statusBarColor">@color/th_bg</item>
         <item name="android:navigationBarColor">@color/th_bg</item>

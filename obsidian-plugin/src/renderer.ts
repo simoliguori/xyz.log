@@ -1,6 +1,6 @@
-import { App, getIconIds, Modal, setIcon } from "obsidian";
-import type TodoHabitsPlugin from "./main";
-import { addDays, PRIORITY_EMOJI, streak, todayISO } from "./parser";
+import { App, getIconIds, Modal, Platform, setIcon } from "obsidian";
+import type XyzlogPlugin from "./main";
+import { addDays, PRIORITY_EMOJI, serializeTodo, streak, todayISO } from "./parser";
 import { Habit, Priority, Todo } from "./types";
 import { TrackerData } from "./store";
 import { locale, prioLabel, t, tf } from "./strings";
@@ -15,19 +15,19 @@ const PRIO_CLASS: Record<Priority, string> = {
 };
 
 export interface RenderOptions {
-	/** intestazione con la data (attiva nella vista, spenta di default negli embed) */
+	/** header with the date (on in the view, off by default in embeds) */
 	header: boolean;
 	habits: boolean;
 	todos: boolean;
-	/** layout dashboard: todo a sinistra, abitudini + cronologia a destra */
+	/** dashboard layout: todos on the left, habits + history on the right */
 	cross: boolean;
-	/** vista a cartelle: todo raggruppati per lista → sezione, con descrizioni */
+	/** folder view: todos grouped by list → section, with descriptions */
 	folders: boolean;
-	/** se presente, mostra solo questa abitudine con la heatmap già espansa */
+	/** if present, show only this habit with its heatmap already expanded */
 	habitId?: string;
 }
 
-/** Testo con link markdown `[t](url)`, URL nudi e #tag resi cliccabili. */
+/** Text with markdown links `[t](url)`, bare URLs and #tags made clickable. */
 function renderRich(el: HTMLElement, text: string): void {
 	const re = /\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s)]+)|(#[\w/-]+)/g;
 	let last = 0;
@@ -50,7 +50,7 @@ function renderRich(el: HTMLElement, text: string): void {
 	if (last < text.length) el.appendText(text.slice(last));
 }
 
-/** Contenitori scrollabili di cui preservare la posizione tra un render e l'altro. */
+/** Scrollable containers whose scroll position is preserved across renders. */
 const TH_SCROLLERS = [
 	".th-todo-scroll",
 	".th-habit-scroll",
@@ -59,7 +59,8 @@ const TH_SCROLLERS = [
 	".th-cross-cell--history",
 ];
 
-/** Suono breve e morbido alla spunta (Web Audio, nessun file esterno). */
+/** Completion sound: a soft two-note "ding" (Web Audio, no external file).
+   Same character as the desktop widget. */
 let thAudioCtx: AudioContext | null = null;
 function playCheckSound(): void {
 	try {
@@ -69,25 +70,38 @@ function playCheckSound(): void {
 		if (!thAudioCtx) thAudioCtx = new Ctx();
 		const ctx = thAudioCtx;
 		if (ctx.state === "suspended") void ctx.resume();
-		const o = ctx.createOscillator();
-		const g = ctx.createGain();
-		o.type = "sine";
-		o.connect(g);
-		g.connect(ctx.destination);
-		const t0 = ctx.currentTime;
-		o.frequency.setValueAtTime(620, t0);
-		o.frequency.exponentialRampToValueAtTime(920, t0 + 0.1);
-		g.gain.setValueAtTime(0.0001, t0);
-		g.gain.exponentialRampToValueAtTime(0.06, t0 + 0.012);
-		g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.19);
-		o.start(t0);
-		o.stop(t0 + 0.2);
+		const now = ctx.currentTime;
+
+		const master = ctx.createGain();
+		master.connect(ctx.destination);
+		master.gain.setValueAtTime(0.0001, now);
+		master.gain.exponentialRampToValueAtTime(0.09, now + 0.015);
+		master.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+
+		// two notes a fifth apart (A5 → E6), soft, with a small tail
+		const notes: [number, number][] = [
+			[880, 0],
+			[1318.51, 0.08],
+		];
+		for (const [freq, t] of notes) {
+			const o = ctx.createOscillator();
+			const g = ctx.createGain();
+			o.type = "sine";
+			o.frequency.setValueAtTime(freq, now + t);
+			o.connect(g);
+			g.connect(master);
+			g.gain.setValueAtTime(0.0001, now + t);
+			g.gain.exponentialRampToValueAtTime(0.9, now + t + 0.02);
+			g.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.42);
+			o.start(now + t);
+			o.stop(now + t + 0.45);
+		}
 	} catch (e) {
-		/* audio non disponibile: ignora */
+		/* audio not available: ignore */
 	}
 }
 
-/** Collassa l'elemento (altezza → 0) e poi esegue `fn`, per far scivolare su le righe sotto. */
+/** Collapse the element (height → 0) then run `fn`, so the rows below slide up. */
 function collapseThenRun(el: HTMLElement, fn: () => void): void {
 	el.style.maxHeight = `${el.scrollHeight}px`;
 	el.style.overflow = "hidden";
@@ -96,7 +110,7 @@ function collapseThenRun(el: HTMLElement, fn: () => void): void {
 	window.setTimeout(fn, 240);
 }
 
-/** Griglia di icone lucide con ricerca, per scegliere l'icona di un'abitudine. */
+/** Searchable grid of lucide icons, to pick a habit's icon. */
 class IconPickerModal extends Modal {
 	private onChooseCb: (iconId: string) => void;
 
@@ -164,17 +178,90 @@ class IconPickerModal extends Modal {
 	}
 }
 
+/** (Translucent) popup to edit a task's text, date, time and priority. */
+class TaskEditModal extends Modal {
+	constructor(private plugin: XyzlogPlugin, private todo: Todo) {
+		super(plugin.app);
+	}
+
+	onOpen(): void {
+		this.modalEl.addClass("th-task-modal");
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.createEl("h3", { cls: "th-tm-title", text: t("editTask") });
+
+		const textInput = contentEl.createEl("input", {
+			cls: "th-tm-text",
+			attr: { type: "text", value: this.todo.text, placeholder: t("newTask") },
+		});
+
+		const dateRow = contentEl.createDiv({ cls: "th-tm-row" });
+		const dateInput = dateRow.createEl("input", {
+			cls: "th-tm-date",
+			attr: { type: "date", value: this.todo.due ?? "" },
+		});
+		const timeInput = dateRow.createEl("input", {
+			cls: "th-tm-time",
+			attr: { type: "time", value: this.todo.time ?? "" },
+		});
+		const prio = dateRow.createEl("select", { cls: "th-tm-prio" });
+		for (const p of [
+			Priority.None,
+			Priority.Lowest,
+			Priority.Low,
+			Priority.Medium,
+			Priority.High,
+			Priority.Highest,
+		]) {
+			prio.createEl("option", {
+				text: p === Priority.None ? t("priority") : `${PRIORITY_EMOJI[p]} ${prioLabel(p)}`,
+				attr: { value: String(p) },
+			});
+		}
+		prio.value = String(this.todo.priority);
+
+		const actions = contentEl.createDiv({ cls: "th-tm-actions" });
+		const cancel = actions.createEl("button", { cls: "th-tm-cancel", text: t("cancel") });
+		cancel.onclick = () => this.close();
+		const save = actions.createEl("button", { cls: "th-tm-save", text: t("save") });
+		const commit = () => {
+			void this.plugin.store.updateTodo(this.todo, {
+				text: textInput.value.trim() || this.todo.text,
+				priority: Number(prio.value) as Priority,
+				due: dateInput.value || null,
+				time: timeInput.value || null,
+			});
+			this.close();
+		};
+		save.onclick = commit;
+		textInput.onkeydown = (e) => {
+			if (e.key === "Enter") commit();
+		};
+		textInput.focus();
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+}
+
 /**
- * Rendering condiviso tra la vista dedicata e i code block `todo-habits`
- * incorporati nelle note.
+ * Shared rendering between the dedicated view and the `xyz.log` code blocks
+ * embedded in notes.
  */
 export class TrackerRenderer {
 	private expanded = new Set<string>();
-	/** chiavi dei gruppi/categorie chiusi, per preservare il collasso tra i render */
+	/** keys of collapsed groups/categories, to preserve the collapse across renders */
 	private collapsed = new Set<string>();
+	/** settings panel open under the expanded habit */
+	private settingsOpen = new Set<string>();
+	/** active page of the mobile swipe (0 = habits, 1 = tasks) */
+	private swipeIndex = 0;
+	/** line of the just-created task, to animate its appearance */
+	private pendingNew: string | null = null;
 
 	constructor(
-		private plugin: TodoHabitsPlugin,
+		private plugin: XyzlogPlugin,
 		private root: HTMLElement,
 		private opts: RenderOptions
 	) {
@@ -197,19 +284,66 @@ export class TrackerRenderer {
 		if (this.opts.header) this.renderHeader(root);
 		if (this.opts.habitId) {
 			this.renderSingleHabit(root, data);
-		} else if (this.opts.habits) {
-			this.renderHabits(root, data);
-		}
-		if (this.opts.folders) {
-			this.renderFolders(root, data);
-		} else if (this.opts.todos) {
-			this.renderTodos(root, data);
+		} else if (this.useSwipe()) {
+			this.renderSwipe(root, data);
+		} else {
+			if (this.opts.habits) this.renderHabits(root, data);
+			if (this.opts.folders) {
+				this.renderFolders(root, data);
+			} else if (this.opts.todos) {
+				this.renderTodos(root, data);
+			}
 		}
 
 		this.restoreScroll(scroll);
 	}
 
-	/** Posizione di scroll dei contenitori, così lo spunto non riporta in cima. */
+	/** On mobile, when showing both habits and tasks, swipe between them (or use
+	   the two tabs on top) instead of stacking them. */
+	private useSwipe(): boolean {
+		return (
+			Platform.isMobile &&
+			this.opts.habits &&
+			this.opts.todos &&
+			!this.opts.folders &&
+			!this.opts.cross &&
+			!this.opts.habitId
+		);
+	}
+
+	private renderSwipe(root: HTMLElement, data: TrackerData): void {
+		const wrap = root.createDiv({ cls: "th-swipe-wrap" });
+		const tabs = wrap.createDiv({ cls: "th-swipe-tabs" });
+		const tabH = tabs.createEl("button", { cls: "th-swipe-tab", text: t("habits") });
+		const tabT = tabs.createEl("button", { cls: "th-swipe-tab", text: t("todos") });
+
+		const track = wrap.createDiv({ cls: "th-swipe-track" });
+		const paneH = track.createDiv({ cls: "th-swipe-pane" });
+		const paneT = track.createDiv({ cls: "th-swipe-pane" });
+		this.renderHabits(paneH, data);
+		this.renderTodos(paneT, data);
+
+		const setActive = (i: number) => {
+			this.swipeIndex = i;
+			tabH.toggleClass("is-active", i === 0);
+			tabT.toggleClass("is-active", i === 1);
+		};
+		setActive(this.swipeIndex);
+
+		tabH.onclick = () => track.scrollTo({ left: 0, behavior: "smooth" });
+		tabT.onclick = () => track.scrollTo({ left: track.clientWidth, behavior: "smooth" });
+		track.onscroll = () => {
+			const i = track.scrollLeft > track.clientWidth / 2 ? 1 : 0;
+			if (i !== this.swipeIndex) setActive(i);
+		};
+
+		// restore the active page after the re-render (no animation)
+		requestAnimationFrame(() => {
+			track.scrollLeft = this.swipeIndex * track.clientWidth;
+		});
+	}
+
+	/** Scroll position of the containers, so checking off doesn't jump to the top. */
 	private captureScroll(): Record<string, number> {
 		const out: Record<string, number> = { __root: this.root.scrollTop };
 		for (const sel of TH_SCROLLERS) {
@@ -249,24 +383,21 @@ export class TrackerRenderer {
 		header.createEl("h1", { text: date, cls: "th-title" });
 	}
 
-	/* ---------------- Layout dashboard ---------------- */
+	/* ---------------- Dashboard layout ---------------- */
 
 	private renderCross(root: HTMLElement, data: TrackerData): void {
 		root.addClass("th-cross");
-		if (this.opts.header) this.renderHeader(root);
-		const today = todayISO();
-
+		// dashboard split: tasks left, habits right. No date on top and no history
+		// (redundant: habits already expand on their own).
 		const grid = root.createDiv({ cls: "th-cross-grid" });
 		const todoCell = grid.createDiv({ cls: "th-cross-cell th-cross-cell--todo" });
 		const habitsCell = grid.createDiv({ cls: "th-cross-cell th-cross-cell--habits" });
-		const historyCell = grid.createDiv({ cls: "th-cross-cell th-cross-cell--history" });
 
 		this.renderTodos(todoCell, data);
 		this.renderHabits(habitsCell, data);
-		this.renderHistoryCell(historyCell, data, today);
 	}
 
-	/** Panoramica cronologia: una riga compatta per abitudine, raggruppata per categoria. */
+	/** History overview: one compact row per habit, grouped by category. */
 	private renderHistoryCell(cell: HTMLElement, data: TrackerData, today: string): void {
 		const section = cell.createDiv({ cls: "th-section" });
 		section.createEl("h2", { text: t("history"), cls: "th-section-title" });
@@ -302,7 +433,7 @@ export class TrackerRenderer {
 		}
 	}
 
-	/** Una riga: nome abitudine + striscia compatta degli ultimi giorni. */
+	/** One row: habit name + compact strip of the last days. */
 	private renderHistoryLine(
 		parent: HTMLElement,
 		habit: Habit,
@@ -325,7 +456,7 @@ export class TrackerRenderer {
 		}
 	}
 
-	/* ---------------- Abitudini ---------------- */
+	/* ---------------- Habits ---------------- */
 
 	private renderSingleHabit(root: HTMLElement, data: TrackerData): void {
 		const habit = data.habits.find((h) => h.id === this.opts.habitId);
@@ -344,7 +475,7 @@ export class TrackerRenderer {
 		const section = root.createDiv({ cls: "th-section" });
 		section.createEl("h2", { text: t("habits"), cls: "th-section-title" });
 
-		this.renderHabitAddForm(section);
+		this.renderHabitAddForm(section, data);
 
 		if (data.habits.length === 0) {
 			section.createDiv({ cls: "th-empty", text: t("noHabits") });
@@ -394,7 +525,9 @@ export class TrackerRenderer {
 			text: name,
 			attr: { title: t("renameCategory") },
 		});
-		head.createSpan({ cls: "th-group-count", text: String(habs.length) });
+		// animated chevron to collapse/expand the category (in place of the counter)
+		const chevron = head.createDiv({ cls: "th-cat-chevron", attr: { "aria-hidden": "true" } });
+		setIcon(chevron, "chevron-down");
 
 		nameEl.onclick = (e) => {
 			e.preventDefault();
@@ -431,7 +564,7 @@ export class TrackerRenderer {
 	}
 
 	private iconizeApi(): { getIconByName: (n: string) => unknown; setIconForNode: (n: string, el: HTMLElement) => void } | null {
-		// `plugins` non è nei tipi pubblici di Obsidian
+		// `plugins` is not part of Obsidian's public types
 		return (this.plugin.app as any).plugins?.getPlugin("obsidian-icon-folder")?.api ?? null;
 	}
 
@@ -453,7 +586,28 @@ export class TrackerRenderer {
 		}
 	}
 
-	private renderHabitAddForm(section: HTMLElement): void {
+	/** Existing categories (icon shared by ≥2 habits, or named in the frontmatter). */
+	private existingCategories(data: TrackerData): { icon: string; name: string }[] {
+		const count = new Map<string, number>();
+		for (const h of data.habits) if (h.icon) count.set(h.icon, (count.get(h.icon) ?? 0) + 1);
+		const cats: { icon: string; name: string }[] = [];
+		const seen = new Set<string>();
+		for (const c of (data.categories ?? [])) {
+			if (c.icon && !seen.has(c.icon)) {
+				seen.add(c.icon);
+				cats.push({ icon: c.icon, name: c.name || c.icon.replace(/^lucide-/, "") });
+			}
+		}
+		for (const [icon, n] of count) {
+			if (n >= 2 && !seen.has(icon)) {
+				seen.add(icon);
+				cats.push({ icon, name: icon.replace(/^lucide-/, "") });
+			}
+		}
+		return cats;
+	}
+
+	private renderHabitAddForm(section: HTMLElement, data: TrackerData): void {
 		const form = section.createDiv({ cls: "th-add th-habit-add" });
 		let chosenIcon = "";
 		const iconBtn = form.createEl("button", {
@@ -461,11 +615,30 @@ export class TrackerRenderer {
 			attr: { type: "button", "aria-label": t("chooseIcon") },
 		});
 		setIcon(iconBtn, "shapes");
+
+		const cats = this.existingCategories(data);
+		const catSel = form.createEl("select", {
+			cls: "th-add-cat",
+			attr: { "aria-label": t("category") },
+		});
+		catSel.createEl("option", { text: t("noCategory"), attr: { value: "" } });
+		for (const c of cats) {
+			catSel.createEl("option", { text: c.name, attr: { value: c.icon } });
+		}
+		const setIconBtn = (icon: string) => {
+			iconBtn.empty();
+			setIcon(iconBtn, icon || "shapes");
+		};
+		catSel.onchange = () => {
+			chosenIcon = catSel.value;
+			setIconBtn(chosenIcon);
+		};
+
 		iconBtn.onclick = () => {
 			new IconPickerModal(this.plugin.app, (iconId) => {
 				chosenIcon = iconId;
-				iconBtn.empty();
-				setIcon(iconBtn, iconId || "shapes");
+				catSel.value = cats.some((c) => c.icon === iconId) ? iconId : "";
+				setIconBtn(iconId);
 			}).open();
 		};
 		const input = form.createEl("input", {
@@ -481,8 +654,8 @@ export class TrackerRenderer {
 			await this.plugin.store.addHabit(name, "", chosenIcon);
 			input.value = "";
 			chosenIcon = "";
-			iconBtn.empty();
-			setIcon(iconBtn, "shapes");
+			catSel.value = "";
+			setIconBtn("");
 		};
 		btn.onclick = submit;
 		input.onkeydown = (e) => {
@@ -496,27 +669,48 @@ export class TrackerRenderer {
 		dates: Map<string, number>,
 		today: string
 	): void {
-		const doneToday = !habit.countable && dates.has(today);
+		const countToday = dates.get(today) ?? 0;
+		const counterMode = habit.countable || habit.goal > 1;
+		const doneToday = !habit.countable && countToday >= habit.goal;
 		const card = parent.createDiv({ cls: `th-habit ${doneToday ? "is-done" : ""}` });
 		const row = card.createDiv({ cls: "th-habit-row" });
 
-		if (habit.countable) {
-			// abitudini "a conteggio" (es. cose brutte): mostra quante volte oggi,
-			// clic = +1, clic destro = -1
-			const count = dates.get(today) ?? 0;
+		if (counterMode) {
+			// several times a day (goal > 1) or free count (countable):
+			// tap = +1; the "−" button next to it = −1 (works on mobile too, where
+			// there's no right-click).
 			const counter = row.createEl("button", {
-				cls: `th-count ${count > 0 ? "is-done" : ""}`,
-				text: String(count),
+				cls: `th-count ${doneToday ? "is-done" : ""}`,
 				attr: { "aria-label": tf.markToday(habit.name), title: tf.markToday(habit.name) },
 			});
+			if (habit.goal > 1) {
+				// compact fraction (½ style): current on top, goal below
+				counter.addClass("th-count-frac");
+				counter.createEl("sup", { text: String(countToday) });
+				counter.createSpan({ cls: "th-frac-slash", text: "⁄" });
+				counter.createEl("sub", { text: String(habit.goal) });
+			} else {
+				counter.setText(String(countToday));
+			}
+			const atGoal = !habit.countable && countToday >= habit.goal;
 			counter.onclick = (e) => {
 				e.stopPropagation();
+				if (atGoal) return; // goal reached: don't go further
 				playCheckSound();
 				counter.addClass("th-pop");
 				void this.plugin.store.incrementHabit(habit.id, today);
 			};
 			counter.oncontextmenu = (e) => {
 				e.preventDefault();
+				e.stopPropagation();
+				if ((dates.get(today) ?? 0) > 0) void this.plugin.store.decrementHabit(habit.id, today);
+			};
+			const minus = row.createEl("button", {
+				cls: `th-count-minus ${countToday > 0 ? "" : "th-hidden"}`,
+				text: "−",
+				attr: { "aria-label": tf.decrementNamed(habit.name), title: tf.decrementNamed(habit.name) },
+			});
+			minus.onclick = (e) => {
 				e.stopPropagation();
 				if ((dates.get(today) ?? 0) > 0) void this.plugin.store.decrementHabit(habit.id, today);
 			};
@@ -536,18 +730,7 @@ export class TrackerRenderer {
 			};
 		}
 
-		const iconBtn = row.createEl("button", {
-			cls: "th-icon-btn",
-			attr: { "aria-label": tf.iconOf(habit.name) },
-		});
-		this.applyHabitIcon(iconBtn, habit);
-		iconBtn.onclick = (e) => {
-			e.stopPropagation();
-			new IconPickerModal(this.plugin.app, (iconId) =>
-				void this.plugin.store.setHabitIcon(habit.id, iconId)
-			).open();
-		};
-
+		// no icon for a single habit: icons are only for the category
 		const name = row.createDiv({ cls: "th-habit-name" });
 		name.createSpan({ text: habit.name });
 
@@ -585,10 +768,107 @@ export class TrackerRenderer {
 
 		if (this.expanded.has(habit.id)) {
 			this.renderHeatmap(card, dates, today);
+			this.renderHabitSettings(card, habit);
 		}
 	}
 
-	/** Heatmap tipo GitHub: colonne = settimane (lun→dom), mesi segnati in alto. */
+	/** Habit settings panel (under the heatmap, when expanded):
+	   times per day, free count, cadence and reminders. */
+	private renderHabitSettings(card: HTMLElement, habit: Habit): void {
+		const key = `s:${habit.id}`;
+		const open = this.settingsOpen.has(key);
+		const toggle = card.createEl("button", {
+			cls: "th-habit-settings-toggle",
+			text: open ? t("hideSettings") : t("settings"),
+		});
+		toggle.onclick = (e) => {
+			e.stopPropagation();
+			if (open) this.settingsOpen.delete(key);
+			else this.settingsOpen.add(key);
+			void this.render();
+		};
+		if (!open) return;
+
+		const panel = card.createDiv({ cls: "th-habit-settings" });
+
+		// — times per day (goal) —
+		const goalRow = panel.createDiv({ cls: "th-setting" });
+		goalRow.createSpan({ cls: "th-setting-label", text: t("perDay") });
+		const stepper = goalRow.createDiv({ cls: "th-stepper" });
+		const minusG = stepper.createEl("button", { cls: "th-step-btn", text: "−" });
+		const goalVal = stepper.createSpan({ cls: "th-step-val", text: String(habit.goal) });
+		const plusG = stepper.createEl("button", { cls: "th-step-btn", text: "+" });
+		const setGoal = (v: number) => {
+			const g = Math.max(1, v);
+			goalVal.setText(String(g));
+			void this.plugin.store.setHabitFields(habit.id, { goal: g === 1 ? "" : g });
+		};
+		minusG.onclick = (e) => { e.stopPropagation(); setGoal(habit.goal - 1); };
+		plusG.onclick = (e) => { e.stopPropagation(); setGoal(habit.goal + 1); };
+
+		// — free count (countable) —
+		const cntRow = panel.createDiv({ cls: "th-setting" });
+		cntRow.createSpan({ cls: "th-setting-label", text: t("freeCount") });
+		const cntToggle = cntRow.createEl("button", {
+			cls: `th-toggle ${habit.countable ? "is-on" : ""}`,
+			attr: { "aria-label": t("freeCount") },
+		});
+		cntToggle.createSpan({ cls: "th-toggle-knob" });
+		cntToggle.onclick = (e) => {
+			e.stopPropagation();
+			void this.plugin.store.setHabitFields(habit.id, {
+				countable: habit.countable ? "" : "true",
+			});
+		};
+
+		// — cadence (every N days) —
+		const cadRow = panel.createDiv({ cls: "th-setting" });
+		cadRow.createSpan({ cls: "th-setting-label", text: t("cadence") });
+		const cadStep = cadRow.createDiv({ cls: "th-stepper" });
+		const minusC = cadStep.createEl("button", { cls: "th-step-btn", text: "−" });
+		const cadVal = cadStep.createSpan({ cls: "th-step-val", text: String(habit.cadence) });
+		const plusC = cadStep.createEl("button", { cls: "th-step-btn", text: "+" });
+		const setCad = (v: number) => {
+			const c = Math.max(1, v);
+			cadVal.setText(String(c));
+			void this.plugin.store.setHabitFields(habit.id, { cadence: c === 1 ? "" : c });
+		};
+		minusC.onclick = (e) => { e.stopPropagation(); setCad(habit.cadence - 1); };
+		plusC.onclick = (e) => { e.stopPropagation(); setCad(habit.cadence + 1); };
+
+		// — reminders (notifications) —
+		const remRow = panel.createDiv({ cls: "th-setting th-setting-col" });
+		remRow.createSpan({ cls: "th-setting-label", text: t("reminders") });
+		const chips = remRow.createDiv({ cls: "th-rem-chips" });
+		for (const time of habit.reminders) {
+			const chip = chips.createSpan({ cls: "th-rem-chip", text: time });
+			const x = chip.createSpan({ cls: "th-rem-chip-x", text: "×" });
+			x.onclick = (e) => {
+				e.stopPropagation();
+				void this.plugin.store.setHabitReminders(
+					habit.id,
+					habit.reminders.filter((r) => r !== time)
+				);
+			};
+		}
+		const addWrap = chips.createDiv({ cls: "th-rem-add" });
+		const timeInput = addWrap.createEl("input", {
+			cls: "th-rem-input",
+			attr: { type: "time" },
+		});
+		const addBtn = addWrap.createEl("button", { cls: "th-rem-addbtn", text: "+" });
+		addBtn.onclick = (e) => {
+			e.stopPropagation();
+			const v = timeInput.value.trim();
+			if (!/^\d{1,2}:\d{2}$/.test(v) || habit.reminders.includes(v)) return;
+			void this.plugin.store.setHabitReminders(
+				habit.id,
+				[...habit.reminders, v].sort()
+			);
+		};
+	}
+
+	/** GitHub-style heatmap: columns = weeks (Mon→Sun), months labelled on top. */
 	private renderHeatmap(parent: HTMLElement, dates: Map<string, number>, today: string): void {
 		const weeks = this.plugin.settings.heatmapWeeks;
 		const scroller = parent.createDiv({ cls: "th-heatmap" });
@@ -596,7 +876,7 @@ export class TrackerRenderer {
 		const grid = scroller.createDiv({ cls: "th-heatmap-grid" });
 
 		const t0 = new Date();
-		const dow = (t0.getDay() + 6) % 7; // 0 = lunedì
+		const dow = (t0.getDay() + 6) % 7; // 0 = Monday
 		const mondayOfThisWeek = addDays(today, -dow);
 		const start = addDays(mondayOfThisWeek, -(weeks - 1) * 7);
 
@@ -637,7 +917,7 @@ export class TrackerRenderer {
 		return new Date(y, m - 1, d).toLocaleDateString(locale(), { month: "short" });
 	}
 
-	/* ---------------- Todo (per data) ---------------- */
+	/* ---------------- Todos (by date) ---------------- */
 
 	private renderTodos(root: HTMLElement, data: TrackerData): void {
 		const section = root.createDiv({ cls: "th-section" });
@@ -652,20 +932,24 @@ export class TrackerRenderer {
 		const open = data.todos.filter((t) => !t.done);
 		const byPrioThenDue = (a: Todo, b: Todo) =>
 			a.priority - b.priority || (a.due ?? "9999").localeCompare(b.due ?? "9999");
+		// no date: newest on top (reverse insertion order)
+		const byNewest = (a: Todo, b: Todo) => b.lineNo - a.lineNo;
 
-		const groups: [string, Todo[], string][] = [
-			[t("overdue"), open.filter((td) => td.due && td.due < today), "th-group-overdue"],
-			[t("today"), open.filter((td) => td.due === today), ""],
-			[t("next7"), open.filter((td) => td.due && td.due > today && td.due <= week), ""],
-			[t("later"), open.filter((td) => td.due && td.due > week), ""],
-			[t("noDate"), open.filter((td) => !td.due), ""],
+		// Events with a future date (and today's) sit above overdue/missed ones;
+		// undated tasks go last (newest first).
+		const groups: [string, Todo[], string, (a: Todo, b: Todo) => number][] = [
+			[t("today"), open.filter((td) => td.due === today), "", byPrioThenDue],
+			[t("next7"), open.filter((td) => td.due && td.due > today && td.due <= week), "", byPrioThenDue],
+			[t("later"), open.filter((td) => td.due && td.due > week), "", byPrioThenDue],
+			[t("overdue"), open.filter((td) => td.due && td.due < today), "th-group-overdue", byPrioThenDue],
+			[t("noDate"), open.filter((td) => !td.due), "", byNewest],
 		];
 
 		if (open.length === 0) {
 			list.createDiv({ cls: "th-empty", text: t("allDone") });
 		}
 
-		for (const [label, todos, cls] of groups) {
+		for (const [label, todos, cls, sortFn] of groups) {
 			if (todos.length === 0) continue;
 			const key = `g:${label}`;
 			const group = list.createEl("details", {
@@ -676,7 +960,7 @@ export class TrackerRenderer {
 			const h = group.createEl("summary", { cls: "th-group-title" });
 			h.createSpan({ text: label });
 			h.createSpan({ cls: "th-group-count", text: String(todos.length) });
-			for (const todo of todos.sort(byPrioThenDue)) {
+			for (const todo of todos.sort(sortFn)) {
 				this.renderTodoRow(group, todo, today);
 			}
 		}
@@ -693,7 +977,7 @@ export class TrackerRenderer {
 		}
 	}
 
-	/* ---------------- Todo (a cartelle: lista → sezione) ---------------- */
+	/* ---------------- Todos (folders: list → section) ---------------- */
 
 	private renderFolders(root: HTMLElement, data: TrackerData): void {
 		const section = root.createDiv({ cls: "th-section" });
@@ -770,7 +1054,10 @@ export class TrackerRenderer {
 		const submit = async () => {
 			const text = input.value.trim();
 			if (!text) return;
-			await this.plugin.store.addTodo(text, Number(prio.value) as Priority, date.value || null);
+			const p = Number(prio.value) as Priority;
+			// expected line, to animate its appearance on the next render
+			this.pendingNew = serializeTodo(text, p, date.value || null);
+			await this.plugin.store.addTodo(text, p, date.value || null);
 			input.value = "";
 		};
 		btn.onclick = submit;
@@ -781,6 +1068,11 @@ export class TrackerRenderer {
 
 	private renderTodoRow(parent: HTMLElement, todo: Todo, today: string): void {
 		const wrap = parent.createDiv({ cls: `th-todo ${todo.done ? "is-done" : ""}` });
+		// animated appearance of the just-created task (inverse of the collapse)
+		if (this.pendingNew && todo.raw === this.pendingNew) {
+			wrap.addClass("th-appear");
+			this.pendingNew = null;
+		}
 		const row = wrap.createDiv({ cls: "th-todo-main" });
 
 		const check = row.createEl("button", {
@@ -788,15 +1080,26 @@ export class TrackerRenderer {
 			attr: { "aria-label": todo.done ? t("reopen") : t("complete") },
 		});
 		setIcon(check, "check");
-		check.onclick = () => {
+		check.onclick = (e) => {
+			e.stopPropagation();
 			if (todo.done) {
 				void this.plugin.store.toggleTodo(todo);
 				return;
 			}
+			// first the checkbox-fill animation (+ sound),
+			// then, once done, the collapse with the gaussian curve
 			playCheckSound();
 			check.addClass("is-done");
 			check.addClass("th-pop");
-			collapseThenRun(wrap, () => void this.plugin.store.toggleTodo(todo));
+			window.setTimeout(() => collapseThenRun(wrap, () => void this.plugin.store.toggleTodo(todo)), 300);
+		};
+
+		// pencil button next to the icon: appears on hover, opens the edit popup
+		const editBtn = row.createEl("button", { cls: "th-edit", attr: { "aria-label": t("editTask") } });
+		setIcon(editBtn, "pencil");
+		editBtn.onclick = (e) => {
+			e.stopPropagation();
+			new TaskEditModal(this.plugin, todo).open();
 		};
 
 		if (todo.priority !== Priority.None) {
@@ -806,20 +1109,34 @@ export class TrackerRenderer {
 			});
 		}
 
-		const text = row.createDiv({ cls: "th-todo-text" });
+		const text = row.createDiv({ cls: "th-todo-text", attr: { title: t("clickToRename") } });
 		renderRich(text, todo.text);
+		// click on the text = inline rename (but not on the links inside the text)
+		text.onclick = (e) => {
+			if ((e.target as HTMLElement).closest("a")) return;
+			e.stopPropagation();
+			this.startRename(text, todo);
+		};
 
-		if (todo.due) {
-			const overdue = !todo.done && todo.due < today;
+		if (todo.due || todo.time) {
+			const overdue = !todo.done && !!todo.due && todo.due < today;
+			const dateText = todo.due
+				? todo.due === today
+					? t("dueToday")
+					: this.formatDue(todo.due)
+				: "";
 			row.createSpan({
 				cls: `th-due ${overdue ? "is-overdue" : ""}`,
-				text: todo.due === today ? t("dueToday") : this.formatDue(todo.due),
+				text: [dateText, todo.time].filter(Boolean).join(" "),
 			});
 		}
 
 		const del = row.createEl("button", { cls: "th-del", attr: { "aria-label": t("delete") } });
 		setIcon(del, "x");
-		del.onclick = () => void this.plugin.store.deleteTodo(todo);
+		del.onclick = (e) => {
+			e.stopPropagation();
+			void this.plugin.store.deleteTodo(todo);
+		};
 
 		if (todo.description) {
 			const desc = wrap.createDiv({ cls: "th-todo-desc" });
@@ -827,6 +1144,33 @@ export class TrackerRenderer {
 				renderRich(desc.createDiv(), line);
 			}
 		}
+	}
+
+	/** Inline rename: replace the text with an input, save on Enter/blur. */
+	private startRename(el: HTMLElement, todo: Todo): void {
+		const input = document.createElement("input");
+		input.type = "text";
+		input.value = todo.text;
+		input.className = "th-todo-rename";
+		el.replaceWith(input);
+		input.focus();
+		input.select();
+		let done = false;
+		const commit = (save: boolean) => {
+			if (done) return;
+			done = true;
+			const v = input.value.trim();
+			if (save && v && v !== todo.text) {
+				void this.plugin.store.updateTodo(todo, { text: v });
+			} else {
+				void this.render();
+			}
+		};
+		input.onkeydown = (e) => {
+			if (e.key === "Enter") commit(true);
+			if (e.key === "Escape") commit(false);
+		};
+		input.onblur = () => commit(true);
 	}
 
 	private formatDue(iso: string): string {

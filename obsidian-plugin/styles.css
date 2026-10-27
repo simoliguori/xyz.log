@@ -9,7 +9,7 @@
 	--th-border: #3a3a41;
 	--th-text: #dcdcdc;
 	--th-muted: #8f8f96;
-	/* sincronizzato con l'accent del tema di Obsidian (Impostazioni → Aspetto) */
+	/* synced with the Obsidian theme accent (Settings → Appearance) */
 	--th-accent: var(--interactive-accent, #44437a);
 	--th-accent-bright: color-mix(in srgb, var(--interactive-accent, #44437a) 50%, #ffffff);
 	--th-accent-soft: color-mix(in srgb, var(--interactive-accent, #44437a) 40%, #1e1e1e);
@@ -20,17 +20,23 @@
 	--th-prio-low: #6f8f7a;
 	--th-prio-lowest: #5d7264;
 	--th-mono: "Roboto Mono", var(--font-monospace), monospace;
-	/* font dei titoli: Space Grotesk (OFL), caricato da Google Fonts in cima al file */
-	--th-serif: "Space Grotesk", var(--font-text), system-ui, sans-serif;
+	/* headline font: Space Grotesk (OFL), loaded from Google Fonts at the top of the file */
+	--th-serif: "NType82-Headline", "NType82 Headline", "NType 82", "Space Grotesk", var(--font-text), system-ui, sans-serif;
 
 	font-family: var(--th-mono);
 	color: var(--th-text);
 	font-size: 0.9em;
 	padding: 10px 12px 18px;
 	overflow-y: auto;
+	/* il contenuto non deve mai allargare la scheda/pane oltre lo spazio
+	   disponibile (evita overflow orizzontali che sballano il workspace) */
+	max-width: 100%;
+	min-width: 0;
+	overflow-x: hidden;
+	box-sizing: border-box;
 }
 
-/* blocco incorporato nelle note: niente padding da vista, sezioni più compatte */
+/* block embedded in notes: no view padding, more compact sections */
 .th-root.th-embed {
 	padding: 4px 0;
 	overflow-y: visible;
@@ -119,7 +125,7 @@
 	height: 10px;
 }
 
-/* ---------- abitudini ---------- */
+/* ---------- habits ---------- */
 
 .th-habit {
 	background: var(--th-bg2);
@@ -194,11 +200,29 @@
 }
 
 .th-heatmap {
-	display: block;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end; /* ancorata a destra: oggi a filo destro */
 	margin-top: 12px;
 	padding-top: 12px;
+	padding-bottom: 4px;
 	border-top: 1px solid var(--th-border);
 	overflow-x: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--th-border) transparent;
+}
+.th-heatmap::-webkit-scrollbar {
+	height: 6px;
+}
+.th-heatmap::-webkit-scrollbar-track {
+	background: transparent;
+}
+.th-heatmap::-webkit-scrollbar-thumb {
+	background: var(--th-border);
+	border-radius: 3px;
+}
+.th-heatmap::-webkit-scrollbar-thumb:hover {
+	background: var(--th-muted);
 }
 
 .th-heatmap-months {
@@ -369,7 +393,7 @@
 	text-decoration: underline;
 }
 
-/* ---------- animazioni, contatore, collassabili ---------- */
+/* ---------- animations, counter, collapsibles ---------- */
 @keyframes th-pop {
 	0% { transform: scale(1); }
 	40% { transform: scale(1.28); }
@@ -400,14 +424,14 @@
 	margin-bottom: 0;
 }
 
-/* abitudine fatta oggi: nome barrato */
+/* habit done today: struck-through name */
 .th-habit.is-done .th-habit-name {
 	text-decoration: line-through;
 	color: var(--th-muted);
 	transition: color 0.2s ease;
 }
 
-/* contatore per abitudini "a conteggio" (es. cose brutte) */
+/* counter for "countable" habits (e.g. things to cut down on) */
 .th-root .th-count {
 	width: 16px;
 	height: 16px;
@@ -415,10 +439,12 @@
 	border-radius: 4px;
 	border: 1.5px solid var(--background-modifier-border, var(--th-border));
 	background: var(--th-bg2);
-	color: var(--th-muted);
+	/* numero minimal e tenue */
+	color: color-mix(in srgb, var(--th-muted) 70%, var(--th-bg));
 	font-family: var(--th-mono);
-	font-size: 0.7em;
-	font-weight: 700;
+	font-size: 0.68em;
+	font-weight: 400;
+	letter-spacing: 0.01em;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -447,7 +473,7 @@
 	display: none;
 }
 
-/* ---------- vista a cartelle (lista → sezione) ---------- */
+/* ---------- folder view (list → section) ---------- */
 .th-folder {
 	margin-bottom: 6px;
 }
@@ -561,7 +587,7 @@
 	margin-bottom: 8px;
 }
 
-/* ---------- abitudini: aggiunta ed eliminazione ---------- */
+/* ---------- habits: add and delete ---------- */
 
 .th-root .th-add-emoji {
 	flex: 0 0 auto;
@@ -577,7 +603,7 @@
 	opacity: 0.7;
 }
 
-/* ---------- abitudini: icona Iconize ---------- */
+/* ---------- habits: Iconize icon ---------- */
 
 .th-root .th-icon-btn {
 	background: transparent;
@@ -777,25 +803,20 @@
 	padding-left: 9px;
 }
 
-/* ---------- layout dashboard (ex "a croce") ---------- */
-/* Todo a sinistra (alto, due blocchi, scrollabile); a destra abitudini (sopra)
-   e cronologia di un'abitudine a scelta (sotto). */
+/* ---------- dashboard layout ---------- */
+/* Todos on the left (tall, two blocks, scrollable); on the right habits (top)
+   and the history of a selected habit (bottom). */
 
 .th-cross-grid {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
-	grid-template-rows: 1fr 1fr;
-	grid-template-areas:
-		"todo habits"
-		"todo history";
 	gap: 12px;
-	margin-top: 12px;
+	margin-top: 4px;
 	height: 620px;
 }
 
-.th-cross-cell--todo { grid-area: todo; }
-.th-cross-cell--habits { grid-area: habits; }
-.th-cross-cell--history { grid-area: history; }
+.th-cross-cell--todo { min-width: 0; }
+.th-cross-cell--habits { min-width: 0; }
 
 .th-cross-cell {
 	min-width: 0;
@@ -812,7 +833,7 @@
 	margin-top: 0;
 }
 
-/* nel dashboard scorre il riquadro stesso: niente limite d'altezza interno */
+/* in the dashboard the tile itself scrolls: no inner height limit */
 .th-cross .th-habit-scroll,
 .th-cross .th-todo-scroll {
 	max-height: none;
@@ -820,7 +841,7 @@
 	padding-right: 0;
 }
 
-/* selettore abitudine nel riquadro Cronologia */
+/* habit selector in the History tile */
 .th-history-head {
 	display: flex;
 	align-items: center;
@@ -839,7 +860,7 @@
 	max-width: 55%;
 }
 
-/* panoramica cronologia: una riga compatta per abitudine, per categoria */
+/* history overview: one compact row per habit, by category */
 .th-hist-cat {
 	display: flex;
 	align-items: center;
@@ -880,34 +901,448 @@
 	height: 8px;
 }
 
-/* nota a larghezza piena: opt-in con cssclasses "th-wide" oppure rilevando un blocco
-   dashboard. Agisce su reading e live preview e neutralizza --file-line-width. */
-/* Larghezza piena OPT-IN per nota: solo chi mette `cssclasses: th-wide`.
-   (compatibile col tema Minimal, che usa variabili proprie) */
-.th-wide {
-	--file-line-width: 100% !important;
-	--line-width: 100% !important;
-	--line-width-wide: 100% !important;
-	--max-width: 100% !important;
-}
-
-.th-wide .markdown-preview-sizer,
-.th-wide .cm-sizer,
-.th-wide .cm-content {
-	max-width: none !important;
-	width: 100% !important;
+/* Full width is OPT-IN per note: `cssclasses: th-wide`. Deliberately minimal:
+   it only widens the reading-view sizer and does NOT touch the theme's
+   line-width variables (Minimal handles its own with `wide`/`max`). Touching
+   them could cause workspace-level layout conflicts (e.g. the left sidebar not
+   closing). With Minimal, its own `wide`/`max` classes are enough. */
+.th-wide .markdown-preview-sizer {
+	max-width: none;
 }
 
 @media (max-width: 700px) {
 	.th-cross-grid {
 		grid-template-columns: 1fr;
-		grid-template-areas:
-			"habits"
-			"history"
-			"todo";
 		height: auto;
 	}
 	.th-cross-cell {
 		overflow-y: visible;
 	}
 }
+
+/* ---------- "several times a day" / free counter ---------- */
+
+.th-root .th-count-wide {
+	width: auto;
+	min-width: 22px;
+	padding: 0 5px;
+}
+
+.th-root .th-count-minus {
+	width: 18px;
+	height: 18px;
+	min-width: 18px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	background: var(--th-bg2);
+	color: var(--th-muted);
+	cursor: pointer;
+	padding: 0;
+	font-size: 0.9em;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: -3px;
+	box-shadow: none;
+}
+
+.th-root .th-count-minus:hover {
+	color: var(--th-overdue);
+}
+
+.th-hidden {
+	display: none !important;
+}
+
+/* ---------- per-habit settings panel ---------- */
+
+.th-root .th-habit-settings-toggle {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	color: var(--th-muted);
+	font-family: var(--th-mono);
+	font-size: 0.72em;
+	cursor: pointer;
+	padding: 8px 0 2px;
+	text-decoration: underline dotted;
+}
+
+.th-habit-settings {
+	display: flex;
+	flex-direction: column;
+	gap: 9px;
+	margin-top: 4px;
+	padding-top: 8px;
+	border-top: 1px solid var(--th-border);
+}
+
+.th-setting {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.th-setting-col {
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.th-setting-label {
+	font-family: var(--th-mono);
+	font-size: 0.75em;
+	color: var(--th-muted);
+}
+
+.th-stepper {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.th-root .th-step-btn {
+	width: 26px;
+	height: 26px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	background: var(--th-bg2);
+	color: var(--th-text);
+	cursor: pointer;
+	font-size: 0.95em;
+	line-height: 1;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: none;
+}
+
+.th-root .th-step-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+.th-step-val {
+	min-width: 18px;
+	text-align: center;
+	font-family: var(--th-mono);
+	font-size: 0.82em;
+	color: var(--th-text);
+}
+
+.th-root .th-toggle {
+	width: 40px;
+	height: 23px;
+	border-radius: 999px;
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	background: var(--th-surface);
+	position: relative;
+	cursor: pointer;
+	padding: 0;
+	box-shadow: none;
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.th-root .th-toggle.is-on {
+	background: var(--interactive-accent, var(--th-accent));
+	border-color: var(--interactive-accent, var(--th-accent));
+}
+
+.th-toggle-knob {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 17px;
+	height: 17px;
+	border-radius: 50%;
+	background: var(--th-text);
+	transition: left 0.15s ease;
+}
+
+.th-toggle.is-on .th-toggle-knob {
+	left: 19px;
+}
+
+.th-rem-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+	margin-top: 4px;
+}
+
+.th-rem-chip {
+	background: var(--th-accent-soft);
+	color: var(--th-text);
+	border-radius: 999px;
+	padding: 2px 8px 2px 10px;
+	font-family: var(--th-mono);
+	font-size: 0.75em;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.th-rem-chip-x {
+	cursor: pointer;
+	color: var(--th-muted);
+	font-size: 1.1em;
+	line-height: 1;
+}
+
+.th-rem-chip-x:hover {
+	color: var(--th-overdue);
+}
+
+.th-rem-add {
+	display: flex;
+	gap: 5px;
+	align-items: center;
+}
+
+.th-root .th-rem-input {
+	background: var(--th-bg2);
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	border-radius: 6px;
+	color: var(--th-text);
+	font-family: var(--th-mono);
+	font-size: 0.75em;
+	padding: 3px 6px;
+}
+
+.th-root .th-rem-addbtn {
+	width: 26px;
+	height: 26px;
+	border-radius: 6px;
+	border: none;
+	background: var(--interactive-accent, var(--th-accent));
+	color: var(--text-on-accent, var(--th-text));
+	cursor: pointer;
+	padding: 0;
+	font-size: 1em;
+	line-height: 1;
+	box-shadow: none;
+}
+
+/* ---------- mobile swipe: habits ⇄ tasks ---------- */
+
+.th-swipe-tabs {
+	display: flex;
+	gap: 6px;
+	margin-bottom: 10px;
+}
+
+.th-root .th-swipe-tab {
+	flex: 1;
+	background: var(--th-bg2);
+	border: 1px solid var(--background-modifier-border, var(--th-border));
+	border-radius: 8px;
+	color: var(--th-muted);
+	font-family: var(--th-mono);
+	font-size: 0.82em;
+	padding: 9px 0;
+	cursor: pointer;
+	box-shadow: none;
+}
+
+.th-root .th-swipe-tab.is-active {
+	background: var(--interactive-accent, var(--th-accent));
+	border-color: var(--interactive-accent, var(--th-accent));
+	color: var(--text-on-accent, var(--th-text));
+}
+
+.th-swipe-track {
+	display: flex;
+	overflow-x: auto;
+	overflow-y: visible;
+	scroll-snap-type: x mandatory;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	touch-action: pan-x pan-y;
+}
+
+.th-swipe-track::-webkit-scrollbar {
+	display: none;
+}
+
+.th-swipe-pane {
+	flex: 0 0 100%;
+	width: 100%;
+	min-width: 0;
+	scroll-snap-align: start;
+	padding: 0 2px;
+}
+
+/* ---------- scroll su mobile: niente trappole d'altezza nei blocchi ---------- */
+
+.th-todo-scroll,
+.th-habit-scroll {
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior: contain;
+}
+
+.is-mobile .th-todo-scroll,
+.is-mobile .th-habit-scroll {
+	max-height: none;
+	overflow: visible;
+}
+
+.is-mobile .th-heatmap {
+	-webkit-overflow-scrolling: touch;
+}
+
+/* ---------- chevron animato delle categorie (minimizza/espandi) ---------- */
+.th-cat-chevron {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	color: var(--th-muted);
+	transition: transform 0.22s ease, color 0.2s ease;
+}
+.th-cat-chevron svg {
+	width: 14px;
+	height: 14px;
+}
+.th-category:not([open]) > .th-category-head .th-cat-chevron {
+	transform: rotate(-90deg);
+}
+.th-category-head:hover .th-cat-chevron {
+	color: var(--th-text);
+}
+
+/* ---------- comparsa animata della nuova task (inverso del collasso) ---------- */
+@keyframes th-appear-in {
+	from { max-height: 0; opacity: 0; transform: translateY(-6px); }
+	to { max-height: 80px; opacity: 1; transform: none; }
+}
+.th-todo.th-appear {
+	animation: th-appear-in 0.3s ease;
+	overflow: hidden;
+}
+
+/* ---------- task editing: inline rename + translucent popup ---------- */
+.th-root .th-todo-text { cursor: text; }
+
+.th-root .th-todo-rename {
+	flex: 1;
+	min-width: 0;
+	background: var(--th-bg2);
+	border: 1px solid var(--interactive-accent, var(--th-accent-bright));
+	border-radius: 6px;
+	color: var(--th-text);
+	font-family: var(--th-mono);
+	font-size: 0.75em;
+	padding: 2px 6px;
+}
+
+.modal.th-task-modal {
+	background: color-mix(in srgb, var(--th-bg, #1e1e1e) 82%, transparent);
+	-webkit-backdrop-filter: blur(20px) saturate(1.2);
+	backdrop-filter: blur(20px) saturate(1.2);
+	border: 1px solid var(--th-border);
+	border-radius: 14px;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 20px 60px rgba(0, 0, 0, 0.45);
+	width: 360px;
+	max-width: 92vw;
+}
+.th-task-modal .th-tm-title {
+	font-family: var(--th-serif);
+	color: var(--th-accent-bright);
+	margin: 0 0 12px;
+	font-weight: 400;
+}
+.th-task-modal .th-tm-text {
+	width: 100%;
+	background: var(--th-bg2);
+	border: 1px solid var(--th-border);
+	border-radius: 8px;
+	color: var(--th-text);
+	font-family: var(--th-mono);
+	font-size: 0.9em;
+	padding: 8px 10px;
+	margin-bottom: 10px;
+	box-sizing: border-box;
+}
+.th-task-modal .th-tm-row {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-bottom: 14px;
+}
+.th-task-modal .th-tm-date,
+.th-task-modal .th-tm-time,
+.th-task-modal .th-tm-prio {
+	background: var(--th-bg2);
+	border: 1px solid var(--th-border);
+	border-radius: 7px;
+	color: var(--th-text);
+	font-family: var(--th-mono);
+	font-size: 0.8em;
+	padding: 5px 8px;
+}
+.th-task-modal .th-tm-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+}
+.th-task-modal .th-tm-save {
+	background: var(--interactive-accent, var(--th-accent));
+	color: var(--text-on-accent, var(--th-text));
+	border: none;
+	border-radius: 8px;
+	padding: 7px 16px;
+	cursor: pointer;
+	font-family: var(--th-mono);
+}
+.th-task-modal .th-tm-cancel {
+	background: var(--th-surface);
+	color: var(--th-text);
+	border: 1px solid var(--th-border);
+	border-radius: 8px;
+	padding: 7px 14px;
+	cursor: pointer;
+	font-family: var(--th-mono);
+}
+
+/* ---------- edit pencil button (hover near the icon) ---------- */
+.th-root .th-edit {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	color: var(--th-muted);
+	cursor: pointer;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 16px;
+	opacity: 0;
+	transition: opacity 0.12s ease, color 0.12s ease;
+}
+.th-todo:hover .th-edit {
+	opacity: 0.7;
+}
+.th-root .th-edit:hover {
+	color: var(--th-accent-bright);
+	opacity: 1;
+}
+.th-root .th-edit svg {
+	width: 12px;
+	height: 12px;
+}
+
+/* category selector in the "new habit" form */
+.th-root .th-add-cat {
+	flex: 0 0 auto;
+	max-width: 120px;
+}
+
+/* ---------- fraction counter (fixed-size box, ½ style) ---------- */
+.th-root .th-count-frac { line-height: 1; overflow: hidden; }
+.th-root .th-count sup,
+.th-root .th-count sub { font-size: 7px; line-height: 1; }
+.th-root .th-count sup { vertical-align: 0.3em; }
+.th-root .th-count sub { vertical-align: -0.2em; }
+.th-root .th-count .th-frac-slash { font-size: 9px; margin: 0 -1px; opacity: 0.85; }

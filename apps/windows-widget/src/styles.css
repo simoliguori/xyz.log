@@ -1,0 +1,1745 @@
+/* xyz.log — widget desktop Windows. Design token condivisi con il plugin. */
+
+:root {
+	--xl-bg: #1e1e1e;
+	--xl-bg2: #262626;
+	--xl-surface: #2c2c31;
+	--xl-border: #3a3a41;
+	--xl-text: #dcdcdc;
+	--xl-muted: #8f8f96;
+	--xl-accent: #44437a;
+	--xl-accent-bright: color-mix(in srgb, var(--xl-accent) 50%, #ffffff);
+	--xl-accent-soft: color-mix(in srgb, var(--xl-accent) 40%, var(--xl-bg));
+	--xl-overdue: #c76a6a;
+	--xl-prio-highest: #c76a6a;
+	--xl-prio-high: #c98f5f;
+	--xl-prio-medium: var(--xl-accent-bright);
+	--xl-prio-low: #6f8f7a;
+	--xl-prio-lowest: #5d7264;
+	--xl-opacity: 0.9;
+	--xl-mono: "Roboto Mono", ui-monospace, monospace;
+	/* header come nelle note Obsidian: NType82 se installato, poi Space Grotesk */
+	--xl-serif: "NType82-Headline", "NType82 Headline", "NType 82", "Space Grotesk", system-ui, sans-serif;
+	--xl-gap: 10px;
+	--xl-row: 92px;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	height: 100%;
+	background: transparent;
+	overflow: hidden;
+	font-family: var(--xl-mono);
+	color: var(--xl-text);
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.xl-app {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	background: var(--xl-bg);
+	overflow: hidden;
+}
+
+/* durante l'intro il contenitore è trasparente: lo splash glass sfoca il desktop */
+.xl-app.xl-splashing {
+	background: transparent;
+}
+
+/* ---------- top bar ---------- */
+
+.xl-topbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--xl-border);
+	-webkit-app-region: drag; /* drag the native window from the bar */
+}
+
+.xl-topbar button,
+.xl-topbar .xl-tab {
+	-webkit-app-region: no-drag;
+}
+
+.xl-logo {
+	font-family: var(--xl-serif);
+	font-size: 15px;
+	color: var(--xl-accent-bright);
+	letter-spacing: 0.02em;
+	/* space for the intro logo that docks here on the left */
+	margin-left: 30px;
+}
+
+.xl-tabs {
+	display: flex;
+	gap: 4px;
+	flex: 1;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+.xl-tabs::-webkit-scrollbar {
+	display: none;
+}
+
+.xl-tab {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	color: var(--xl-muted);
+	font-family: var(--xl-mono);
+	font-size: 12px;
+	padding: 5px 10px;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.xl-tab:hover {
+	background: var(--xl-bg2);
+}
+
+.xl-tab.is-active {
+	background: var(--xl-accent);
+	border-color: var(--xl-accent);
+	color: var(--xl-text);
+}
+
+.xl-tab-x {
+	opacity: 0.6;
+	font-size: 13px;
+}
+
+.xl-tab-x:hover {
+	color: var(--xl-overdue);
+	opacity: 1;
+}
+
+.xl-tab-add {
+	color: var(--xl-muted);
+}
+
+.xl-actions {
+	display: flex;
+	gap: 4px;
+}
+
+.xl-icon-btn {
+	width: 30px;
+	height: 30px;
+	border-radius: 8px;
+	border: 1px solid var(--xl-border);
+	background: var(--xl-bg2);
+	color: var(--xl-text);
+	cursor: pointer;
+	font-size: 14px;
+}
+
+.xl-icon-btn:hover {
+	background: var(--xl-surface);
+}
+
+.xl-icon-btn.is-on {
+	background: var(--xl-accent);
+	border-color: var(--xl-accent);
+}
+
+/* ---------- add-tile bar ---------- */
+
+.xl-addtile {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--xl-border);
+	background: var(--xl-bg2);
+}
+
+.xl-addtile-label {
+	font-size: 11px;
+	color: var(--xl-muted);
+}
+
+.xl-addtile-btn {
+	background: var(--xl-surface);
+	border: 1px solid var(--xl-border);
+	border-radius: 7px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 11px;
+	padding: 4px 8px;
+	cursor: pointer;
+}
+
+.xl-addtile-btn:hover {
+	border-color: var(--xl-accent-bright);
+}
+
+/* ---------- grid ---------- */
+
+.xl-grid {
+	display: grid;
+	grid-auto-rows: var(--xl-row);
+	grid-auto-flow: row dense;
+	gap: var(--xl-gap);
+	padding: var(--xl-gap);
+	overflow-y: auto;
+	flex: 1;
+}
+
+.xl-tile {
+	position: relative;
+	background: var(--xl-bg);
+	border: 1px solid var(--xl-border);
+	border-radius: 12px;
+	padding: 10px 12px;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.xl-grid.is-edit .xl-tile {
+	border-style: dashed;
+	border-color: var(--xl-accent);
+}
+
+.xl-tile.is-dragging {
+	opacity: 0.4;
+}
+
+.xl-tile-body {
+	overflow-y: auto;
+	flex: 1;
+	min-height: 0;
+}
+
+.xl-tile-chrome {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: -2px -4px 6px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid var(--xl-border);
+	font-size: 11px;
+	color: var(--xl-muted);
+}
+
+.xl-tile-handle {
+	cursor: grab;
+}
+
+.xl-tile-type {
+	font-weight: 500;
+}
+
+.xl-tile-habitsel,
+.xl-set-select {
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 6px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 11px;
+	padding: 2px 4px;
+}
+
+.xl-tile-size {
+	display: flex;
+	gap: 6px;
+	margin-left: auto;
+}
+
+.xl-size-step {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+.xl-size-label {
+	font-size: 10px;
+	color: var(--xl-muted);
+}
+
+.xl-size-val {
+	min-width: 12px;
+	text-align: center;
+	font-size: 11px;
+}
+
+.xl-tile-del {
+	background: transparent;
+	border: none;
+	color: var(--xl-muted);
+	font-size: 15px;
+	cursor: pointer;
+}
+
+.xl-tile-del:hover {
+	color: var(--xl-overdue);
+}
+
+.xl-resize-handle {
+	position: absolute;
+	right: 2px;
+	bottom: 0;
+	width: 18px;
+	height: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--xl-accent-bright);
+	cursor: nwse-resize;
+	font-size: 12px;
+}
+
+/* ---------- sezioni condivise ---------- */
+
+.xl-section-title {
+	font-family: var(--xl-serif);
+	font-weight: 400;
+	font-size: 14px;
+	margin: 0 0 6px;
+	color: var(--xl-accent-bright);
+	border-bottom: 1px solid var(--xl-border);
+	padding-bottom: 3px;
+}
+
+.xl-empty {
+	color: var(--xl-muted);
+	font-size: 12px;
+	padding: 10px 0;
+}
+
+/* header */
+.xl-header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+}
+
+.xl-header-date {
+	font-family: var(--xl-serif);
+	font-size: 18px;
+	text-transform: capitalize;
+}
+
+.xl-header-clock {
+	font-size: 22px;
+	color: var(--xl-accent-bright);
+}
+
+/* stats */
+.xl-stats {
+	display: flex;
+	gap: 10px;
+	height: 100%;
+	align-items: center;
+}
+
+.xl-stat {
+	flex: 1;
+	text-align: center;
+}
+
+.xl-stat-n {
+	font-family: var(--xl-serif);
+	font-size: 22px;
+	color: var(--xl-text);
+}
+
+.xl-stat.is-alert .xl-stat-n {
+	color: var(--xl-overdue);
+}
+
+.xl-stat-l {
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: var(--xl-muted);
+}
+
+/* ---------- habits ---------- */
+
+.xl-habit {
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 7px;
+	padding: 4px 8px;
+	margin-bottom: 5px;
+}
+
+.xl-habit-row {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	cursor: pointer;
+}
+
+.xl-check {
+	width: 18px;
+	height: 18px;
+	min-width: 18px;
+	border-radius: 5px;
+	border: 1.5px solid var(--xl-accent-bright);
+	background: transparent;
+	color: var(--xl-text);
+	cursor: pointer;
+	font-size: 11px;
+	line-height: 1;
+	padding: 0;
+}
+
+.xl-check.is-done {
+	background: var(--xl-accent);
+	border-color: var(--xl-accent);
+}
+
+.xl-check-sm {
+	width: 16px;
+	height: 16px;
+	min-width: 16px;
+}
+
+.xl-count {
+	min-width: 18px;
+	height: 18px;
+	border-radius: 5px;
+	border: 1.5px solid var(--xl-accent-bright);
+	background: transparent;
+	/* numero minimal e tenue */
+	color: color-mix(in srgb, var(--xl-muted) 80%, var(--xl-bg));
+	font-family: var(--xl-mono);
+	font-size: 9.5px;
+	font-weight: 400;
+	letter-spacing: 0.01em;
+	cursor: pointer;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+}
+/* frazione compatta dentro un box di dimensione fissa (come il check) */
+.xl-count-frac {
+	line-height: 1;
+}
+.xl-count sup,
+.xl-count sub {
+	font-size: 8.5px;
+	line-height: 1;
+}
+.xl-count sup {
+	vertical-align: 0.32em;
+}
+.xl-count sub {
+	vertical-align: -0.22em;
+}
+.xl-count .xl-frac-slash {
+	font-size: 11px;
+	margin: 0 -1px;
+	opacity: 0.85;
+}
+
+.xl-count.is-done {
+	background: var(--xl-accent);
+	border-color: var(--xl-accent);
+	color: var(--xl-text);
+}
+
+.xl-count-minus {
+	width: 18px;
+	height: 18px;
+	border-radius: 4px;
+	border: 1px solid var(--xl-border);
+	background: var(--xl-bg);
+	color: var(--xl-muted);
+	cursor: pointer;
+	font-size: 13px;
+	line-height: 1;
+	padding: 0;
+	margin-left: -3px;
+}
+
+.xl-count-minus:hover {
+	color: var(--xl-overdue);
+}
+
+.xl-habit-icon {
+	font-size: 13px;
+	width: 16px;
+	text-align: center;
+}
+
+.xl-habit-name {
+	flex: 0 1 auto;
+	font-size: 12px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.xl-habit.is-done .xl-habit-name {
+	text-decoration: line-through;
+	color: var(--xl-muted);
+}
+
+.xl-streak {
+	color: var(--xl-accent-bright);
+	font-size: 11px;
+	font-weight: 700;
+}
+
+.xl-strip {
+	display: flex;
+	gap: 3px;
+	margin-left: auto;
+}
+
+.xl-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--xl-surface);
+}
+
+.xl-dot.is-done {
+	background: var(--xl-accent);
+}
+
+.xl-dot.is-today {
+	outline: 1.5px solid var(--xl-accent-bright);
+	outline-offset: 1px;
+}
+
+.xl-del {
+	background: transparent;
+	border: none;
+	color: var(--xl-muted);
+	cursor: pointer;
+	font-size: 14px;
+	opacity: 0;
+	padding: 0 2px;
+}
+
+.xl-habit-row:hover .xl-del,
+.xl-todo:hover .xl-del {
+	opacity: 0.7;
+}
+
+.xl-del:hover {
+	color: var(--xl-overdue);
+	opacity: 1;
+}
+
+/* categorie */
+.xl-category {
+	margin-bottom: 8px;
+}
+
+.xl-category-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 2px 4px;
+	color: var(--xl-muted);
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+}
+
+.xl-category-body {
+	margin-left: 10px;
+	border-left: 1px solid var(--xl-border);
+	padding-left: 8px;
+}
+
+.xl-group-count {
+	background: var(--xl-surface);
+	border-radius: 999px;
+	padding: 0 7px;
+	font-size: 10px;
+}
+
+/* heatmap */
+.xl-heatmap {
+	margin-top: 10px;
+	padding-top: 10px;
+	padding-bottom: 4px;
+	border-top: 1px solid var(--xl-border);
+	display: flex;
+	justify-content: flex-end; /* ancorata a destra: oggi a filo destro */
+	overflow-x: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--xl-border) transparent;
+}
+.xl-heatmap::-webkit-scrollbar {
+	height: 6px;
+}
+.xl-heatmap::-webkit-scrollbar-track {
+	background: transparent;
+}
+.xl-heatmap::-webkit-scrollbar-thumb {
+	background: var(--xl-border);
+	border-radius: 3px;
+}
+.xl-heatmap::-webkit-scrollbar-thumb:hover {
+	background: var(--xl-muted);
+}
+
+.xl-heatmap-grid {
+	display: flex;
+	gap: 3px;
+	width: max-content;
+}
+
+.xl-heatmap-col {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.xl-cell {
+	width: 10px;
+	height: 10px;
+	border-radius: 3px;
+	background: var(--xl-surface);
+}
+
+.xl-cell.is-done {
+	background: var(--xl-accent);
+}
+
+.xl-cell.is-today {
+	outline: 1.5px solid var(--xl-accent-bright);
+	outline-offset: 1px;
+}
+
+.xl-cell.is-future {
+	background: transparent;
+}
+
+.xl-heatmap-caption {
+	color: var(--xl-muted);
+	font-size: 11px;
+	margin-top: 6px;
+}
+
+/* ---------- per-habit settings ---------- */
+
+.xl-habit-settings-toggle {
+	background: transparent;
+	border: none;
+	color: var(--xl-muted);
+	font-family: var(--xl-mono);
+	font-size: 11px;
+	cursor: pointer;
+	padding: 6px 0 2px;
+	text-decoration: underline dotted;
+}
+
+.xl-habit-settings {
+	display: flex;
+	flex-direction: column;
+	gap: 9px;
+	padding-top: 8px;
+	border-top: 1px solid var(--xl-border);
+}
+
+.xl-setting {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.xl-setting-col {
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.xl-setting-label {
+	font-size: 12px;
+	color: var(--xl-muted);
+}
+
+.xl-stepper {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.xl-step-btn {
+	width: 24px;
+	height: 24px;
+	border-radius: 6px;
+	border: 1px solid var(--xl-border);
+	background: var(--xl-bg2);
+	color: var(--xl-text);
+	cursor: pointer;
+	font-size: 14px;
+	line-height: 1;
+	padding: 0;
+}
+
+.xl-step-btn:hover {
+	background: var(--xl-surface);
+}
+
+.xl-step-val {
+	min-width: 16px;
+	text-align: center;
+	font-size: 12px;
+}
+
+.xl-toggle {
+	width: 40px;
+	height: 23px;
+	border-radius: 999px;
+	border: 1px solid var(--xl-border);
+	background: var(--xl-surface);
+	position: relative;
+	cursor: pointer;
+	padding: 0;
+}
+
+.xl-toggle.is-on {
+	background: var(--xl-accent);
+	border-color: var(--xl-accent);
+}
+
+.xl-toggle-knob {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 17px;
+	height: 17px;
+	border-radius: 50%;
+	background: var(--xl-text);
+	transition: left 0.15s ease;
+}
+
+.xl-toggle.is-on .xl-toggle-knob {
+	left: 19px;
+}
+
+.xl-rem-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+	margin-top: 4px;
+}
+
+.xl-rem-chip {
+	background: var(--xl-accent-soft);
+	border-radius: 999px;
+	padding: 2px 8px 2px 10px;
+	font-size: 11px;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.xl-rem-chip-x {
+	cursor: pointer;
+	color: var(--xl-muted);
+	font-size: 13px;
+}
+
+.xl-rem-chip-x:hover {
+	color: var(--xl-overdue);
+}
+
+.xl-rem-add {
+	display: flex;
+	gap: 5px;
+}
+
+.xl-rem-input {
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 6px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 11px;
+	padding: 2px 5px;
+}
+
+.xl-rem-addbtn {
+	width: 24px;
+	height: 24px;
+	border-radius: 6px;
+	border: none;
+	background: var(--xl-accent);
+	color: var(--xl-text);
+	cursor: pointer;
+	font-size: 14px;
+	padding: 0;
+}
+
+/* ---------- aggiunta todo/habit ---------- */
+
+.xl-add {
+	display: flex;
+	gap: 5px;
+	margin-bottom: 7px;
+	flex-wrap: wrap;
+}
+
+.xl-add input,
+.xl-add select {
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 6px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 12px;
+	padding: 4px 6px;
+	height: 27px;
+}
+
+.xl-add-text {
+	flex: 1;
+	min-width: 90px;
+}
+
+.xl-add-date,
+.xl-add-time,
+.xl-add-prio {
+	flex: 0 0 auto;
+}
+
+.xl-add-btn {
+	width: 27px;
+	height: 27px;
+	border-radius: 6px;
+	background: var(--xl-accent);
+	color: var(--xl-text);
+	border: none;
+	cursor: pointer;
+	font-size: 16px;
+}
+
+/* ---------- todo ---------- */
+
+.xl-todo-scroll {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.xl-group {
+	margin-bottom: 8px;
+}
+
+.xl-group-title {
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	color: var(--xl-muted);
+	margin: 0 0 4px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	list-style: none;
+}
+
+.xl-group-title::-webkit-details-marker {
+	display: none;
+}
+
+.xl-group-overdue .xl-group-title {
+	color: var(--xl-overdue);
+}
+
+.xl-todo {
+	padding: 3px 6px;
+	border-radius: 6px;
+	font-size: 12px;
+	line-height: 1.3;
+}
+
+.xl-todo:hover {
+	background: var(--xl-bg2);
+}
+
+.xl-todo-main {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+}
+
+.xl-todo.is-done .xl-todo-text {
+	color: var(--xl-muted);
+	text-decoration: line-through;
+}
+
+.xl-todo-text {
+	flex: 1;
+	min-width: 0;
+}
+
+.xl-todo-desc {
+	margin: 1px 0 3px 24px;
+	color: var(--xl-muted);
+	font-size: 11px;
+	word-break: break-word;
+}
+
+.xl-link {
+	color: var(--xl-accent-bright);
+	text-decoration: none;
+}
+
+.xl-link:hover {
+	text-decoration: underline;
+}
+
+.xl-tag {
+	color: var(--xl-accent-bright);
+}
+
+.xl-prio-dot {
+	width: 8px;
+	height: 8px;
+	min-width: 8px;
+	border-radius: 50%;
+}
+
+.xl-prio-highest { background: var(--xl-prio-highest); }
+.xl-prio-high { background: var(--xl-prio-high); }
+.xl-prio-medium { background: var(--xl-prio-medium); }
+.xl-prio-low { background: var(--xl-prio-low); }
+.xl-prio-lowest { background: var(--xl-prio-lowest); }
+.xl-prio-none { background: transparent; }
+
+.xl-due {
+	color: var(--xl-muted);
+	font-size: 11px;
+	white-space: nowrap;
+}
+
+.xl-due.is-overdue {
+	color: var(--xl-overdue);
+	font-weight: 700;
+}
+
+.xl-done-group summary {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	color: var(--xl-muted);
+	cursor: pointer;
+	margin: 6px 0;
+}
+
+/* folders */
+.xl-folder {
+	margin-bottom: 6px;
+}
+
+.xl-folder-title,
+.xl-subfolder-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--xl-muted);
+	list-style: none;
+	cursor: pointer;
+}
+
+.xl-folder-title {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	padding: 3px 0;
+	border-bottom: 1px solid var(--xl-border);
+	margin-bottom: 3px;
+}
+
+.xl-folder-title::-webkit-details-marker,
+.xl-subfolder-title::-webkit-details-marker {
+	display: none;
+}
+
+.xl-subfolder {
+	margin: 3px 0 3px 8px;
+	border-left: 1px solid var(--xl-border);
+	padding-left: 8px;
+}
+
+.xl-subfolder-title {
+	font-size: 11px;
+	padding: 2px 0;
+}
+
+/* history */
+.xl-hist-cat {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: var(--xl-muted);
+	margin: 7px 0 2px;
+}
+
+.xl-hist-line {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 2px 0;
+}
+
+.xl-hist-name {
+	font-size: 12px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	flex: 0 1 auto;
+	min-width: 50px;
+}
+
+.xl-hist-strip {
+	display: flex;
+	gap: 2px;
+	margin-left: auto;
+}
+
+.xl-hist-strip .xl-cell {
+	width: 8px;
+	height: 8px;
+}
+
+/* ---------- settings overlay ---------- */
+
+.xl-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 10;
+}
+
+.xl-settings {
+	width: min(420px, 92vw);
+	max-height: 90vh;
+	overflow-y: auto;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 14px;
+	padding: 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.xl-settings-title {
+	font-family: var(--xl-serif);
+	font-size: 18px;
+	margin: 0;
+	color: var(--xl-accent-bright);
+}
+
+.xl-set-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.xl-set-label {
+	font-size: 12px;
+	color: var(--xl-text);
+	flex: 1;
+}
+
+.xl-set-folder {
+	font-size: 11px;
+	color: var(--xl-muted);
+	max-width: 150px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.xl-set-btn {
+	background: var(--xl-accent);
+	border: none;
+	border-radius: 7px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 12px;
+	padding: 6px 12px;
+	cursor: pointer;
+}
+
+.xl-set-mode {
+	font-size: 11px;
+	color: var(--xl-muted);
+	text-align: center;
+	padding-top: 6px;
+	border-top: 1px solid var(--xl-border);
+}
+
+.xl-set-close {
+	background: var(--xl-surface);
+	border: 1px solid var(--xl-border);
+	border-radius: 8px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 13px;
+	padding: 8px;
+	cursor: pointer;
+}
+
+/* scrollbar discreta */
+.xl-grid::-webkit-scrollbar,
+.xl-tile-body::-webkit-scrollbar,
+.xl-settings::-webkit-scrollbar {
+	width: 8px;
+}
+
+.xl-grid::-webkit-scrollbar-thumb,
+.xl-tile-body::-webkit-scrollbar-thumb,
+.xl-settings::-webkit-scrollbar-thumb {
+	background: var(--xl-border);
+	border-radius: 4px;
+}
+
+/* schermi stretti: una colonna, swipe tra le tab */
+@media (max-width: 560px) {
+	.xl-grid {
+		grid-template-columns: 1fr !important;
+	}
+	.xl-tile {
+		grid-column: span 1 !important;
+	}
+}
+
+/* ======================= intro, onboarding, window ======================= */
+
+/* --- window controls (no Windows title bar) --- */
+.xl-win-btn {
+	width: 30px;
+	height: 30px;
+	border-radius: 8px;
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--xl-muted);
+	cursor: pointer;
+	font-size: 14px;
+	line-height: 1;
+}
+.xl-win-btn:hover {
+	background: var(--xl-bg2);
+	color: var(--xl-text);
+}
+.xl-win-close:hover {
+	background: var(--xl-overdue);
+	color: #fff;
+}
+
+/* --- logo --- */
+.xl-logo-svg {
+	width: 92px;
+	height: 92px;
+}
+.xl-logo-bg {
+	fill: var(--xl-accent);
+	transform-origin: center;
+	/* comparsa morbida (easeOutQuint, curva "gaussiana") con rimbalzo lieve */
+	animation: xl-logo-pop 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.xl-logo-check {
+	stroke: var(--xl-text);
+	stroke-width: 9;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-dasharray: 92;
+	stroke-dashoffset: 92;
+	animation: xl-draw 0.6s cubic-bezier(0.33, 1, 0.68, 1) 0.42s forwards;
+}
+
+/* --- intro a tutto schermo (glassmorphica che rifrange il backdrop) --- */
+.xl-splash {
+	position: fixed;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	/* glass: semi-transparent so the blurred desktop shows through, but readable */
+	background: rgba(20, 20, 24, 0.52);
+	/* "liquid glass" reale su Chromium/WebView2: rifrazione via filtro SVG */
+	backdrop-filter: url(#xl-glass) saturate(1.4) brightness(1.06);
+	/* fallback (Safari/Firefox): frosted blur */
+	-webkit-backdrop-filter: blur(24px) saturate(1.4) brightness(1.06);
+	/* "lit edge" + bordo luminoso come i materiali Apple */
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+	-webkit-app-region: drag;
+	z-index: 50;
+	animation: xl-splash-out 0.45s ease 1.95s both;
+}
+@media (prefers-reduced-transparency: reduce) {
+	.xl-splash {
+		background: var(--xl-bg);
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.xl-splash,
+	.xl-splash::before,
+	.xl-splash::after,
+	.xl-splash-inner,
+	.xl-splash-word,
+	.xl-logo-bg,
+	.xl-logo-check {
+		animation: none;
+	}
+	.xl-splash-word { opacity: 1; }
+	.xl-logo-check { stroke-dashoffset: 0; }
+}
+/* light refractions: translucent white highlights + a slight accent tint, all
+   semi-transparent so they stay consistent with the blurred backdrop behind. */
+.xl-splash::before {
+	content: "";
+	position: absolute;
+	inset: -25%;
+	background:
+		radial-gradient(38% 38% at 28% 26%, rgba(255, 255, 255, 0.1), transparent 70%),
+		radial-gradient(42% 42% at 78% 72%, color-mix(in srgb, var(--xl-accent-bright) 30%, transparent), transparent 72%),
+		radial-gradient(45% 45% at 62% 20%, color-mix(in srgb, var(--xl-accent) 24%, transparent), transparent 75%);
+	filter: blur(34px);
+	opacity: 0.55;
+	animation: xl-refract 7s ease-in-out infinite alternate;
+	pointer-events: none;
+}
+/* lampo di luce diagonale che attraversa il vetro una volta */
+.xl-splash::after {
+	content: "";
+	position: absolute;
+	top: -60%;
+	left: -30%;
+	width: 55%;
+	height: 220%;
+	background: linear-gradient(
+		100deg,
+		transparent,
+		rgba(255, 255, 255, 0.14) 48%,
+		rgba(255, 255, 255, 0.04) 52%,
+		transparent
+	);
+	transform: rotate(8deg) translateX(-40vw);
+	animation: xl-sheen 1.8s cubic-bezier(0.33, 1, 0.68, 1) 0.5s both;
+	pointer-events: none;
+}
+.xl-splash-inner {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 18px;
+	/* starts in the center and rises gently towards the end of the intro */
+	animation: xl-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.2s both;
+}
+.xl-splash-word {
+	font-family: var(--xl-serif);
+	font-size: 34px;
+	letter-spacing: 0.02em;
+	color: var(--xl-text);
+	opacity: 0;
+	animation: xl-fade-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.65s both;
+}
+
+/* --- onboarding --- */
+.xl-onboard {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+.xl-onboard-bar {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 8px 10px;
+	-webkit-app-region: drag;
+}
+.xl-onboard-bar .xl-win-btn {
+	-webkit-app-region: no-drag;
+}
+.xl-onboard-barspace {
+	flex: 1;
+}
+.xl-onboard-card {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	padding: 0 32px 40px;
+	text-align: center;
+}
+.xl-onboard-logo .xl-logo-svg {
+	width: 76px;
+	height: 76px;
+}
+.xl-onboard-title {
+	font-family: var(--xl-serif);
+	font-size: 30px;
+	color: var(--xl-text);
+}
+.xl-onboard-sub {
+	font-size: 13px;
+	color: var(--xl-muted);
+	margin-bottom: 8px;
+}
+.xl-onboard-btn {
+	background: var(--xl-accent);
+	border: none;
+	border-radius: 10px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 14px;
+	padding: 11px 20px;
+	cursor: pointer;
+}
+.xl-onboard-btn:hover {
+	background: var(--xl-accent-bright);
+	color: var(--xl-bg);
+}
+.xl-onboard-hint {
+	font-size: 11px;
+	color: var(--xl-muted);
+	margin-bottom: 10px;
+}
+.xl-onboard-card .xl-setting {
+	width: min(320px, 80vw);
+}
+.xl-onboard-foot {
+	margin-top: 16px;
+	font-size: 11px;
+	color: var(--xl-muted);
+	max-width: 320px;
+}
+
+/* --- check / counter / collapse animations --- */
+@keyframes xl-logo-pop {
+	0% { transform: scale(0.35); opacity: 0; }
+	55% { transform: scale(1.07); opacity: 1; }
+	75% { transform: scale(0.98); }
+	100% { transform: scale(1); opacity: 1; }
+}
+@keyframes xl-draw {
+	to { stroke-dashoffset: 0; }
+}
+/* il gruppo logo+testo parte al centro e sale dolcemente */
+@keyframes xl-rise {
+	from { transform: translateY(0); }
+	to { transform: translateY(-48px); }
+}
+/* luci del vetro che derivano lentamente (rifrazione) */
+@keyframes xl-refract {
+	0% { transform: translate3d(-4%, -3%, 0) scale(1); opacity: 0.45; }
+	100% { transform: translate3d(5%, 4%, 0) scale(1.1); opacity: 0.62; }
+}
+/* lampo di luce che attraversa una volta */
+@keyframes xl-sheen {
+	from { transform: rotate(8deg) translateX(-40vw); }
+	to { transform: rotate(8deg) translateX(170vw); }
+}
+/* final fade of the intro, for a soft transition */
+@keyframes xl-splash-out {
+	to { opacity: 0; }
+}
+@keyframes xl-fade-up {
+	from { opacity: 0; transform: translateY(8px); }
+	to { opacity: 1; transform: none; }
+}
+@keyframes xl-pop {
+	0% { transform: scale(1); }
+	40% { transform: scale(1.28); }
+	100% { transform: scale(1); }
+}
+.xl-pop {
+	animation: xl-pop 0.3s ease;
+}
+.xl-todo {
+	transition: max-height 0.22s ease, opacity 0.18s ease, padding 0.22s ease, margin 0.22s ease;
+}
+.xl-collapsing {
+	max-height: 0 !important;
+	opacity: 0;
+	padding-top: 0;
+	padding-bottom: 0;
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
+/* ===== intro coordinata: logo persistente + velo glass + entrata contenuto ===== */
+
+/* logo that starts from the center and "solidifies" into the header */
+.xl-brand {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	width: 92px;
+	height: 92px;
+	/* transform costante (solo centratura): niente vw/vh da ricalcolare al drag */
+	transform: translate(-50%, -50%);
+	transition: top 0.8s cubic-bezier(0.22, 1, 0.36, 1), left 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+		width 0.8s cubic-bezier(0.22, 1, 0.36, 1), height 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+		opacity 0.25s ease;
+	z-index: 60;
+	pointer-events: none;
+	opacity: 0;
+}
+body.xl-reveal .xl-brand {
+	opacity: 1;
+}
+.xl-brand .xl-logo-svg {
+	width: 100%;
+	height: 100%;
+}
+.xl-brand.is-docked {
+	/* piccolo, in alto a sinistra: posizione fissa in px (rigida al trascinamento) */
+	top: 23px;
+	left: 24px;
+	width: 24px;
+	height: 24px;
+}
+
+/* intro "liquid glass" veil that dissolves as the content comes in */
+.xl-veil {
+	position: fixed;
+	inset: 0;
+	z-index: 40;
+	pointer-events: none;
+	background: rgba(20, 20, 24, 0.5);
+	backdrop-filter: url(#xl-glass) saturate(1.4) brightness(1.06);
+	-webkit-backdrop-filter: blur(24px) saturate(1.4) brightness(1.06);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+	animation: xl-veil-out 1.5s ease forwards;
+}
+@keyframes xl-veil-out {
+	0% { opacity: 1; }
+	55% { opacity: 0.55; }
+	100% { opacity: 0; }
+}
+
+/* spazio nella topbar dove si aggancia il logo */
+.xl-logo-slot {
+	width: 30px;
+	flex: 0 0 auto;
+}
+
+/* entrata coordinata del contenuto (insieme al logo) */
+.xl-app.xl-intro .xl-topbar,
+.xl-app.xl-intro .xl-grid,
+.xl-app.xl-intro .xl-onboard {
+	animation: xl-content-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+@keyframes xl-content-in {
+	from { opacity: 0; transform: translateY(16px) scale(0.985); }
+	to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.xl-brand { transition: none; }
+	.xl-veil { animation: none; opacity: 0; }
+	.xl-app.xl-intro .xl-topbar,
+	.xl-app.xl-intro .xl-grid,
+	.xl-app.xl-intro .xl-onboard { animation: none; }
+}
+
+/* value chips in the onboarding (modular, markdown, ...) */
+.xl-onboard-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	justify-content: center;
+	margin: 2px 0 12px;
+}
+.xl-onboard-chip {
+	font-family: var(--xl-mono);
+	font-size: 11px;
+	color: var(--xl-accent-bright);
+	background: var(--xl-accent-soft);
+	border: 1px solid color-mix(in srgb, var(--xl-accent) 45%, transparent);
+	border-radius: 999px;
+	padding: 3px 10px;
+}
+
+/* ---------- task editing: inline rename + glass popup ---------- */
+.xl-todo-text { cursor: text; }
+.xl-todo-rename {
+	flex: 1;
+	min-width: 0;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-accent-bright);
+	border-radius: 6px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 12px;
+	padding: 2px 6px;
+}
+.xl-task-modal {
+	width: min(380px, 92vw);
+	background: rgba(24, 24, 28, 0.72);
+	-webkit-backdrop-filter: blur(22px) saturate(1.3);
+	backdrop-filter: blur(22px) saturate(1.3);
+	border: 1px solid var(--xl-border);
+	border-radius: 16px;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 24px 70px rgba(0, 0, 0, 0.5);
+	padding: 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+.xl-tm-title {
+	font-family: var(--xl-serif);
+	font-size: 18px;
+	color: var(--xl-accent-bright);
+}
+.xl-tm-text {
+	width: 100%;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 8px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 14px;
+	padding: 9px 10px;
+	box-sizing: border-box;
+}
+.xl-tm-row {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+.xl-tm-date,
+.xl-tm-time,
+.xl-tm-prio {
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 7px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 12px;
+	padding: 6px 8px;
+}
+.xl-tm-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 2px;
+}
+.xl-tm-save {
+	background: var(--xl-accent);
+	color: var(--xl-text);
+	border: none;
+	border-radius: 8px;
+	padding: 8px 16px;
+	cursor: pointer;
+	font-family: var(--xl-mono);
+}
+.xl-tm-save:hover {
+	background: var(--xl-accent-bright);
+	color: var(--xl-bg);
+}
+.xl-tm-cancel {
+	background: var(--xl-surface);
+	color: var(--xl-text);
+	border: 1px solid var(--xl-border);
+	border-radius: 8px;
+	padding: 8px 14px;
+	cursor: pointer;
+	font-family: var(--xl-mono);
+}
+
+/* ---------- fix di polish (icone, +, scrollbar, slide, unlink) ---------- */
+
+/* lucide icons for habits and categories */
+.xl-habit-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--xl-muted);
+}
+.xl-habit-icon svg { width: 14px; height: 14px; }
+.xl-category-icon {
+	display: inline-flex;
+	align-items: center;
+	color: var(--xl-accent-bright);
+}
+.xl-category-icon svg { width: 13px; height: 13px; }
+
+/* bottoni "+" centrati */
+.xl-add-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+}
+
+/* space between the tasks and the tile's scrollbar */
+.xl-tile-body { padding-right: 6px; }
+.xl-todo-scroll { padding-right: 2px; }
+
+/* bottone pericoloso (unlink) */
+.xl-set-danger {
+	background: var(--xl-surface) !important;
+	color: var(--xl-overdue) !important;
+	border: 1px solid var(--xl-border);
+}
+.xl-set-danger:hover {
+	background: var(--xl-overdue) !important;
+	color: #fff !important;
+}
+
+/* animazione di cambio tab (slide + fade) */
+@keyframes xl-slide-r {
+	from { opacity: 0; transform: translateX(26px); }
+	to { opacity: 1; transform: none; }
+}
+@keyframes xl-slide-l {
+	from { opacity: 0; transform: translateX(-26px); }
+	to { opacity: 1; transform: none; }
+}
+.xl-grid.xl-slide-r { animation: xl-slide-r 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.xl-grid.xl-slide-l { animation: xl-slide-l 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* ---------- selettore icone lucide ---------- */
+.xl-icon-modal {
+	width: min(520px, 92vw);
+	max-height: 80vh;
+	background: rgba(24, 24, 28, 0.8);
+	-webkit-backdrop-filter: blur(22px) saturate(1.3);
+	backdrop-filter: blur(22px) saturate(1.3);
+	border: 1px solid var(--xl-border);
+	border-radius: 16px;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 24px 70px rgba(0, 0, 0, 0.5);
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	overflow: hidden;
+}
+.xl-icon-top { display: flex; gap: 8px; }
+.xl-icon-search {
+	flex: 1;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 8px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 13px;
+	padding: 8px 10px;
+}
+.xl-icon-none {
+	background: var(--xl-surface);
+	border: 1px solid var(--xl-border);
+	border-radius: 8px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 12px;
+	padding: 0 12px;
+	cursor: pointer;
+}
+.xl-icon-grid {
+	display: flex;
+	flex-wrap: wrap;
+	align-content: flex-start;
+	gap: 4px;
+	overflow-y: auto;
+	max-height: 56vh;
+}
+.xl-icon-tile {
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	cursor: pointer;
+	color: var(--xl-text);
+}
+.xl-icon-tile:hover { background: var(--xl-bg2); border-color: var(--xl-border); }
+.xl-icon-tile svg { width: 18px; height: 18px; }
+
+/* icon button in the "new habit" form + clickable icon */
+.xl-add-icon {
+	width: 27px;
+	height: 27px;
+	flex: 0 0 auto;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 6px;
+	color: var(--xl-muted);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 13px;
+}
+.xl-add-icon:hover { border-color: var(--xl-accent-bright); color: var(--xl-text); }
+.xl-add-icon svg { width: 15px; height: 15px; }
+.xl-habit-icon-btn { cursor: pointer; }
+
+/* onboarding: bottoni secondari */
+.xl-onboard-btn2 {
+	background: var(--xl-surface);
+	border: 1px solid var(--xl-border);
+	border-radius: 10px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 12px;
+	padding: 8px 16px;
+	cursor: pointer;
+}
+.xl-onboard-btn2:hover { border-color: var(--xl-accent-bright); }
+.xl-onboard-back {
+	background: transparent;
+	border: none;
+	color: var(--xl-muted);
+	font-family: var(--xl-mono);
+	font-size: 11px;
+	cursor: pointer;
+	margin-top: 4px;
+}
+
+/* ---------- barra superiore ad auto-hide ---------- */
+.xl-topbar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 30;
+	background: var(--xl-bg);
+	transform: translateY(-110%);
+	opacity: 0;
+	transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+}
+body.xl-reveal .xl-topbar {
+	transform: none;
+	opacity: 1;
+}

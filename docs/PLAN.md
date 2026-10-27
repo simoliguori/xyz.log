@@ -4,13 +4,13 @@
 > widget. Goal: replace proprietary trackers (e.g. TickTick) with an open system where
 > **your data is yours** (markdown files in your vault), synced everywhere.
 
-![Architecture](images/architettura.svg)
+![Architecture](images/architecture.svg)
 
 ## Guiding principle: modularity
 
 Modularity is **the core focus**. Every function (habits, to-dos, history, a single
 habit, …) is an **independent module** you compose freely: in the plugin as a
-` ```todo-habits ` block with options, in the widget as a tab. The same applies to the
+` ```xyz.log ` block with options, in the widget as a tab. The same applies to the
 code (`packages/core`, reused by every client) and to the repo: isolated features,
 combinable, testable on their own. A "homepage" is just **a composition of modules**, not
 a monolith.
@@ -19,15 +19,14 @@ a monolith.
 
 ## 1. The idea in one line
 
-Three markdown files in a vault are the **single source of truth**; every client (Obsidian
-plugin, Android widget, Windows widget) reads and writes them. Any folder sync (Obsidian
-Sync or otherwise) keeps everything aligned across PC and phone. No database, no server, no
-lock-in.
+Three markdown files in a vault; every client (Obsidian plugin, Android widget, Windows
+widget) reads and writes them. Any folder sync (Obsidian Sync or otherwise) keeps
+everything aligned across PC and phone. No database, no server — just text you own.
 
 ## 2. Current status
 
 **Obsidian plugin** (`obsidian-plugin/`, TypeScript) — **implemented**:
-- dedicated view + embeddable ` ```todo-habits ` block (options `habits`, `todos`,
+- dedicated view + embeddable ` ```xyz.log ` block (options `habits`, `todos`,
   `folders`/`cartelle`, `cross`/`croce`, `habit:<id>`, `header`);
 - habits with icons (lucide/Iconize), **categories** by icon, **cadence streaks**,
   **GitHub-style heatmap**, **countable** habits (goal N/day);
@@ -40,14 +39,21 @@ lock-in.
 - command-palette "insert block"; compact UI;
 - **i18n**: English (default) / Italian toggle in settings.
 
-**Windows desktop widget** — **planned** (see §4).
+**Shared core** (`packages/core/`, TypeScript) — **implemented**: canonical parser,
+view-model (grouping/streaks), i18n and reminder collection, with unit tests.
 
-**Android widget** (`android-widget/`, Kotlin + Glance) — **early scaffold only, not
-functional yet** (source exists but was never built/shipped). Its parser must be kept in
-sync with the format.
+**Windows desktop widget** (`apps/windows-widget/`, Tauri) — **implemented**: modular
+tile dashboard (horizontal/vertical, resizable, draggable tiles over custom tabs),
+reusing `packages/core`; native notifications with a scheduler, autostart, tray and
+desktop pinning in the Rust shell. Frontend previewable in a browser (mock backend).
 
-**Shared format**: `docs/DATA_FORMAT.md`. **TickTick import** (CSV → `Todo.md` with
-list/section/description structure; habits → `Habits.md` + `Habit Log.md`) prototyped.
+**Android app + widgets** (`android-widget/`, Kotlin + Glance) — **implemented**: parser
+at parity with the core; swipeable app (habits ⇄ tasks), counter habits, and AlarmManager
+notifications (channel, exact alarms, boot reschedule). Needs the Android SDK to build.
+
+**Shared format**: `docs/DATA_FORMAT.md`. **TickTick import** — implemented in the plugin
+settings: a backup CSV → `Todo.md`, grouped by list, with dates, priorities, tags,
+descriptions and done state.
 
 **Fonts**: no proprietary assets — **Space Grotesk** (OFL) for headings, loaded from Google
 Fonts.
@@ -61,8 +67,8 @@ Fonts.
             └──────────────┬───────────────┬──────────────┘
                            │               │
         ┌──────────────────┼───────────────┼──────────────────┐
-   Obsidian plugin     Android widget   Windows widget     (future clients)
-   (TS, done)          (Kotlin, scaffold) (Tauri, planned)
+   Obsidian plugin     Android app      Windows widget     (future clients)
+   (TS, done)          (Kotlin, done)   (Tauri, done)
 ```
 
 **Shared core** — today the parser/renderer live only inside the Obsidian plugin. Key
@@ -158,14 +164,19 @@ want a reminder (and at which time(s)).
 
 - **Phase 0 — done**: shared markdown format, Obsidian plugin (view, blocks, dashboard,
   folders/descriptions, i18n), TickTick import, no proprietary fonts.
-- **Phase 1 — OSS foundations**: extract `packages/core`; CI; contributor docs.
-- **Phase 2 — Windows widget MVP (Tauri)**: borderless, taskbar-less window; Habits/Tasks/
-  Today tabs reading the files.
-- **Phase 3 — interactivity**: check habits, add/complete to-dos writing back to markdown.
-- **Phase 4 — gadget**: `WorkerW` pinning, autostart, tray, transparency.
-- **Phase 5 — notifications**: optional reminders (daily habits + timed events).
-- **Phase 6 — Android**: actually build and ship the widget (currently a scaffold).
-- **Phase 7 — release**: packaging, docs, v1.0.
+- **Phase 1 — done**: extracted `packages/core` (parser, view-model, i18n, reminders) with
+  unit tests; Obsidian mobile fixes (counter habits, swipe, scroll, future-above-overdue).
+- **Phase 2 — done**: Windows widget frontend (modular tiles, tabs, interactivity) on the
+  shared core; previewable in a browser.
+- **Phase 3 — done**: write-back for habits/to-dos across all clients (incl. counter
+  habits and reminders editing).
+- **Phase 4 — done (needs on-device test)**: Rust shell — borderless taskbar-less window,
+  autostart, tray, `WorkerW` pinning, opacity. Requires `cargo` to build/verify.
+- **Phase 5 — done**: reminders — `reminders:` on habits, `⏰` on events; scheduler + native
+  toasts (Windows) and AlarmManager (Android).
+- **Phase 6 — done (needs SDK build)**: Android app rebuilt — parser parity, swipeable
+  habits ⇄ tasks, counter habits, notifications.
+- **Phase 7 — release**: CI, packaging, icons, docs, v1.0.
 
 ## 8. Open decisions
 

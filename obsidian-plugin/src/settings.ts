@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type TodoHabitsPlugin from "./main";
+import type XyzlogPlugin from "./main";
 import { Lang, setLang, t } from "./strings";
+import { TickTickImportModal } from "./ticktick";
 
 export interface TrackerSettings {
 	folder: string;
@@ -9,13 +10,13 @@ export interface TrackerSettings {
 }
 
 export const DEFAULT_SETTINGS: TrackerSettings = {
-	folder: "Tracker",
+	folder: "xyz.log",
 	heatmapWeeks: 52,
 	lang: "en",
 };
 
 export class TrackerSettingTab extends PluginSettingTab {
-	constructor(app: App, private plugin: TodoHabitsPlugin) {
+	constructor(app: App, private plugin: XyzlogPlugin) {
 		super(app, plugin);
 	}
 
@@ -36,7 +37,7 @@ export class TrackerSettingTab extends PluginSettingTab {
 						setLang(this.plugin.settings.lang);
 						await this.plugin.saveSettings();
 						this.plugin.refreshView();
-						this.display(); // ridisegna le impostazioni nella nuova lingua
+						this.display(); // redraw the settings in the new language
 					})
 			);
 
@@ -45,10 +46,10 @@ export class TrackerSettingTab extends PluginSettingTab {
 			.setDesc(t("setFolderDesc"))
 			.addText((text) =>
 				text
-					.setPlaceholder("Tracker")
+					.setPlaceholder("xyz.log")
 					.setValue(this.plugin.settings.folder)
 					.onChange(async (value) => {
-						this.plugin.settings.folder = value.trim() || "Tracker";
+						this.plugin.settings.folder = value.trim() || "xyz.log";
 						await this.plugin.saveSettings();
 						this.plugin.refreshView();
 					})
@@ -67,6 +68,15 @@ export class TrackerSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 						this.plugin.refreshView();
 					})
+			);
+
+		new Setting(containerEl)
+			.setName(t("setImportName"))
+			.setDesc(t("setImportDesc"))
+			.addButton((b) =>
+				b
+					.setButtonText(t("importButton"))
+					.onClick(() => new TickTickImportModal(this.app, this.plugin).open())
 			);
 	}
 }

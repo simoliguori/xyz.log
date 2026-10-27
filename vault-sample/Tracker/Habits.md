@@ -1,16 +1,16 @@
 ---
 habits:
-  - id: meditazione
-    name: Meditazione
+  - id: meditation
+    name: Meditation
     emoji: "🧘"
-  - id: lettura
-    name: Lettura
+  - id: reading
+    name: Reading
     emoji: "📖"
-  - id: allenamento
-    name: Allenamento
+  - id: workout
+    name: Workout
     emoji: "🏋️"
 ---
 
-# Abitudini
+# Habits
 
-Definisci le abitudini nel frontmatter qui sopra. Il corpo del file è libero.
+Define your habits in the frontmatter above. The body of the file is free text.

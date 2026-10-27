@@ -12,33 +12,35 @@ import {
 	serializeTodo,
 	setCategoryNameInFrontmatter,
 	setHabitFieldsInFrontmatter,
+	serializeTimeList,
 	setHabitIconInFrontmatter,
 	slugifyHabitId,
 	todayISO,
 	toggleLog,
 	toggleTodoLine,
+	updateTodoLine,
 } from "./parser";
 import { Category, Habit, HabitLog, Priority, Todo } from "./types";
 
 const HABITS_TEMPLATE = `---
 habits:
-  - id: esempio
-    name: Esempio
+  - id: example
+    name: Example
     emoji: "✨"
 ---
 
-# Abitudini
+# Habits
 
-Definisci le abitudini nel frontmatter qui sopra (vedi docs/DATA_FORMAT.md del progetto).
+Define your habits in the frontmatter above (see docs/DATA_FORMAT.md).
 `;
 
-const LOG_TEMPLATE = `# Cronologia abitudini
+const LOG_TEMPLATE = `# Habit history
 
 `;
 
 const TODO_TEMPLATE = `# Todo
 
-- [ ] La mia prima attività 🔼 📅 ${todayISO()}
+- [ ] My first task 🔼 📅 ${todayISO()}
 `;
 
 export interface TrackerData {
@@ -112,6 +114,16 @@ export class Store {
 		);
 	}
 
+	/** Update a task's fields (text, priority, date, time). */
+	async updateTodo(
+		todo: Todo,
+		fields: { text?: string; priority?: Priority; due?: string | null; time?: string | null }
+	): Promise<void> {
+		await this.process(this.todoPath, (data) =>
+			replaceLine(data, todo.raw, () => updateTodoLine(todo, fields))
+		);
+	}
+
 	async deleteTodo(todo: Todo): Promise<void> {
 		await this.process(this.todoPath, (data) =>
 			replaceLine(data, todo.raw, () => null)
@@ -128,7 +140,16 @@ export class Store {
 		);
 	}
 
-	/** Crea una nuova abitudine, generando uno slug id univoco dal nome. */
+	/** Append a ready-made markdown block (e.g. a TickTick import) to Todo.md. */
+	async appendTodoMarkdown(markdown: string): Promise<void> {
+		await this.ensureFiles();
+		await this.process(this.todoPath, (data) => {
+			const trimmed = data.replace(/\s+$/, "");
+			return `${trimmed}\n${markdown.replace(/^\n+/, "")}\n`;
+		});
+	}
+
+	/** Create a new habit, generating a unique slug id from the name. */
 	async addHabit(name: string, emoji: string, icon: string): Promise<void> {
 		await this.ensureFiles();
 		await this.process(this.habitsPath, (data) => {
@@ -168,12 +189,20 @@ export class Store {
 		);
 	}
 
-	/** Aggiunge un completamento (abitudini contabili: più volte nello stesso giorno). */
+	/** Set the reminder times (empty list = remove the field). */
+	async setHabitReminders(id: string, times: string[]): Promise<void> {
+		const value = times.length ? serializeTimeList(times) : "";
+		await this.process(this.habitsPath, (data) =>
+			setHabitFieldsInFrontmatter(data, id, { reminders: value })
+		);
+	}
+
+	/** Add a completion (countable habits: several times on the same day). */
 	async incrementHabit(habitId: string, date: string): Promise<void> {
 		await this.process(this.logPath, (data) => appendLine(data, logLine(date, habitId)));
 	}
 
-	/** Rimuove un singolo completamento per (data, abitudine). */
+	/** Remove a single completion for (date, habit). */
 	async decrementHabit(habitId: string, date: string): Promise<void> {
 		await this.process(this.logPath, (data) => {
 			const lines = data.split(/\r?\n/);

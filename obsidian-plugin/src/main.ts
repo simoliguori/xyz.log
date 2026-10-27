@@ -1,11 +1,11 @@
-import { debounce, Editor, MarkdownRenderChild, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { debounce, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Plugin, TFile, WorkspaceLeaf } from "obsidian";
 import { TrackerRenderer, RenderOptions } from "./renderer";
 import { DEFAULT_SETTINGS, TrackerSettings, TrackerSettingTab } from "./settings";
 import { Store } from "./store";
 import { setLang, t } from "./strings";
 import { TrackerView, VIEW_TYPE } from "./view";
 
-export default class TodoHabitsPlugin extends Plugin {
+export default class XyzlogPlugin extends Plugin {
 	settings: TrackerSettings;
 	store: Store;
 
@@ -25,19 +25,31 @@ export default class TodoHabitsPlugin extends Plugin {
 			callback: () => void this.activateView(),
 		});
 
-		this.addCommand({
-			id: "insert-block",
-			name: t("insertBlock"),
-			editorCallback: (editor: Editor) => {
-				const block = "```todo-habits\nheader\nhabits\ntodos\n```\n";
-				editor.replaceSelection(block);
-			},
-		});
+		// one command per block, found in the palette as "xyz.log - …"
+		const blocks: [string, string, string][] = [
+			["dashboard", "Dashboard (tasks + habits)", "cross"],
+			["tasks", "Tasks by date", "todos"],
+			["folders", "Tasks by folder", "folders"],
+			["habits", "Habits", "habits"],
+			["single-habit", "Single habit (heatmap)", "habit: <id>"],
+			["header", "Header (today's date)", "header"],
+			["full", "Full (header + habits + tasks)", "header\nhabits\ntodos"],
+		];
+		for (const [id, label, body] of blocks) {
+			this.addCommand({
+				id: `insert-${id}`,
+				name: `- ${label}`,
+				editorCallback: (editor: Editor) => {
+					editor.replaceSelection("```xyz.log\n" + body + "\n```\n");
+				},
+			});
+		}
 
 		this.addSettingTab(new TrackerSettingTab(this.app, this));
 
-		// blocco ```todo-habits``` incorporabile in qualsiasi nota
-		this.registerMarkdownCodeBlockProcessor("todo-habits", (source, el, ctx) => {
+		// ```xyz.log``` block, embeddable in any note
+		// (backwards-compatible aliases: `xyzlog` and the legacy `todo-habits`)
+		const blockHandler = (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
 			const opts = parseEmbedOptions(source);
 			el.addClass("th-embed");
 			const renderer = new TrackerRenderer(this, el, opts);
@@ -54,9 +66,12 @@ export default class TodoHabitsPlugin extends Plugin {
 			);
 
 			void renderer.render();
-		});
+		};
+		for (const lang of ["xyz.log", "xyzlog", "todo-habits"]) {
+			this.registerMarkdownCodeBlockProcessor(lang, blockHandler);
+		}
 
-		// ri-renderizza quando uno dei tre file cambia (edit manuale o Obsidian Sync)
+		// re-render when one of the three files changes (manual edit or Obsidian Sync)
 		this.registerEvent(
 			this.app.vault.on("modify", (file) => {
 				if (file instanceof TFile && this.store.isTrackedPath(file.path)) {
@@ -99,8 +114,8 @@ export default class TodoHabitsPlugin extends Plugin {
 }
 
 /**
- * Opzioni del blocco ```todo-habits```, una per riga:
- * `habits`, `todos`, `header`, `habit: <id>`. Vuoto = habits + todos.
+ * Options of the ```xyz.log``` block, one per line:
+ * `habits`, `todos`, `header`, `habit: <id>`. Empty = habits + todos.
  */
 function parseEmbedOptions(source: string): RenderOptions {
 	const opts: RenderOptions = {

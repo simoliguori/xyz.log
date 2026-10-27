@@ -1,13 +1,13 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
-import type TodoHabitsPlugin from "./main";
+import type XyzlogPlugin from "./main";
 import { TrackerRenderer } from "./renderer";
 
-export const VIEW_TYPE = "todo-habits-view";
+export const VIEW_TYPE = "xyzlog-view";
 
 export class TrackerView extends ItemView {
 	private renderer: TrackerRenderer | null = null;
 
-	constructor(leaf: WorkspaceLeaf, private plugin: TodoHabitsPlugin) {
+	constructor(leaf: WorkspaceLeaf, private plugin: XyzlogPlugin) {
 		super(leaf);
 	}
 

@@ -3,7 +3,7 @@
 	"name": "xyz.log",
 	"version": "0.1.0",
 	"minAppVersion": "1.4.0",
-	"description": "xyz.log — habit tracker e todo markdown-first, modulare, con blocchi componibili. Dati condivisi con i widget Android e desktop.",
+	"description": "Markdown-first, modular habit tracker and to-do list with composable blocks. Shares its data with the Android and desktop widgets.",
 	"author": "simol",
 	"isDesktopOnly": false
 }
