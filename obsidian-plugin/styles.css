@@ -803,7 +803,7 @@
 	padding-left: 9px;
 }
 
-/* ---------- layout dashboard (ex "a croce") ---------- */
+/* ---------- dashboard layout ---------- */
 /* Todos on the left (tall, two blocks, scrollable); on the right habits (top)
    and the history of a selected habit (bottom). */
 
@@ -901,11 +901,11 @@
 	height: 8px;
 }
 
-/* Larghezza piena OPT-IN per nota: `cssclasses: th-wide`. Volutamente minimale:
-   allarga solo il sizer in reading view e NON tocca le variabili di line-width
-   del tema (Minimal gestisce le sue con `wide`/`max`). Toccarle poteva creare
-   conflitti di layout a livello di workspace (es. la sidebar sinistra che non si
-   chiudeva). Se usi Minimal, le sue classi `wide`/`max` bastano da sole. */
+/* Full width is OPT-IN per note: `cssclasses: th-wide`. Deliberately minimal:
+   it only widens the reading-view sizer and does NOT touch the theme's
+   line-width variables (Minimal handles its own with `wide`/`max`). Touching
+   them could cause workspace-level layout conflicts (e.g. the left sidebar not
+   closing). With Minimal, its own `wide`/`max` classes are enough. */
 .th-wide .markdown-preview-sizer {
 	max-width: none;
 }
