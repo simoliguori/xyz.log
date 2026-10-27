@@ -8,7 +8,7 @@ import dev.simol.xyzlog.data.Prefs
 import dev.simol.xyzlog.data.VaultRepository
 import java.time.LocalDateTime
 
-/** Scatta all'orario programmato: mostra i promemoria dovuti e riprogramma. */
+/** Fires at the scheduled time: shows the due reminders and reschedules. */
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (Prefs(context).notificationsEnabled) {
@@ -21,13 +21,13 @@ class ReminderReceiver : BroadcastReceiver() {
                     val match = if (r.kind == "todo") r.date == today && r.time == hm else r.time == hm
                     if (match) {
                         val id = (r.kind + r.id + r.time).hashCode()
-                        val body = if (r.kind == "todo") "Evento · ${r.time}" else "Promemoria · ${r.time}"
+                        val body = if (r.kind == "todo") "Event · ${r.time}" else "Reminder · ${r.time}"
                         Notifications.show(context, id, r.title, body)
                     }
                 }
             }
         }
-        // riprogramma il prossimo
+        // reschedule the next one
         NotificationScheduler.scheduleNext(context)
     }
 }

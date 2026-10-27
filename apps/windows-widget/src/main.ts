@@ -28,7 +28,7 @@ import { lucideIconNames, lucideSvg } from "./icons";
 import { COLS, MAX_H, newTile, Tile, TILE_META, TileType, uid, type AppConfig, type TabLayout } from "./layout";
 import { renderTileBody, type RenderCtx, type Store } from "./render";
 
-/** Logo: quadrato arrotondato con spunta, usato nell'intro e nell'onboarding. */
+/** Logo: rounded square with a check, used in the intro and the onboarding. */
 const LOGO_SVG = `<svg class="xl-logo-svg" viewBox="0 0 120 120" aria-hidden="true">
 	<rect x="10" y="10" width="100" height="100" rx="26" class="xl-logo-bg" />
 	<path d="M38 62 L53 77 L84 42" class="xl-logo-check" fill="none" />
@@ -65,7 +65,7 @@ class App {
 		this.applyTheme();
 		this.setupAutoHide();
 		this.backend.onFilesChanged(() => void this.reload());
-		// dati pronti PRIMA del primo disegno: niente schermata vuota
+		// data ready BEFORE the first draw: no blank screen
 		await this.loadData();
 		if (this.config.syncAccent) {
 			this.obsAccent = await this.backend.obsidianAccent();
@@ -82,18 +82,18 @@ class App {
 		document.body.appendChild(this.brand);
 	}
 
-	/** La barra in alto (logo + tab + pulsanti) scompare quando il cursore non è
+	/** The top bar (logo + tabs + buttons) disappears when the cursor isn't
 	   vicino al bordo superiore, e ricompare passandoci sopra. */
 	private setupAutoHide(): void {
 		window.addEventListener("mousemove", (e) => {
 			document.body.classList.toggle("xl-reveal", e.clientY < 46);
 		});
-		// all'avvio resta visibile un attimo, poi si nasconde
+		// stays visible for a moment on launch, then hides
 		document.body.classList.add("xl-reveal");
 		window.setTimeout(() => document.body.classList.remove("xl-reveal"), 2600);
 	}
 
-	/** Intro: il logo compare DA SOLO al centro per un attimo, poi il contenuto
+	/** Intro: the logo appears ALONE in the center for a moment, then the content
 	   entra (pop) e il logo si aggancia in alto. Nessun overlay sul contenuto. */
 	private playIntro(): void {
 		window.setTimeout(() => {
@@ -128,7 +128,7 @@ class App {
 		};
 	}
 
-	/** accent effettivo: quello di Obsidian se la sync è attiva, altrimenti il custom */
+	/** effective accent: Obsidian's if sync is on, otherwise the custom one */
 	private effectiveAccent(): string {
 		return this.config.syncAccent && this.obsAccent ? this.obsAccent : this.config.accent;
 	}
@@ -217,12 +217,12 @@ class App {
 	/* ---------- render ---------- */
 
 	private render(): void {
-		// smonta eventuali timer dei riquadri (header clock)
+		// tear down any tile timers (header clock)
 		this.root.querySelectorAll(".xl-tile-body").forEach((n) => n.dispatchEvent(new Event("xl-dispose")));
 		clear(this.root);
 		this.ensureBrand();
 		this.brand?.classList.toggle("is-docked", this.docked);
-		// fase "logo da solo": contenitore vuoto, solo il logo al centro
+		// "logo alone" phase: empty container, just the logo in the center
 		if (this.logoOnly) return;
 		this.root.classList.toggle("xl-intro", this.intro);
 		if (!this.config.folder) {
@@ -237,7 +237,7 @@ class App {
 		if (this.iconPicker) this.root.appendChild(this.iconPickerOverlay());
 	}
 
-	/* ---------- selettore icone lucide (come Obsidian) ---------- */
+	/* ---------- lucide icon picker (like Obsidian) ---------- */
 
 	private iconPickerOverlay(): HTMLElement {
 		const T = (it: string, en: string) => (this.config.lang === "it" ? it : en);
@@ -269,7 +269,7 @@ class App {
 			let shown = 0;
 			for (const name of names) {
 				if (f && !name.includes(f)) continue;
-				if (shown++ > 400) break; // limita per performance
+				if (shown++ > 400) break; // cap for performance
 				const svg = lucideSvg(name, 18);
 				if (!svg) continue;
 				const b = el("button", { cls: "xl-icon-tile", attr: { title: name }, html: svg });
@@ -288,7 +288,7 @@ class App {
 		return overlay;
 	}
 
-	/* ---------- popup modifica task (glass) ---------- */
+	/* ---------- task edit popup (glass) ---------- */
 
 	private taskModal(todo: Todo): HTMLElement {
 		const T = (it: string, en: string) => (this.config.lang === "it" ? it : en);
@@ -345,7 +345,7 @@ class App {
 		return overlay;
 	}
 
-	/* ---------- controlli finestra (niente barra di Windows) ---------- */
+	/* ---------- window controls (no Windows title bar) ---------- */
 
 	private winButtons(): HTMLElement[] {
 		const min = el("button", { cls: "xl-win-btn", text: "–", attr: { title: this.config.lang === "it" ? "Riduci a icona" : "Minimize" } });
@@ -367,7 +367,7 @@ class App {
 		wrap.appendChild(bar);
 
 		const card = el("div", { cls: "xl-onboard-card" });
-		// niente logo qui: l'intro mostra già il logo che sale, evitando il doppione
+		// no logo here: the intro already shows the logo rising, avoiding the double
 		card.appendChild(el("div", { cls: "xl-onboard-title", text: "xyz.log" }));
 		card.appendChild(
 			el("div", {
@@ -385,7 +385,7 @@ class App {
 		card.appendChild(chips);
 
 		if (this.onboardVault) {
-			// passo 2: nessuna cartella trovata nel vault → chiedi di crearla
+			// step 2: no folder found in the vault → offer to create it
 			card.appendChild(
 				el("div", {
 					cls: "xl-onboard-hint",
@@ -460,7 +460,7 @@ class App {
 		return wrap;
 	}
 
-	/** Imposta la cartella dati risolta e passa all'app. */
+	/** Set the resolved data folder and switch to the app. */
 	private async setFolder(path: string): Promise<void> {
 		this.config.folder = path;
 		this.onboardVault = null;
@@ -475,7 +475,7 @@ class App {
 
 	private topBar(): HTMLElement {
 		const bar = el("div", { cls: "xl-topbar" });
-		// il nome lascia spazio a sinistra dove si "solidifica" il logo dell'intro
+		// the name leaves space on the left where the intro logo "solidifies"
 		bar.appendChild(el("div", { cls: "xl-logo", text: "xyz.log" }));
 
 		const tabs = el("div", { cls: "xl-tabs" });
@@ -713,7 +713,7 @@ class App {
 		this.render();
 	}
 
-	/* ---------- swipe tra tab (touch / schermi stretti) ---------- */
+	/* ---------- swipe between tabs (touch / narrow screens) ---------- */
 
 	private attachSwipe(grid: HTMLElement): void {
 		let x0 = 0;
@@ -750,7 +750,7 @@ class App {
 		const panel = el("div", { cls: "xl-settings" });
 		panel.appendChild(el("h2", { cls: "xl-settings-title", text: "Setup" }));
 
-		// cartella dati
+		// data folder
 		const folderRow = el("div", { cls: "xl-set-row" });
 		folderRow.appendChild(el("span", { cls: "xl-set-label", text: T("Cartella dati", "Data folder") }));
 		const folderVal = el("span", { cls: "xl-set-folder", text: this.config.folder || T("(non impostata)", "(not set)") });
@@ -791,7 +791,7 @@ class App {
 			})
 		);
 
-		// accent: sincronizzato con Obsidian oppure personalizzato
+		// accent: synced with Obsidian or customized
 		panel.appendChild(
 			this.toggleRow(T("Accent come Obsidian", "Accent from Obsidian"), this.config.syncAccent, async (on) => {
 				this.config.syncAccent = on;

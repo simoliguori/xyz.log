@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type XyzlogPlugin from "./main";
 import { Lang, setLang, t } from "./strings";
+import { TickTickImportModal } from "./ticktick";
 
 export interface TrackerSettings {
 	folder: string;
@@ -36,7 +37,7 @@ export class TrackerSettingTab extends PluginSettingTab {
 						setLang(this.plugin.settings.lang);
 						await this.plugin.saveSettings();
 						this.plugin.refreshView();
-						this.display(); // ridisegna le impostazioni nella nuova lingua
+						this.display(); // redraw the settings in the new language
 					})
 			);
 
@@ -67,6 +68,15 @@ export class TrackerSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 						this.plugin.refreshView();
 					})
+			);
+
+		new Setting(containerEl)
+			.setName(t("setImportName"))
+			.setDesc(t("setImportDesc"))
+			.addButton((b) =>
+				b
+					.setButtonText(t("importButton"))
+					.onClick(() => new TickTickImportModal(this.app, this.plugin).open())
 			);
 	}
 }

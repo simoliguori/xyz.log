@@ -2,7 +2,7 @@ use chrono::{DateTime, Local, Timelike};
 use serde::Deserialize;
 use std::collections::HashSet;
 
-/// Promemoria inviato dal frontend (core::collectReminders).
+/// Reminder sent by the frontend (core::collectReminders).
 #[derive(Debug, Clone, Deserialize)]
 pub struct Reminder {
     pub kind: String, // "habit" | "todo"
@@ -10,11 +10,11 @@ pub struct Reminder {
     pub title: String,
     pub time: String, // "HH:mm"
     #[serde(default)]
-    pub date: Option<String>, // "YYYY-MM-DD" (solo per i todo)
+    pub date: Option<String>, // "YYYY-MM-DD" (todos only)
 }
 
-/// Dato l'istante attuale, restituisce le notifiche (titolo, corpo) da mostrare
-/// adesso e aggiorna l'insieme di quelle già inviate (una per minuto al giorno).
+/// Given the current instant, returns the notifications (title, body) to show
+/// now and updates the set of already-sent ones (one per minute per day).
 pub fn due_now(
     now: DateTime<Local>,
     reminders: &[Reminder],
@@ -23,7 +23,7 @@ pub fn due_now(
     let hm = format!("{:02}:{:02}", now.hour(), now.minute());
     let today = now.format("%Y-%m-%d").to_string();
 
-    // pulizia: tieni solo le chiavi di oggi
+    // cleanup: keep only today's keys
     fired.retain(|k| k.ends_with(&today));
 
     let mut out = Vec::new();
@@ -41,7 +41,7 @@ pub fn due_now(
             continue;
         }
         fired.insert(key);
-        let title = if r.kind == "todo" { "Promemoria" } else { "Abitudine" };
+        let title = if r.kind == "todo" { "Reminder" } else { "Habit" };
         out.push((title.to_string(), format!("{} · {}", r.title, r.time)));
     }
     out

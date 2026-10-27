@@ -6,7 +6,7 @@ import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 
-/** Design token condivisi con il plugin Obsidian (design/tokens.json). */
+/** Design tokens shared with the Obsidian plugin (design/tokens.json). */
 object Tokens {
     val bg = Color(0xFF1E1E1E)
     val bg2 = Color(0xFF262626)
@@ -25,7 +25,7 @@ object Tokens {
     val prioLowest = Color(0xFF5D7264)
 }
 
-/** Accent personalizzabile con le varianti derivate (come nel CSS del plugin). */
+/** Customizable accent with derived variants (like in the plugin CSS). */
 data class Accent(val base: Color, val bright: Color, val soft: Color)
 
 fun accentFromHex(hex: String): Accent {
@@ -50,9 +50,9 @@ private fun Color.mix(other: Color, fraction: Float): Color = Color(
 )
 
 /**
- * Font dei titoli: NType82-Headline se l'utente ha copiato l'otf in
- * assets/fonts/ (non è redistribuibile), altrimenti il sans di sistema.
- * Vale solo per l'app Compose: i widget Glance non supportano font custom.
+ * Headline font: NType82-Headline if the user copied the otf into
+ * assets/fonts/ (it's not redistributable), otherwise the system sans.
+ * Applies only to the Compose app: Glance widgets don't support custom fonts.
  */
 @OptIn(ExperimentalTextApi::class)
 fun headlineFontFamily(context: Context): FontFamily = try {

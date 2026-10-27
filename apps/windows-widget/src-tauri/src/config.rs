@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-/// Configurazione persistente del widget. `tabs` è opaco (la forma dei riquadri
-/// vive nel frontend TypeScript): lo conserviamo così com'è.
+/// Persistent widget config. `tabs` is opaque (the tile layout lives in the
+/// TypeScript frontend): we store it as-is.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppConfig {
@@ -20,10 +20,10 @@ pub struct AppConfig {
     pub autostart: bool,
     #[serde(default = "default_true")]
     pub notifications: bool,
-    /// sincronizza l'accent col colore di Obsidian (letto da appearance.json)
+    /// sync the accent with Obsidian's color (read from appearance.json)
     #[serde(default = "default_true")]
     pub sync_accent: bool,
-    /// indice della tab lasciata aperta
+    /// index of the tab left open
     #[serde(default)]
     pub active_tab: u32,
     #[serde(default)]

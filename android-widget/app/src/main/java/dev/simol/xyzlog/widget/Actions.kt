@@ -13,7 +13,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Abitudini binarie (goal 1, non countable): spunta on/off. */
+/** Binary habits (goal 1, not countable): check on/off. */
 class ToggleHabitAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val habitId = parameters[HABIT_ID] ?: return
@@ -28,7 +28,7 @@ class ToggleHabitAction : ActionCallback {
     }
 }
 
-/** Abitudini a contatore (goal>1 o countable): +1, poi azzera a goal raggiunto. */
+/** Counter habits (goal>1 or countable): +1, then reset once the goal is reached. */
 class TapHabitAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val habitId = parameters[HABIT_ID] ?: return
@@ -57,7 +57,7 @@ class ToggleTodoAction : ActionCallback {
     }
 }
 
-/** Apre l'app sulla cronologia stile GitHub dell'abitudine toccata. */
+/** Opens the app on the GitHub-style history of the tapped habit. */
 class OpenHabitAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val habitId = parameters[HABIT_ID] ?: return

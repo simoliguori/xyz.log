@@ -61,7 +61,7 @@ body {
 	gap: 10px;
 	padding: 8px 12px;
 	border-bottom: 1px solid var(--xl-border);
-	-webkit-app-region: drag; /* trascina la finestra nativa dalla barra */
+	-webkit-app-region: drag; /* drag the native window from the bar */
 }
 
 .xl-topbar button,
@@ -74,7 +74,7 @@ body {
 	font-size: 15px;
 	color: var(--xl-accent-bright);
 	letter-spacing: 0.02em;
-	/* spazio per il logo dell'intro che si aggancia qui a sinistra */
+	/* space for the intro logo that docks here on the left */
 	margin-left: 30px;
 }
 
@@ -636,7 +636,7 @@ body {
 	margin-top: 6px;
 }
 
-/* ---------- impostazioni per abitudine ---------- */
+/* ---------- per-habit settings ---------- */
 
 .xl-habit-settings-toggle {
 	background: transparent;
@@ -1131,9 +1131,9 @@ body {
 	}
 }
 
-/* ======================= intro, onboarding, finestra ======================= */
+/* ======================= intro, onboarding, window ======================= */
 
-/* --- controlli finestra (niente barra di Windows) --- */
+/* --- window controls (no Windows title bar) --- */
 .xl-win-btn {
 	width: 30px;
 	height: 30px;
@@ -1183,7 +1183,7 @@ body {
 	align-items: center;
 	justify-content: center;
 	overflow: hidden;
-	/* vetro: semi-trasparente così il desktop sfocato traspare, ma leggibile */
+	/* glass: semi-transparent so the blurred desktop shows through, but readable */
 	background: rgba(20, 20, 24, 0.52);
 	/* "liquid glass" reale su Chromium/WebView2: rifrazione via filtro SVG */
 	backdrop-filter: url(#xl-glass) saturate(1.4) brightness(1.06);
@@ -1215,8 +1215,8 @@ body {
 	.xl-splash-word { opacity: 1; }
 	.xl-logo-check { stroke-dashoffset: 0; }
 }
-/* rifrazioni di luce: highlight bianchi translucidi + lieve tinta accent, tutti
-   semi-trasparenti così restano coerenti col backdrop sfocato dietro. */
+/* light refractions: translucent white highlights + a slight accent tint, all
+   semi-transparent so they stay consistent with the blurred backdrop behind. */
 .xl-splash::before {
 	content: "";
 	position: absolute;
@@ -1256,7 +1256,7 @@ body {
 	flex-direction: column;
 	align-items: center;
 	gap: 18px;
-	/* parte al centro e sale dolcemente verso la fine dell'intro */
+	/* starts in the center and rises gently towards the end of the intro */
 	animation: xl-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.2s both;
 }
 .xl-splash-word {
@@ -1340,7 +1340,7 @@ body {
 	max-width: 320px;
 }
 
-/* --- animazioni spunta / contatore / collasso --- */
+/* --- check / counter / collapse animations --- */
 @keyframes xl-logo-pop {
 	0% { transform: scale(0.35); opacity: 0; }
 	55% { transform: scale(1.07); opacity: 1; }
@@ -1365,7 +1365,7 @@ body {
 	from { transform: rotate(8deg) translateX(-40vw); }
 	to { transform: rotate(8deg) translateX(170vw); }
 }
-/* dissolvenza finale dell'intro, per uno stacco morbido */
+/* final fade of the intro, for a soft transition */
 @keyframes xl-splash-out {
 	to { opacity: 0; }
 }
@@ -1395,7 +1395,7 @@ body {
 
 /* ===== intro coordinata: logo persistente + velo glass + entrata contenuto ===== */
 
-/* logo che parte dal centro e si "solidifica" nell'header */
+/* logo that starts from the center and "solidifies" into the header */
 .xl-brand {
 	position: fixed;
 	top: 50%;
@@ -1426,7 +1426,7 @@ body.xl-reveal .xl-brand {
 	height: 24px;
 }
 
-/* velo "liquid glass" dell'intro che si dissolve mentre il contenuto entra */
+/* intro "liquid glass" veil that dissolves as the content comes in */
 .xl-veil {
 	position: fixed;
 	inset: 0;
@@ -1469,7 +1469,7 @@ body.xl-reveal .xl-brand {
 	.xl-app.xl-intro .xl-onboard { animation: none; }
 }
 
-/* chip di valori nell'onboarding (modulare, markdown, ...) */
+/* value chips in the onboarding (modular, markdown, ...) */
 .xl-onboard-chips {
 	display: flex;
 	flex-wrap: wrap;
@@ -1487,7 +1487,7 @@ body.xl-reveal .xl-brand {
 	padding: 3px 10px;
 }
 
-/* ---------- modifica task: rename inline + popup glass ---------- */
+/* ---------- task editing: inline rename + glass popup ---------- */
 .xl-todo-text { cursor: text; }
 .xl-todo-rename {
 	flex: 1;
@@ -1576,7 +1576,7 @@ body.xl-reveal .xl-brand {
 
 /* ---------- fix di polish (icone, +, scrollbar, slide, unlink) ---------- */
 
-/* icone lucide delle abitudini e delle categorie */
+/* lucide icons for habits and categories */
 .xl-habit-icon {
 	display: inline-flex;
 	align-items: center;
@@ -1599,7 +1599,7 @@ body.xl-reveal .xl-brand {
 	line-height: 1;
 }
 
-/* spazio tra le task e la scrollbar del riquadro */
+/* space between the tasks and the tile's scrollbar */
 .xl-tile-body { padding-right: 6px; }
 .xl-todo-scroll { padding-right: 2px; }
 
@@ -1686,7 +1686,7 @@ body.xl-reveal .xl-brand {
 .xl-icon-tile:hover { background: var(--xl-bg2); border-color: var(--xl-border); }
 .xl-icon-tile svg { width: 18px; height: 18px; }
 
-/* bottone icona nel form "nuova abitudine" + icona cliccabile */
+/* icon button in the "new habit" form + clickable icon */
 .xl-add-icon {
 	width: 27px;
 	height: 27px;

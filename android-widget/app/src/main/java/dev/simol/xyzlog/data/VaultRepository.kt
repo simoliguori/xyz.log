@@ -6,9 +6,9 @@ import androidx.documentfile.provider.DocumentFile
 import java.time.LocalDate
 
 /**
- * Legge e scrive i tre file markdown del tracker dentro il vault Obsidian
+ * Reads and writes the three tracker markdown files inside the Obsidian vault
  * sul telefono, tramite Storage Access Framework. Scritture minime (una riga)
- * per ridurre i conflitti con Obsidian Sync.
+ * to reduce conflicts with Obsidian Sync.
  */
 class VaultRepository(private val context: Context) {
 
@@ -33,7 +33,7 @@ class VaultRepository(private val context: Context) {
 
     private fun writeFile(name: String, content: String) {
         val file = dataFolder()?.findFile(name) ?: return
-        // "wt" tronca il file: senza, un contenuto più corto lascerebbe coda sporca
+        // "wt" truncates the file: without it, shorter content would leave a dirty tail
         context.contentResolver.openOutputStream(file.uri, "wt")
             ?.use { it.write(content.toByteArray(Charsets.UTF_8)) }
     }
@@ -48,7 +48,7 @@ class VaultRepository(private val context: Context) {
         )
     }
 
-    /* ---------------- abitudini ---------------- */
+    /* ---------------- habits ---------------- */
 
     fun toggleHabit(habitId: String, date: LocalDate) {
         val content = readFile(LOG_FILE) ?: return
@@ -71,8 +71,8 @@ class VaultRepository(private val context: Context) {
     }
 
     /**
-     * Tap sul widget per un'abitudine a contatore: countable → +1; a goal → +1
-     * fino al goal, poi azzera (così si può correggere anche dal widget).
+     * Tap on the widget for a counter habit: countable → +1; goal-based → +1
+     * up to the goal, then reset (so it can be corrected from the widget too).
      */
     fun tapHabit(habitId: String, date: LocalDate) {
         val habit = readData().habits.find { it.id == habitId } ?: run {
@@ -112,7 +112,7 @@ class VaultRepository(private val context: Context) {
         setHabitFields(id, mapOf("reminders" to value))
     }
 
-    /* ---------------- attività ---------------- */
+    /* ---------------- tasks ---------------- */
 
     fun toggleTodo(raw: String) {
         val content = readFile(TODO_FILE) ?: return

@@ -4,7 +4,7 @@
 > widget. Goal: replace proprietary trackers (e.g. TickTick) with an open system where
 > **your data is yours** (markdown files in your vault), synced everywhere.
 
-![Architecture](images/architettura.svg)
+![Architecture](images/architecture.svg)
 
 ## Guiding principle: modularity
 
@@ -19,10 +19,9 @@ a monolith.
 
 ## 1. The idea in one line
 
-Three markdown files in a vault are the **single source of truth**; every client (Obsidian
-plugin, Android widget, Windows widget) reads and writes them. Any folder sync (Obsidian
-Sync or otherwise) keeps everything aligned across PC and phone. No database, no server, no
-lock-in.
+Three markdown files in a vault; every client (Obsidian plugin, Android widget, Windows
+widget) reads and writes them. Any folder sync (Obsidian Sync or otherwise) keeps
+everything aligned across PC and phone. No database, no server — just text you own.
 
 ## 2. Current status
 
@@ -52,8 +51,9 @@ desktop pinning in the Rust shell. Frontend previewable in a browser (mock backe
 at parity with the core; swipeable app (habits ⇄ tasks), counter habits, and AlarmManager
 notifications (channel, exact alarms, boot reschedule). Needs the Android SDK to build.
 
-**Shared format**: `docs/DATA_FORMAT.md`. **TickTick import** (CSV → `Todo.md` with
-list/section/description structure; habits → `Habits.md` + `Habit Log.md`) prototyped.
+**Shared format**: `docs/DATA_FORMAT.md`. **TickTick import** — implemented in the plugin
+settings: a backup CSV → `Todo.md`, grouped by list, with dates, priorities, tags,
+descriptions and done state.
 
 **Fonts**: no proprietary assets — **Space Grotesk** (OFL) for headings, loaded from Google
 Fonts.
@@ -67,8 +67,8 @@ Fonts.
             └──────────────┬───────────────┬──────────────┘
                            │               │
         ┌──────────────────┼───────────────┼──────────────────┐
-   Obsidian plugin     Android widget   Windows widget     (future clients)
-   (TS, done)          (Kotlin, scaffold) (Tauri, planned)
+   Obsidian plugin     Android app      Windows widget     (future clients)
+   (TS, done)          (Kotlin, done)   (Tauri, done)
 ```
 
 **Shared core** — today the parser/renderer live only inside the Obsidian plugin. Key

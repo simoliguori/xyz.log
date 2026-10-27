@@ -12,10 +12,10 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Programma un singolo allarme esatto per il prossimo promemoria in scadenza.
- * Quando scatta, ReminderReceiver mostra le notifiche dovute e ri-programma il
- * successivo. Così bastano pochi allarmi e lo stato resta coerente anche dopo
- * un riavvio o una sincronizzazione del vault.
+ * Schedules a single exact alarm for the next due reminder. When it fires,
+ * ReminderReceiver shows the due notifications and reschedules the next one. This
+ * way few alarms are needed and the state stays consistent even after
+ * a reboot or a vault sync.
  */
 object NotificationScheduler {
     private const val REQ = 7010

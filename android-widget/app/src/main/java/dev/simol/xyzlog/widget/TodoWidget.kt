@@ -100,12 +100,12 @@ class TodoWidget : GlanceAppWidget() {
 
             when {
                 data == null -> Text(
-                    text = "Tocca per scegliere la cartella del vault",
+                    text = "Tap to pick the vault folder",
                     style = TextStyle(color = ColorProvider(accent.bright), fontSize = 13.sp, fontFamily = FontFamily.Monospace),
                     modifier = GlanceModifier.clickable(actionStartActivity<MainActivity>())
                 )
                 else -> {
-                    // ordine: oggi/futuri sopra, scaduti sotto, senza data in fondo
+                    // order: today/future on top, overdue below, undated last
                     val open = MarkdownParser.groupTodos(data.todos, today)
                         .flatMap { it.second }
                         .take(30)
@@ -183,8 +183,8 @@ class TodoWidget : GlanceAppWidget() {
     }
 
     private fun formatDue(due: LocalDate, today: LocalDate): String = when (due) {
-        today -> "oggi"
-        today.plusDays(1) -> "domani"
-        else -> due.format(DateTimeFormatter.ofPattern("d MMM", Locale.ITALIAN))
+        today -> "today"
+        today.plusDays(1) -> "tomorrow"
+        else -> due.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH))
     }
 }

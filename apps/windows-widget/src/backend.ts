@@ -2,8 +2,8 @@ import type { Reminder } from "@xyzlog/core";
 import type { AppConfig, TabLayout } from "./layout";
 import { defaultTabs } from "./layout";
 
-/** I tre file del tracker come testo grezzo: il parsing avviene nel core,
-   lato frontend, così la logica resta una sola e condivisa. */
+/** The three tracker files as raw text: parsing happens in the core, on the
+   frontend side, so the logic stays single and shared. */
 export interface VaultFiles {
 	habits: string;
 	log: string;
@@ -18,20 +18,20 @@ export interface Backend {
 	getConfig(): Promise<AppConfig>;
 	setConfig(cfg: AppConfig): Promise<void>;
 	pickFolder(): Promise<string | null>;
-	/** cerca una cartella "xyz.log" dentro il vault; null se non c'è */
+	/** look for an "xyz.log" folder inside the vault; null if there's none */
 	locateDataFolder(vault: string): Promise<string | null>;
-	/** crea `<parent>/xyz.log` con i file del tracker; ritorna il percorso */
+	/** create `<parent>/xyz.log` with the tracker files; returns the path */
 	createDataFolder(parent: string): Promise<string>;
-	/** notifica il backend quando uno dei file cambia (edit esterno / sync) */
+	/** notify the backend when one of the files changes (external edit / sync) */
 	onFilesChanged(cb: () => void): void;
-	/** passa al backend l'elenco dei promemoria da programmare come notifiche */
+	/** hand the backend the list of reminders to schedule as notifications */
 	syncReminders(reminders: Reminder[]): Promise<void>;
-	/** mostra subito una notifica (usata per il test "Prova notifica") */
+	/** show a notification right away (used by the "Test notification" button) */
 	notify(title: string, body: string): Promise<void>;
 	setOpacity(pct: number): Promise<void>;
 	setPinned(on: boolean): Promise<void>;
 	setAutostart(on: boolean): Promise<void>;
-	/** accent color corrente di Obsidian (da appearance.json), o null */
+	/** Obsidian's current accent color (from appearance.json), or null */
 	obsidianAccent(): Promise<string | null>;
 	minimizeWindow(): Promise<void>;
 	closeWindow(): Promise<void>;
@@ -52,7 +52,7 @@ const DEFAULT_CONFIG = (): AppConfig => ({
 });
 
 /* ------------------------------------------------------------------ */
-/* Backend reale (Tauri): invoca i comandi Rust in src-tauri.          */
+/* Real backend (Tauri): invokes the Rust commands in src-tauri.       */
 /* ------------------------------------------------------------------ */
 
 function isTauri(): boolean {
@@ -69,7 +69,7 @@ class TauriBackend implements Backend {
 			const core = await import("@tauri-apps/api/core");
 			const event = await import("@tauri-apps/api/event");
 			this.invoke = core.invoke;
-			// il backend emette "vault-changed" quando un file cambia su disco
+			// the backend emits "vault-changed" when a file changes on disk
 			this.changeEvent = event.listen;
 		})();
 	}
@@ -146,15 +146,15 @@ class TauriBackend implements Backend {
 }
 
 /* ------------------------------------------------------------------ */
-/* Backend fittizio (browser): dati d'esempio in memoria + localStorage */
-/* per provare l'interfaccia senza l'app nativa.                        */
+/* Mock backend (browser): in-memory sample data + localStorage, to try */
+/* out the interface without the native app.                            */
 /* ------------------------------------------------------------------ */
 
 const SAMPLE: VaultFiles = {
 	habits: `---
 habits:
   - id: meditation
-    name: Meditazione
+    name: Meditation
     icon: lucide-flower
     reminders: ["08:00"]
   - id: lamictal
@@ -168,21 +168,21 @@ habits:
     goal: 2
     reminders: ["09:00", "21:00"]
   - id: reading
-    name: Lettura
+    name: Reading
     emoji: "📖"
     cadence: 2
   - id: water
-    name: Acqua
+    name: Water
     emoji: "💧"
     countable: true
 categories:
   - icon: lucide-pill
-    name: Farmaci
+    name: Meds
 ---
 
-# Abitudini
+# Habits
 `,
-	log: `# Cronologia abitudini
+	log: `# Habit history
 
 - [x] ${iso(-1)} meditation
 - [x] ${iso(-2)} meditation
@@ -198,19 +198,19 @@ categories:
 
 ## Inbox
 
-- [ ] Chiamare il dentista 🔼 📅 ${iso(2)} ⏰ 15:30
-- [ ] Comprare il regalo ⏫ 📅 ${iso(5)}
-- [ ] Pagare la bolletta 🔺 📅 ${iso(-3)}
-- [ ] Rispondere alle email 📅 ${iso(0)} ⏰ 18:00
-- [ ] Idea senza data
+- [ ] Call the dentist 🔼 📅 ${iso(2)} ⏰ 15:30
+- [ ] Buy the gift ⏫ 📅 ${iso(5)}
+- [ ] Pay the bill 🔺 📅 ${iso(-3)}
+- [ ] Reply to emails 📅 ${iso(0)} ⏰ 18:00
+- [ ] Undated idea
 
-## progetti
+## projects
 
 ### visual
 
-- [ ] prototipo lidar
-	descrizione su righe indentate
-	con un [link](https://example.com)
+- [ ] lidar prototype
+	description on indented lines
+	with a [link](https://example.com)
 `,
 };
 
@@ -245,7 +245,7 @@ class MockBackend implements Backend {
 	async getConfig(): Promise<AppConfig> {
 		const saved = load<AppConfig>(LS_CONFIG);
 		const cfg = { ...DEFAULT_CONFIG(), ...saved };
-		cfg.folder = cfg.folder || "(anteprima) vault/xyz.log";
+		cfg.folder = cfg.folder || "(preview) vault/xyz.log";
 		if (!cfg.tabs?.length) cfg.tabs = defaultTabs();
 		return cfg;
 	}
@@ -253,7 +253,7 @@ class MockBackend implements Backend {
 		save(LS_CONFIG, cfg);
 	}
 	async pickFolder(): Promise<string | null> {
-		return "(anteprima) vault";
+		return "(preview) vault";
 	}
 	async locateDataFolder(vault: string): Promise<string | null> {
 		return `${vault}/xyz.log`;
@@ -265,13 +265,13 @@ class MockBackend implements Backend {
 		this.listeners.push(cb);
 	}
 	async syncReminders(_reminders: Reminder[]): Promise<void> {
-		/* nell'anteprima non c'è uno scheduler nativo */
+		/* in the preview there's no native scheduler */
 	}
 	async notify(title: string, body: string): Promise<void> {
 		if ("Notification" in window && Notification.permission === "granted") {
 			new Notification(title, { body });
 		} else {
-			console.info(`[notifica] ${title} — ${body}`);
+			console.info(`[notification] ${title} — ${body}`);
 		}
 	}
 	async setOpacity(_pct: number): Promise<void> {}
@@ -297,7 +297,7 @@ function save<T>(key: string, value: T): void {
 	try {
 		localStorage.setItem(key, JSON.stringify(value));
 	} catch {
-		/* storage non disponibile */
+		/* storage not available */
 	}
 }
 

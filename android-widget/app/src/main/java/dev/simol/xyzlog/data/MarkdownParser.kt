@@ -3,8 +3,8 @@ package dev.simol.xyzlog.data
 import java.time.LocalDate
 
 /**
- * Specchio Kotlin di packages/core/src/parser.ts (+ parti di viewmodel.ts).
- * Se cambi la logica qui, allineala al core TypeScript e a docs/DATA_FORMAT.md.
+ * Kotlin mirror of packages/core/src/parser.ts (+ parts of viewmodel.ts).
+ * If you change the logic here, align it with the TypeScript core and docs/DATA_FORMAT.md.
  */
 object MarkdownParser {
 
@@ -94,7 +94,7 @@ object MarkdownParser {
                 cur = mutableMapOf(item.groupValues[1] to unquote(item.groupValues[2]))
             } else if (field != null && cur != null) {
                 val key = field.groupValues[1]
-                // reminders è un array inline: non togliere le virgolette qui
+                // reminders is an inline array: don't strip the quotes here
                 cur!![key] = if (key == "reminders") field.groupValues[2] else unquote(field.groupValues[2])
             }
         }
@@ -168,7 +168,7 @@ object MarkdownParser {
         return lines.joinToString("\n")
     }
 
-    /** Rimuove tutti i completamenti di (data, abitudine) di quel giorno. */
+    /** Removes all completions of (date, habit) for that day. */
     fun clearLog(content: String, date: LocalDate, habitId: String): String {
         val target = logLine(date, habitId)
         return content.split(Regex("\r?\n")).filter { it.trim() != target }.joinToString("\n")
@@ -207,7 +207,7 @@ object MarkdownParser {
             if (h2 != null) { list = h2.groupValues[1].trim(); section = ""; i++; continue }
             val t = parseTodoLine(line)
             if (t == null) { i++; continue }
-            // descrizione: righe indentate non-task subito sotto
+            // description: indented non-task lines right below
             val desc = mutableListOf<String>()
             while (i + 1 < lines.size) {
                 val next = lines[i + 1]
@@ -288,8 +288,8 @@ object MarkdownParser {
     enum class TodoGroup { TODAY, NEXT7, LATER, OVERDUE, NODATE }
 
     /**
-     * Task aperte raggruppate per scadenza. Gli eventi con data **futura** (e di
-     * oggi) stanno **sopra** quelli **mancati/scaduti**; senza data in fondo.
+     * Open tasks grouped by due date. Events with a **future** date (and today's)
+     * sit **above** the **missed/overdue** ones; undated last.
      */
     fun groupTodos(todos: List<Todo>, today: LocalDate): List<Pair<TodoGroup, List<Todo>>> {
         val week = today.plusDays(7)
@@ -305,7 +305,7 @@ object MarkdownParser {
         return buckets.entries
             .filter { it.value.isNotEmpty() }
             .map { (g, list) ->
-                // senza data: più nuove in alto (le nuove task sono aggiunte in fondo al file)
+                // no date: newest on top (new tasks are appended at the end of the file)
                 g to if (g == TodoGroup.NODATE) list.reversed()
                 else list.sortedBy { datedSort(it) }
             }
@@ -329,7 +329,7 @@ object MarkdownParser {
             .replace(Regex("""\p{Mn}+"""), "")
             .replace(Regex("""[^a-z0-9]+"""), "-")
             .trim('-')
-        return s.ifEmpty { "abitudine" }
+        return s.ifEmpty { "habit" }
     }
 
     private fun yamlValue(s: String): String =
@@ -363,7 +363,7 @@ object MarkdownParser {
     }
 
     fun removeHabitFromFrontmatter(content: String, id: String): String =
-        editHabitBlock(content, id) { _, _, _ -> null } // segnala rimozione
+        editHabitBlock(content, id) { _, _, _ -> null } // signals removal
 
     fun setHabitFieldsInFrontmatter(content: String, id: String, fields: Map<String, String>): String {
         return editHabitBlock(content, id) { lines, start, stop ->
@@ -386,8 +386,8 @@ object MarkdownParser {
     }
 
     /**
-     * Trova il blocco dell'abitudine `id` e applica `op`. Se `op` ritorna null
-     * (tramite la variante rimozione) elimina il blocco. Usa un sentinel interno.
+     * Find the block of habit `id` and apply `op`. If `op` returns null (via the
+     * removal variant) delete the block. Uses an internal sentinel.
      */
     private fun editHabitBlock(content: String, id: String, op: (MutableList<String>, Int, Int) -> Any?): String {
         val fm = FRONTMATTER.find(content) ?: return content
@@ -406,7 +406,7 @@ object MarkdownParser {
             if (!found) continue
             val result = op(lines, start, stop)
             if (result == null) {
-                // rimozione del blocco
+                // block removal
                 for (i in stop - 1 downTo start) lines.removeAt(i)
             }
             return content.replace(fm.value, "---\n${lines.joinToString("\n")}\n---")

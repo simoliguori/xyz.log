@@ -8,15 +8,15 @@ data class Habit(
     val name: String,
     val emoji: String = "",
     val icon: String = "",
-    /** ogni quanti giorni l'abitudine conta per lo streak (1 = ogni giorno) */
+    /** how often the habit counts towards the streak (1 = every day) */
     val cadence: Int = 1,
     val start: String = "",
     val duration: Int = 0,
-    /** conteggio libero (più volte al giorno, senza "fatto") */
+    /** free count (several times a day, no "done" state) */
     val countable: Boolean = false,
-    /** completamenti al giorno necessari perché il giorno sia "fatto" */
+    /** completions per day needed for the day to count as "done" */
     val goal: Int = 1,
-    /** orari "HH:mm" dei promemoria giornalieri */
+    /** "HH:mm" daily reminder times */
     val reminders: List<String> = emptyList(),
 )
 
@@ -25,7 +25,7 @@ data class Category(
     val name: String,
 )
 
-/** L'ordinal è l'ordine di importanza (0 = massima), allineato al core. */
+/** The ordinal is the importance order (0 = highest), aligned with the core. */
 enum class TaskPriority(val emoji: String, val label: String) {
     HIGHEST("🔺", "massima"),
     HIGH("⏫", "alta"),
@@ -36,12 +36,12 @@ enum class TaskPriority(val emoji: String, val label: String) {
 }
 
 data class Todo(
-    /** riga originale completa, usata per identificare la task al toggle */
+    /** full original line, used to identify the task on toggle */
     val raw: String,
     val done: Boolean,
     val text: String,
     val due: LocalDate?,
-    /** orario "HH:mm" dell'evento (⏰) */
+    /** event time "HH:mm" (⏰) */
     val time: String?,
     val doneDate: LocalDate?,
     val priority: TaskPriority,
@@ -50,7 +50,7 @@ data class Todo(
     val description: String? = null,
 )
 
-/** habitId -> (data -> numero di completamenti in quel giorno) */
+/** habitId -> (date -> number of completions that day) */
 typealias HabitLog = Map<String, Map<LocalDate, Int>>
 
 data class TrackerData(
@@ -60,7 +60,7 @@ data class TrackerData(
     val todos: List<Todo>,
 )
 
-/** Promemoria da programmare come notifica (specchio di core::Reminder). */
+/** Reminder to schedule as a notification (mirror of core::Reminder). */
 data class Reminder(
     val kind: String, // "habit" | "todo"
     val id: String,

@@ -17,7 +17,7 @@ import {
 } from "../src/parser";
 import { Priority } from "../src/types";
 
-test("parseHabits legge campi, goal, countable, cadence e reminders", () => {
+test("parseHabits reads fields, goal, countable, cadence and reminders", () => {
 	const md = `---
 habits:
   - id: lamictal
@@ -45,57 +45,57 @@ habits:
 	assert.deepEqual(habits[2].reminders, []);
 });
 
-test("parseTimeList e normalizeTime normalizzano gli orari", () => {
+test("parseTimeList and normalizeTime normalize times", () => {
 	assert.deepEqual(parseTimeList('["9:0", "21:5"]'), ["09:00", "21:05"]);
 	assert.equal(normalizeTime("7:30"), "07:30");
-	assert.equal(normalizeTime("boh"), null);
+	assert.equal(normalizeTime("nope"), null);
 });
 
-test("parseTodoLine estrae data, ora, priorità e testo pulito", () => {
-	const t = parseTodoLine("- [ ] Dentista 🔼 📅 2026-10-25 ⏰ 15:30", 0)!;
-	assert.equal(t.text, "Dentista");
+test("parseTodoLine extracts date, time, priority and clean text", () => {
+	const t = parseTodoLine("- [ ] Dentist 🔼 📅 2026-10-25 ⏰ 15:30", 0)!;
+	assert.equal(t.text, "Dentist");
 	assert.equal(t.due, "2026-10-25");
 	assert.equal(t.time, "15:30");
 	assert.equal(t.priority, Priority.Medium);
 	assert.equal(t.done, false);
 });
 
-test("serializeTodo riproduce ora ed è reversibile dal parser", () => {
-	const line = serializeTodo("Chiamata", Priority.High, "2026-11-01", "10:00");
+test("serializeTodo reproduces the time and round-trips through the parser", () => {
+	const line = serializeTodo("Call", Priority.High, "2026-11-01", "10:00");
 	const t = parseTodoLine(line, 0)!;
-	assert.equal(t.text, "Chiamata");
+	assert.equal(t.text, "Call");
 	assert.equal(t.due, "2026-11-01");
 	assert.equal(t.time, "10:00");
 	assert.equal(t.priority, Priority.High);
 });
 
-test("toggleTodoLine completa e riapre", () => {
-	const done = toggleTodoLine("- [ ] Pagare 📅 2026-10-20", "2026-10-22");
-	assert.match(done, /- \[x\] Pagare 📅 2026-10-20 ✅ 2026-10-22/);
+test("toggleTodoLine completes and reopens", () => {
+	const done = toggleTodoLine("- [ ] Pay 📅 2026-10-20", "2026-10-22");
+	assert.match(done, /- \[x\] Pay 📅 2026-10-20 ✅ 2026-10-22/);
 	const open = toggleTodoLine(done, "2026-10-22");
-	assert.match(open, /- \[ \] Pagare 📅 2026-10-20/);
+	assert.match(open, /- \[ \] Pay 📅 2026-10-20/);
 	assert.doesNotMatch(open, /✅/);
 });
 
-test("toggleLog aggiunge e rimuove, parseLog conta i doppioni", () => {
+test("toggleLog adds and removes, parseLog counts duplicates", () => {
 	let log = "# Habit history\n";
 	log = toggleLog(log, "2026-10-22", "lamictal");
-	log = toggleLog(log, "2026-10-22", "lamictal"); // secondo scatto rimuove
+	log = toggleLog(log, "2026-10-22", "lamictal"); // second toggle removes it
 	assert.doesNotMatch(log, /lamictal/);
 	let log2 = "# h\n- [x] 2026-10-22 lamictal\n- [x] 2026-10-22 lamictal\n";
 	const parsed = parseLog(log2);
 	assert.equal(parsed.get("lamictal")!.get("2026-10-22"), 2);
 });
 
-test("streak rispetta goal (2 completamenti al giorno) e cadence", () => {
-	// goal 2: un giorno conta solo con ≥2 completamenti
+test("streak respects goal (2 completions per day) and cadence", () => {
+	// goal 2: a day only counts with ≥2 completions
 	const counts = new Map<string, number>([
 		["2026-10-22", 2],
 		["2026-10-21", 2],
-		["2026-10-20", 1], // solo 1: interrompe
+		["2026-10-20", 1], // only 1: breaks the streak
 	]);
 	assert.equal(streak(counts, "2026-10-22", 2, 1), 2);
-	// cadence 2: basta un giorno fatto per periodo
+	// cadence 2: one done day per period is enough
 	const c2 = new Map<string, number>([
 		["2026-10-22", 1],
 		["2026-10-19", 1],
@@ -103,7 +103,7 @@ test("streak rispetta goal (2 completamenti al giorno) e cadence", () => {
 	assert.equal(streak(c2, "2026-10-22", 1, 2), 2);
 });
 
-test("addHabitToFrontmatter e setHabitFields scrivono reminders come array", () => {
+test("addHabitToFrontmatter and setHabitFields write reminders as an array", () => {
 	let md = `---\nhabits:\n  - id: a\n    name: A\n---\n# h\n`;
 	md = addHabitToFrontmatter(md, { id: "b", name: "B" });
 	assert.match(md, /- id: b/);

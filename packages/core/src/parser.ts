@@ -1,8 +1,8 @@
 import { Category, Habit, HabitLog, Priority, Todo } from "./types";
 
-/* Parser puro (nessuna dipendenza esterna): è la logica canonica condivisa da
-   tutti i client. Lo specchio Kotlin vive in MarkdownParser.kt. Se cambi
-   qualcosa qui, allinealo anche lì e in docs/DATA_FORMAT.md. */
+/* Pure parser (no external dependencies): the canonical logic shared by every
+   client. The Kotlin mirror lives in MarkdownParser.kt. If you change something
+   here, mirror it there and in docs/DATA_FORMAT.md. */
 
 export const PRIORITY_EMOJI: Record<Priority, string> = {
 	[Priority.Highest]: "🔺",
@@ -31,7 +31,7 @@ function unquote(s: string): string {
 	return t;
 }
 
-/** Normalizza "9:0" → "09:00"; scarta valori non orari. */
+/** Normalize "9:0" → "09:00"; drop non-time values. */
 export function normalizeTime(s: string): string | null {
 	const m = s.trim().match(/^(\d{1,2}):(\d{1,2})$/);
 	if (!m) return null;
@@ -40,7 +40,7 @@ export function normalizeTime(s: string): string | null {
 	return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 }
 
-/** Legge una lista di orari da `reminders: ["09:00", "21:00"]` (o CSV semplice). */
+/** Read a list of times from `reminders: ["09:00", "21:00"]` (or plain CSV). */
 export function parseTimeList(raw: string | undefined): string[] {
 	if (!raw) return [];
 	const inner = raw.trim().replace(/^\[/, "").replace(/\]$/, "");
@@ -50,12 +50,12 @@ export function parseTimeList(raw: string | undefined): string[] {
 		.filter((x): x is string => x !== null);
 }
 
-/** Serializza una lista di orari come array YAML inline. */
+/** Serialize a list of times as an inline YAML array. */
 export function serializeTimeList(times: string[]): string {
 	return `[${times.map((t) => `"${t}"`).join(", ")}]`;
 }
 
-/** Estrae le abitudini dal frontmatter YAML di Habits.md (vedi DATA_FORMAT.md) */
+/** Extract habits from the YAML frontmatter of Habits.md (see DATA_FORMAT.md). */
 export function parseHabits(content: string): Habit[] {
 	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
 	if (!fm) return [];
@@ -88,7 +88,7 @@ export function parseHabits(content: string): Habit[] {
 		}
 		if (!inHabits) continue;
 		if (/^\S/.test(line)) {
-			// nuova chiave top-level: fine della lista habits
+			// new top-level key: end of the habits list
 			push();
 			inHabits = false;
 			continue;
@@ -100,7 +100,7 @@ export function parseHabits(content: string): Habit[] {
 			cur = {};
 			cur[item[1]] = unquote(item[2]);
 		} else if (field && cur) {
-			// reminders è una lista: non applicare unquote (è un array inline)
+			// reminders is a list: don't unquote (it's an inline array)
 			cur[field[1]] = field[1] === "reminders" ? field[2] : unquote(field[2]);
 		}
 	}
@@ -108,7 +108,7 @@ export function parseHabits(content: string): Habit[] {
 	return habits;
 }
 
-/** Conta i completamenti per abitudine e per giorno (le righe duplicate si sommano). */
+/** Count completions per habit and per day (duplicate lines add up). */
 export function parseLog(content: string): HabitLog {
 	const log: HabitLog = new Map();
 	for (const line of content.split(/\r?\n/)) {
@@ -126,7 +126,7 @@ export function logLine(date: string, habitId: string): string {
 	return `- [x] ${date} ${habitId}`;
 }
 
-/** Aggiunge o rimuove la riga di log per (data, abitudine). Ritorna il nuovo contenuto. */
+/** Add or remove the log line for (date, habit). Returns the new content. */
 export function toggleLog(content: string, date: string, habitId: string): string {
 	const target = logLine(date, habitId);
 	const lines = content.split(/\r?\n/);
@@ -179,10 +179,10 @@ export function parseTodoLine(line: string, lineNo: number): Todo | null {
 }
 
 /**
- * Legge Todo.md con sottocartelle e descrizioni:
- * - `## Lista` → sottocartella di 1° livello
- * - `### Sezione` → sottocartella di 2° livello
- * - righe indentate (non-task) sotto una task → descrizione (con link markdown)
+ * Read Todo.md with sub-folders and descriptions:
+ * - `## List` → first-level sub-folder
+ * - `### Section` → second-level sub-folder
+ * - indented (non-task) lines under a task → description (with markdown links)
  */
 export function parseTodos(content: string): Todo[] {
 	const todos: Todo[] = [];
@@ -233,9 +233,9 @@ export function serializeTodo(
 	return line;
 }
 
-/** Riscrive la riga di una task con nuovi campi, preservando indentazione,
-   stato di completamento e data di completamento (la descrizione, su righe a
-   parte, non viene toccata). I campi non passati restano quelli attuali. */
+/** Rewrite a task line with new fields, preserving indentation, done state and
+   done date (the description, on separate lines, is left untouched). Fields not
+   passed keep their current value. */
 export function updateTodoLine(
 	todo: Todo,
 	fields: { text?: string; priority?: Priority; due?: string | null; time?: string | null }
@@ -254,7 +254,7 @@ export function updateTodoLine(
 	return line;
 }
 
-/** Inverte lo stato di completamento di una riga task. `today` in formato ISO. */
+/** Toggle a task line's done state. `today` in ISO format. */
 export function toggleTodoLine(line: string, today: string): string {
 	const m = line.match(TODO_LINE_RE);
 	if (!m) return line;
@@ -265,7 +265,7 @@ export function toggleTodoLine(line: string, today: string): string {
 	return `${m[1]}- [x] ${m[3].trim()} ✅ ${today}`;
 }
 
-/** Sostituisce nel contenuto la prima riga identica a `raw` col risultato di `fn`. */
+/** Replace the first line equal to `raw` with the result of `fn`. */
 export function replaceLine(
 	content: string,
 	raw: string,
@@ -288,7 +288,7 @@ export function appendLine(content: string, line: string): string {
 	return lines.join("\n");
 }
 
-/* ---------- utilità date (locale, senza timezone UTC) ---------- */
+/* ---------- date helpers (local, no UTC timezone) ---------- */
 
 export function toISO(d: Date): string {
 	const y = d.getFullYear();
@@ -307,17 +307,17 @@ export function addDays(iso: string, n: number): string {
 	return toISO(date);
 }
 
-/* ---------- streak / cronologia ---------- */
+/* ---------- streak / history ---------- */
 
-/** Completamenti registrati in una certa data (0 se nessuno). */
+/** Completions recorded on a given date (0 if none). */
 export function countOn(counts: Map<string, number>, date: string): number {
 	return counts.get(date) ?? 0;
 }
 
 /**
- * Streak a periodi: un "periodo" lungo `cadence` giorni è fatto se almeno uno
- * dei suoi giorni raggiunge `goal` completamenti. Conta a ritroso da oggi
- * (o dal periodo precedente se quello corrente non è ancora fatto).
+ * Period-based streak: a "period" of `cadence` days is done if at least one of
+ * its days reaches `goal` completions. Counts backwards from today (or from the
+ * previous period if the current one isn't done yet).
  */
 export function streak(
 	counts: Map<string, number>,
@@ -341,7 +341,7 @@ export function streak(
 	return count;
 }
 
-/** true se l'abitudine a termine ha superato la sua durata. */
+/** true if a fixed-term habit has passed its duration. */
 export function habitExpired(habit: Habit, today: string): boolean {
 	return (
 		habit.duration > 0 &&
@@ -350,9 +350,9 @@ export function habitExpired(habit: Habit, today: string): boolean {
 	);
 }
 
-/* ---------- scrittura del frontmatter di Habits.md ---------- */
+/* ---------- writing the Habits.md frontmatter ---------- */
 
-/** Slug univoco dal nome: minuscole, senza accenti, solo a-z0-9 e trattini. */
+/** Unique slug from the name: lowercase, no accents, only a-z0-9 and hyphens. */
 export function slugifyHabitId(name: string): string {
 	const s = name
 		.toLowerCase()
@@ -360,14 +360,14 @@ export function slugifyHabitId(name: string): string {
 		.replace(/[̀-ͯ]/g, "")
 		.replace(/[^a-z0-9]+/g, "-")
 		.replace(/^-+|-+$/g, "");
-	return s || "abitudine";
+	return s || "habit";
 }
 
 function yamlValue(s: string): string {
 	return /[:#"']/.test(s) ? `"${s.replace(/"/g, "'")}"` : s;
 }
 
-/** Sottoinsieme di Habit usato quando si aggiunge/serializza un'abitudine. */
+/** Subset of Habit used when adding/serializing a habit. */
 type HabitSeed = { id: string; name: string; emoji?: string; icon?: string };
 
 function habitItemLines(habit: HabitSeed): string[] {
@@ -377,7 +377,7 @@ function habitItemLines(habit: HabitSeed): string[] {
 	return lines;
 }
 
-/** Indice (esclusivo) della fine del blocco indentato che inizia alla riga `idx`. */
+/** Exclusive end index of the indented block starting at line `idx`. */
 function habitsBlockEnd(lines: string[], idx: number): number {
 	let end = idx + 1;
 	while (end < lines.length && (/^\s/.test(lines[end]) || lines[end].trim() === "")) end++;
@@ -475,7 +475,7 @@ export function setHabitFieldsInFrontmatter(
 		for (const key of keys) {
 			const v = fields[key];
 			if (v === "" || v == null) continue;
-			// una lista già serializzata (es. reminders) passa senza virgolette
+			// an already-serialized list (e.g. reminders) passes through unquoted
 			const sval = String(v);
 			insert.push(`    ${key}: ${sval.startsWith("[") ? sval : yamlValue(sval)}`);
 		}
@@ -485,7 +485,7 @@ export function setHabitFieldsInFrontmatter(
 	return content;
 }
 
-/** Parser YAML generico per una lista di item indentati sotto `key:`. */
+/** Generic YAML parser for a list of items indented under `key:`. */
 function parseFmItems(content: string, key: string): Record<string, string>[] {
 	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
 	if (!fm) return [];
@@ -521,7 +521,7 @@ function parseFmItems(content: string, key: string): Record<string, string>[] {
 	return items;
 }
 
-/** Categorie definite nel frontmatter (chiave `categories:`), una per icona. */
+/** Categories defined in the frontmatter (key `categories:`), one per icon. */
 export function parseCategories(content: string): Category[] {
 	return parseFmItems(content, "categories")
 		.filter((c) => c.icon)

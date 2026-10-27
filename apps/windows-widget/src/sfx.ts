@@ -1,5 +1,5 @@
-/* Suono di completamento: un piccolo "ding" morbido a due note (Web Audio,
-   nessun file esterno). Condiviso nello stile col plugin Obsidian. */
+/* Completion sound: a soft two-note "ding" (Web Audio, no external file).
+   Shares its character with the Obsidian plugin. */
 
 let ctx: AudioContext | null = null;
 
@@ -19,7 +19,7 @@ export function playComplete(): void {
 		master.gain.exponentialRampToValueAtTime(0.09, now + 0.015);
 		master.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
 
-		// due note in quinta (A5 → E6), morbide e con una piccola coda
+		// two notes a fifth apart (A5 → E6), soft, with a small tail
 		const notes: [number, number][] = [
 			[880, 0],
 			[1318.51, 0.08],
@@ -38,6 +38,6 @@ export function playComplete(): void {
 			o.stop(now + t + 0.45);
 		}
 	} catch {
-		/* audio non disponibile: ignora */
+		/* audio not available: ignore */
 	}
 }

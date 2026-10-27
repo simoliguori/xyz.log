@@ -1,7 +1,7 @@
 {
   "name": "xyzlog-windows-widget",
   "version": "0.1.0",
-  "description": "Widget desktop Windows di xyz.log: gadget sempre attivo, modulare a riquadri, con notifiche.",
+  "description": "xyz.log Windows desktop widget: an always-on, modular tile-based gadget with notifications.",
   "license": "MIT",
   "type": "module",
   "scripts": {

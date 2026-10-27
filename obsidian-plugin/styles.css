@@ -9,7 +9,7 @@
 	--th-border: #3a3a41;
 	--th-text: #dcdcdc;
 	--th-muted: #8f8f96;
-	/* sincronizzato con l'accent del tema di Obsidian (Impostazioni → Aspetto) */
+	/* synced with the Obsidian theme accent (Settings → Appearance) */
 	--th-accent: var(--interactive-accent, #44437a);
 	--th-accent-bright: color-mix(in srgb, var(--interactive-accent, #44437a) 50%, #ffffff);
 	--th-accent-soft: color-mix(in srgb, var(--interactive-accent, #44437a) 40%, #1e1e1e);
@@ -20,7 +20,7 @@
 	--th-prio-low: #6f8f7a;
 	--th-prio-lowest: #5d7264;
 	--th-mono: "Roboto Mono", var(--font-monospace), monospace;
-	/* font dei titoli: Space Grotesk (OFL), caricato da Google Fonts in cima al file */
+	/* headline font: Space Grotesk (OFL), loaded from Google Fonts at the top of the file */
 	--th-serif: "NType82-Headline", "NType82 Headline", "NType 82", "Space Grotesk", var(--font-text), system-ui, sans-serif;
 
 	font-family: var(--th-mono);
@@ -36,7 +36,7 @@
 	box-sizing: border-box;
 }
 
-/* blocco incorporato nelle note: niente padding da vista, sezioni più compatte */
+/* block embedded in notes: no view padding, more compact sections */
 .th-root.th-embed {
 	padding: 4px 0;
 	overflow-y: visible;
@@ -125,7 +125,7 @@
 	height: 10px;
 }
 
-/* ---------- abitudini ---------- */
+/* ---------- habits ---------- */
 
 .th-habit {
 	background: var(--th-bg2);
@@ -393,7 +393,7 @@
 	text-decoration: underline;
 }
 
-/* ---------- animazioni, contatore, collassabili ---------- */
+/* ---------- animations, counter, collapsibles ---------- */
 @keyframes th-pop {
 	0% { transform: scale(1); }
 	40% { transform: scale(1.28); }
@@ -424,14 +424,14 @@
 	margin-bottom: 0;
 }
 
-/* abitudine fatta oggi: nome barrato */
+/* habit done today: struck-through name */
 .th-habit.is-done .th-habit-name {
 	text-decoration: line-through;
 	color: var(--th-muted);
 	transition: color 0.2s ease;
 }
 
-/* contatore per abitudini "a conteggio" (es. cose brutte) */
+/* counter for "countable" habits (e.g. things to cut down on) */
 .th-root .th-count {
 	width: 16px;
 	height: 16px;
@@ -473,7 +473,7 @@
 	display: none;
 }
 
-/* ---------- vista a cartelle (lista → sezione) ---------- */
+/* ---------- folder view (list → section) ---------- */
 .th-folder {
 	margin-bottom: 6px;
 }
@@ -587,7 +587,7 @@
 	margin-bottom: 8px;
 }
 
-/* ---------- abitudini: aggiunta ed eliminazione ---------- */
+/* ---------- habits: add and delete ---------- */
 
 .th-root .th-add-emoji {
 	flex: 0 0 auto;
@@ -603,7 +603,7 @@
 	opacity: 0.7;
 }
 
-/* ---------- abitudini: icona Iconize ---------- */
+/* ---------- habits: Iconize icon ---------- */
 
 .th-root .th-icon-btn {
 	background: transparent;
@@ -804,8 +804,8 @@
 }
 
 /* ---------- layout dashboard (ex "a croce") ---------- */
-/* Todo a sinistra (alto, due blocchi, scrollabile); a destra abitudini (sopra)
-   e cronologia di un'abitudine a scelta (sotto). */
+/* Todos on the left (tall, two blocks, scrollable); on the right habits (top)
+   and the history of a selected habit (bottom). */
 
 .th-cross-grid {
 	display: grid;
@@ -833,7 +833,7 @@
 	margin-top: 0;
 }
 
-/* nel dashboard scorre il riquadro stesso: niente limite d'altezza interno */
+/* in the dashboard the tile itself scrolls: no inner height limit */
 .th-cross .th-habit-scroll,
 .th-cross .th-todo-scroll {
 	max-height: none;
@@ -841,7 +841,7 @@
 	padding-right: 0;
 }
 
-/* selettore abitudine nel riquadro Cronologia */
+/* habit selector in the History tile */
 .th-history-head {
 	display: flex;
 	align-items: center;
@@ -860,7 +860,7 @@
 	max-width: 55%;
 }
 
-/* panoramica cronologia: una riga compatta per abitudine, per categoria */
+/* history overview: one compact row per habit, by category */
 .th-hist-cat {
 	display: flex;
 	align-items: center;
@@ -920,7 +920,7 @@
 	}
 }
 
-/* ---------- contatore "più volte al giorno" / libero ---------- */
+/* ---------- "several times a day" / free counter ---------- */
 
 .th-root .th-count-wide {
 	width: auto;
@@ -955,7 +955,7 @@
 	display: none !important;
 }
 
-/* ---------- pannello impostazioni per abitudine ---------- */
+/* ---------- per-habit settings panel ---------- */
 
 .th-root .th-habit-settings-toggle {
 	background: transparent;
@@ -1125,7 +1125,7 @@
 	box-shadow: none;
 }
 
-/* ---------- swipe mobile: abitudini ⇄ attività ---------- */
+/* ---------- mobile swipe: habits ⇄ tasks ---------- */
 
 .th-swipe-tabs {
 	display: flex;
@@ -1221,7 +1221,7 @@
 	overflow: hidden;
 }
 
-/* ---------- modifica task: rename inline + popup traslucente ---------- */
+/* ---------- task editing: inline rename + translucent popup ---------- */
 .th-root .th-todo-text { cursor: text; }
 
 .th-root .th-todo-rename {
@@ -1305,7 +1305,7 @@
 	font-family: var(--th-mono);
 }
 
-/* ---------- tasto matita di modifica (hover vicino all'icona) ---------- */
+/* ---------- edit pencil button (hover near the icon) ---------- */
 .th-root .th-edit {
 	background: transparent;
 	border: none;
@@ -1333,13 +1333,13 @@
 	height: 12px;
 }
 
-/* selettore categoria nel form "nuova abitudine" */
+/* category selector in the "new habit" form */
 .th-root .th-add-cat {
 	flex: 0 0 auto;
 	max-width: 120px;
 }
 
-/* ---------- contatore a frazione (box di dimensione fissa, stile ½) ---------- */
+/* ---------- fraction counter (fixed-size box, ½ style) ---------- */
 .th-root .th-count-frac { line-height: 1; overflow: hidden; }
 .th-root .th-count sup,
 .th-root .th-count sub { font-size: 7px; line-height: 1; }

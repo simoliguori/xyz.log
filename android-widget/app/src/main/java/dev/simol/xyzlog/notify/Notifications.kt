@@ -11,7 +11,7 @@ import androidx.core.app.NotificationManagerCompat
 import dev.simol.xyzlog.MainActivity
 import dev.simol.xyzlog.R
 
-/** Canale e invio delle notifiche di promemoria. */
+/** Channel and delivery of reminder notifications. */
 object Notifications {
     const val CHANNEL = "reminders"
 
@@ -19,9 +19,9 @@ object Notifications {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL,
-                "Promemoria",
+                "Reminders",
                 NotificationManager.IMPORTANCE_HIGH,
-            ).apply { description = "Abitudini ed eventi di xyz.log" }
+            ).apply { description = "xyz.log habits and events" }
             context.getSystemService(NotificationManager::class.java)
                 ?.createNotificationChannel(channel)
         }

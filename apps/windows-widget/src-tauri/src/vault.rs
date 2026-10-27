@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
-/// I tre file del tracker come testo grezzo (il parsing è lato frontend).
+/// The three tracker files as raw text (parsing happens on the frontend).
 #[derive(Debug, Clone, Serialize)]
 pub struct VaultFiles {
     pub habits: String,
@@ -47,7 +47,7 @@ pub fn read_files(folder: &str) -> VaultFiles {
 
 pub fn write_file(folder: &str, which: &str, content: &str) -> std::io::Result<()> {
     let path = file_path(folder, which).ok_or_else(|| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, "cartella o file non valido")
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid folder or file")
     })?;
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -55,8 +55,8 @@ pub fn write_file(folder: &str, which: &str, content: &str) -> std::io::Result<(
     std::fs::write(path, content)
 }
 
-/// Cerca nel vault una cartella chiamata "xyz.log" (ricorsiva, profondità limitata,
-/// salta cartelle nascoste e node_modules). Ritorna il percorso della prima trovata.
+/// Search the vault for a folder named "xyz.log" (recursive, limited depth,
+/// skipping hidden folders and node_modules). Returns the path of the first found.
 pub fn locate_data_folder(vault: &str) -> Option<String> {
     if vault.trim().is_empty() {
         return None;
@@ -84,7 +84,7 @@ pub fn locate_data_folder(vault: &str) -> Option<String> {
     None
 }
 
-/// Crea `<parent>/xyz.log` con i tre file del tracker (se mancano). Ritorna il percorso.
+/// Create `<parent>/xyz.log` with the three tracker files (if missing). Returns the path.
 pub fn create_data_folder(parent: &str) -> std::io::Result<String> {
     let dir = Path::new(parent).join("xyz.log");
     std::fs::create_dir_all(&dir)?;
@@ -101,8 +101,8 @@ pub fn create_data_folder(parent: &str) -> std::io::Result<String> {
     Ok(dir.to_string_lossy().to_string())
 }
 
-/// Legge l'accent color di Obsidian risalendo dalla cartella dati fino a trovare
-/// `.obsidian/appearance.json`. Ritorna un esadecimale `#rrggbb` o None.
+/// Read Obsidian's accent color by walking up from the data folder until it finds
+/// `.obsidian/appearance.json`. Returns a `#rrggbb` hex or None.
 pub fn obsidian_accent(folder: &str) -> Option<String> {
     if folder.trim().is_empty() {
         return None;
@@ -119,7 +119,7 @@ pub fn obsidian_accent(folder: &str) -> Option<String> {
                 if s.starts_with('#') && (s.len() == 7 || s.len() == 4) {
                     return Some(s.to_string());
                 }
-                return None; // "" o formato non gestito: usa il default
+                return None; // "" or unsupported format: use the default
             } else if acc.is_object() {
                 let h = acc.get("h")?.as_f64()?;
                 let s = acc.get("s")?.as_f64()?;
@@ -154,7 +154,7 @@ fn hsl_to_hex(h: f64, s: f64, l: f64) -> String {
     format!("#{:02x}{:02x}{:02x}", to(r1), to(g1), to(b1))
 }
 
-/// mtime combinato dei tre file, per il polling delle modifiche esterne.
+/// Combined mtime of the three files, for polling external changes.
 pub fn signature(folder: &str) -> u128 {
     let mut sig: u128 = 0;
     for name in [HABITS_FILE, LOG_FILE, TODO_FILE] {

@@ -100,7 +100,7 @@ class HabitWidget : GlanceAppWidget() {
             when {
                 data == null -> NotConfigured(accent)
                 data.habits.isEmpty() -> Text(
-                    text = "Nessuna abitudine in Habits.md",
+                    text = "No habits in Habits.md",
                     style = TextStyle(color = ColorProvider(Tokens.muted), fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                 )
                 else -> LazyColumn {
@@ -115,7 +115,7 @@ class HabitWidget : GlanceAppWidget() {
     @Composable
     private fun NotConfigured(accent: Accent) {
         Text(
-            text = "Tocca per scegliere la cartella del vault",
+            text = "Tap to pick the vault folder",
             style = TextStyle(color = ColorProvider(accent.bright), fontSize = 13.sp, fontFamily = FontFamily.Monospace),
             modifier = GlanceModifier.clickable(actionStartActivity<MainActivity>())
         )
@@ -202,7 +202,7 @@ class HabitWidget : GlanceAppWidget() {
                 )
                 Spacer(GlanceModifier.width(8.dp))
             }
-            // pallini degli ultimi 7 giorni (raggiunto il goal = acceso)
+            // dots for the last 7 days (goal reached = lit)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 for (i in 6 downTo 0) {
                     val d = today.minusDays(i.toLong())

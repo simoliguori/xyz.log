@@ -13,7 +13,7 @@ export function locale(): string {
 	return LANG === "it" ? "it-IT" : "en-GB";
 }
 
-/** Stringhe statiche: chiave → { en, it }. */
+/** Static strings: key → { en, it }. */
 const S = {
 	habits: { en: "Habits", it: "Abitudini" },
 	todos: { en: "To-do", it: "Todo" },
@@ -53,7 +53,7 @@ const S = {
 	reminders: { en: "Reminders", it: "Promemoria" },
 	dueDate: { en: "Due date", it: "Scadenza" },
 	inbox: { en: "Inbox", it: "Inbox" },
-	// priorità
+	// priorities
 	prioHighest: { en: "highest", it: "massima" },
 	prioHigh: { en: "high", it: "alta" },
 	prioMedium: { en: "medium", it: "media" },
@@ -73,7 +73,24 @@ const S = {
 	},
 	setLangName: { en: "Language", it: "Lingua" },
 	setLangDesc: { en: "Interface language.", it: "Lingua dell'interfaccia." },
-	// comandi / ribbon
+	// import TickTick
+	setImportName: { en: "Import from TickTick", it: "Importa da TickTick" },
+	setImportDesc: {
+		en: "Bring your TickTick tasks into Todo.md from a backup CSV.",
+		it: "Porta le tue attività TickTick in Todo.md da un backup CSV.",
+	},
+	importButton: { en: "Choose CSV…", it: "Scegli CSV…" },
+	importTickTickTitle: { en: "Import from TickTick", it: "Importa da TickTick" },
+	importTickTickHelp: {
+		en: "In TickTick: Settings → Backup → download the CSV, then pick it here. Tasks are added to Todo.md, grouped by list; your habits are untouched.",
+		it: "In TickTick: Impostazioni → Backup → scarica il CSV, poi selezionalo qui. Le attività vengono aggiunte a Todo.md, raggruppate per lista; le abitudini non vengono toccate.",
+	},
+	importAction: { en: "Import", it: "Importa" },
+	importNothing: {
+		en: "No tasks found. Make sure it's a TickTick backup CSV.",
+		it: "Nessuna attività trovata. Assicurati che sia un backup CSV di TickTick.",
+	},
+	// commands / ribbon
 	openTracker: { en: "Open xyz.log", it: "Apri xyz.log" },
 	insertBlock: { en: "Insert xyz.log block", it: "Inserisci blocco xyz.log" },
 } as const;
@@ -94,7 +111,7 @@ export function prioLabel(p: Priority): string {
 	return t(PRIO_KEY[p]);
 }
 
-/** Stringhe con parametri. */
+/** Parameterized strings. */
 export const tf = {
 	iconsCount: (n: number) => (LANG === "it" ? `${n} icone` : `${n} icons`),
 	heatmapCaption: (done: number, weeks: number) =>
@@ -116,4 +133,10 @@ export const tf = {
 		LANG === "it"
 			? `Abitudine "${id}" non trovata in ${path}.`
 			: `Habit "${id}" not found in ${path}.`,
+	importFound: (tasks: number, lists: number) =>
+		LANG === "it"
+			? `Trovate ${tasks} attività in ${lists} liste.`
+			: `Found ${tasks} tasks across ${lists} lists.`,
+	importDone: (n: number) =>
+		LANG === "it" ? `Importate ${n} attività da TickTick.` : `Imported ${n} tasks from TickTick.`,
 };

@@ -1,8 +1,8 @@
 import { Priority } from "./types";
 import { TodoGroupId } from "./viewmodel";
 
-/* i18n condiviso (minimale): etichette usate dal view-model e dai client.
-   I client possono comunque avere stringhe proprie. */
+/* Shared (minimal) i18n: labels used by the view-model and the clients.
+   Clients may still keep their own strings. */
 
 export type Lang = "en" | "it";
 

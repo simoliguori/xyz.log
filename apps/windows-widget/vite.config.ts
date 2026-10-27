@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
 
-// Vite serve il frontend del widget. Il core condiviso è importato dai sorgenti
-// TS tramite alias, così non serve un passo di build separato del pacchetto.
+// Vite serves the widget frontend. The shared core is imported from its TS
+// sources via an alias, so no separate package build step is needed.
 export default defineConfig({
 	root: ".",
 	clearScreen: false,

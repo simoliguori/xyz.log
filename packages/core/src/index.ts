@@ -1,4 +1,4 @@
-/* Punto d'ingresso del core condiviso. I client importano da qui. */
+/* Entry point of the shared core. Clients import from here. */
 
 export * from "./types";
 export * from "./parser";

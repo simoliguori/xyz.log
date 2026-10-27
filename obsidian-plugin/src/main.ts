@@ -25,7 +25,7 @@ export default class XyzlogPlugin extends Plugin {
 			callback: () => void this.activateView(),
 		});
 
-		// un comando per ogni blocco, individuabili nella palette come "xyz.log - …"
+		// one command per block, found in the palette as "xyz.log - …"
 		const blocks: [string, string, string][] = [
 			["dashboard", "Dashboard (tasks + habits)", "cross"],
 			["tasks", "Tasks by date", "todos"],
@@ -47,8 +47,8 @@ export default class XyzlogPlugin extends Plugin {
 
 		this.addSettingTab(new TrackerSettingTab(this.app, this));
 
-		// blocco ```xyz.log``` incorporabile in qualsiasi nota
-		// (alias retrocompatibili: `xyzlog` e il vecchio `todo-habits`)
+		// ```xyz.log``` block, embeddable in any note
+		// (backwards-compatible aliases: `xyzlog` and the legacy `todo-habits`)
 		const blockHandler = (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
 			const opts = parseEmbedOptions(source);
 			el.addClass("th-embed");
@@ -71,7 +71,7 @@ export default class XyzlogPlugin extends Plugin {
 			this.registerMarkdownCodeBlockProcessor(lang, blockHandler);
 		}
 
-		// ri-renderizza quando uno dei tre file cambia (edit manuale o Obsidian Sync)
+		// re-render when one of the three files changes (manual edit or Obsidian Sync)
 		this.registerEvent(
 			this.app.vault.on("modify", (file) => {
 				if (file instanceof TFile && this.store.isTrackedPath(file.path)) {
@@ -114,8 +114,8 @@ export default class XyzlogPlugin extends Plugin {
 }
 
 /**
- * Opzioni del blocco ```xyz.log```, una per riga:
- * `habits`, `todos`, `header`, `habit: <id>`. Vuoto = habits + todos.
+ * Options of the ```xyz.log``` block, one per line:
+ * `habits`, `todos`, `header`, `habit: <id>`. Empty = habits + todos.
  */
 function parseEmbedOptions(source: string): RenderOptions {
 	const opts: RenderOptions = {

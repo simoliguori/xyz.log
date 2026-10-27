@@ -1,35 +1,35 @@
-/* Modello dati condiviso tra tutti i client (plugin Obsidian, widget Windows,
-   app Android). È TypeScript puro, senza dipendenze di runtime. Lo specchio
-   Kotlin vive in android-widget/.../data/. Vedi docs/DATA_FORMAT.md. */
+/* Data model shared across every client (Obsidian plugin, Windows widget,
+   Android app). Pure TypeScript, no runtime dependencies. The Kotlin mirror
+   lives in android-widget/.../data/. See docs/DATA_FORMAT.md. */
 
 export interface Habit {
 	id: string;
 	name: string;
 	emoji: string;
-	/** nome icona (lucide o Iconize), es. "lucide-book"; vince sull'emoji */
+	/** icon name (lucide or Iconize), e.g. "lucide-book"; wins over the emoji */
 	icon: string;
-	/** ogni quanti giorni l'abitudine "conta" per lo streak (1 = ogni giorno) */
+	/** how often the habit "counts" towards the streak (1 = every day) */
 	cadence: number;
-	/** data ISO di inizio (opzionale), usata con duration per le abitudini a termine */
+	/** ISO start date (optional), used with duration for fixed-term habits */
 	start: string;
-	/** durata in giorni (0 = senza fine) */
+	/** duration in days (0 = open-ended) */
 	duration: number;
-	/** se true l'abitudine si conta più volte al giorno */
+	/** when true the habit can be logged several times a day */
 	countable: boolean;
-	/** completamenti al giorno necessari perché il giorno sia "fatto" */
+	/** completions per day needed for the day to count as "done" */
 	goal: number;
-	/** orari "HH:mm" dei promemoria giornalieri (vuoto = nessun promemoria) */
+	/** "HH:mm" daily reminder times (empty = no reminder) */
 	reminders: string[];
 }
 
 export interface Category {
-	/** nome icona condivisa dalle abitudini del gruppo */
+	/** icon shared by the habits in the group */
 	icon: string;
-	/** nome visualizzato della categoria */
+	/** display name of the category */
 	name: string;
 }
 
-/** habitId -> (data ISO YYYY-MM-DD -> numero di completamenti in quel giorno) */
+/** habitId -> (ISO date YYYY-MM-DD -> number of completions that day) */
 export type HabitLog = Map<string, Map<string, number>>;
 
 export enum Priority {
@@ -42,27 +42,27 @@ export enum Priority {
 }
 
 export interface Todo {
-	/** riga originale completa, usata per identificare la task al toggle */
+	/** full original line, used to identify the task on toggle */
 	raw: string;
 	lineNo: number;
 	done: boolean;
-	/** testo senza i campi emoji (i #tag restano inline) */
+	/** text without the emoji fields (#tags stay inline) */
 	text: string;
 	due: string | null;
-	/** orario "HH:mm" dell'evento (⏰), separato dalla data per compatibilità */
+	/** event time "HH:mm" (⏰), kept separate from the date for compatibility */
 	time: string | null;
 	doneDate: string | null;
 	priority: Priority;
 	tags: string[];
-	/** sottocartella di 1° livello (intestazione `## Lista`), es. "Inbox", "idee" */
+	/** first-level sub-folder (heading `## List`), e.g. "Inbox", "ideas" */
 	list?: string;
-	/** sottocartella di 2° livello (intestazione `### Sezione`) dentro la lista */
+	/** second-level sub-folder (heading `### Section`) inside the list */
 	section?: string;
-	/** descrizione libera (righe indentate sotto la task), può contenere link markdown */
+	/** free description (indented lines under the task), may contain markdown links */
 	description?: string;
 }
 
-/** Dato aggregato dei tre file, pronto per il viewmodel. */
+/** The three files combined, ready for the view-model. */
 export interface TrackerData {
 	habits: Habit[];
 	categories: Category[];

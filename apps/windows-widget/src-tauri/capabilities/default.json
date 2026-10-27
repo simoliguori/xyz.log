@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permessi del widget: notifiche, dialog cartella, autostart.",
+  "description": "Widget permissions: notifications, folder dialog, autostart.",
   "windows": ["main"],
   "permissions": [
     "core:default",

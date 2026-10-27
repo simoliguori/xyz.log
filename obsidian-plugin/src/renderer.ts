@@ -15,19 +15,19 @@ const PRIO_CLASS: Record<Priority, string> = {
 };
 
 export interface RenderOptions {
-	/** intestazione con la data (attiva nella vista, spenta di default negli embed) */
+	/** header with the date (on in the view, off by default in embeds) */
 	header: boolean;
 	habits: boolean;
 	todos: boolean;
-	/** layout dashboard: todo a sinistra, abitudini + cronologia a destra */
+	/** dashboard layout: todos on the left, habits + history on the right */
 	cross: boolean;
-	/** vista a cartelle: todo raggruppati per lista → sezione, con descrizioni */
+	/** folder view: todos grouped by list → section, with descriptions */
 	folders: boolean;
-	/** se presente, mostra solo questa abitudine con la heatmap già espansa */
+	/** if present, show only this habit with its heatmap already expanded */
 	habitId?: string;
 }
 
-/** Testo con link markdown `[t](url)`, URL nudi e #tag resi cliccabili. */
+/** Text with markdown links `[t](url)`, bare URLs and #tags made clickable. */
 function renderRich(el: HTMLElement, text: string): void {
 	const re = /\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s)]+)|(#[\w/-]+)/g;
 	let last = 0;
@@ -50,7 +50,7 @@ function renderRich(el: HTMLElement, text: string): void {
 	if (last < text.length) el.appendText(text.slice(last));
 }
 
-/** Contenitori scrollabili di cui preservare la posizione tra un render e l'altro. */
+/** Scrollable containers whose scroll position is preserved across renders. */
 const TH_SCROLLERS = [
 	".th-todo-scroll",
 	".th-habit-scroll",
@@ -59,8 +59,8 @@ const TH_SCROLLERS = [
 	".th-cross-cell--history",
 ];
 
-/** Suono di completamento: piccolo "ding" morbido a due note (Web Audio, nessun
-   file esterno). Stesso carattere del widget desktop. */
+/** Completion sound: a soft two-note "ding" (Web Audio, no external file).
+   Same character as the desktop widget. */
 let thAudioCtx: AudioContext | null = null;
 function playCheckSound(): void {
 	try {
@@ -78,7 +78,7 @@ function playCheckSound(): void {
 		master.gain.exponentialRampToValueAtTime(0.09, now + 0.015);
 		master.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
 
-		// due note in quinta (A5 → E6), morbide e con una piccola coda
+		// two notes a fifth apart (A5 → E6), soft, with a small tail
 		const notes: [number, number][] = [
 			[880, 0],
 			[1318.51, 0.08],
@@ -97,11 +97,11 @@ function playCheckSound(): void {
 			o.stop(now + t + 0.45);
 		}
 	} catch (e) {
-		/* audio non disponibile: ignora */
+		/* audio not available: ignore */
 	}
 }
 
-/** Collassa l'elemento (altezza → 0) e poi esegue `fn`, per far scivolare su le righe sotto. */
+/** Collapse the element (height → 0) then run `fn`, so the rows below slide up. */
 function collapseThenRun(el: HTMLElement, fn: () => void): void {
 	el.style.maxHeight = `${el.scrollHeight}px`;
 	el.style.overflow = "hidden";
@@ -110,7 +110,7 @@ function collapseThenRun(el: HTMLElement, fn: () => void): void {
 	window.setTimeout(fn, 240);
 }
 
-/** Griglia di icone lucide con ricerca, per scegliere l'icona di un'abitudine. */
+/** Searchable grid of lucide icons, to pick a habit's icon. */
 class IconPickerModal extends Modal {
 	private onChooseCb: (iconId: string) => void;
 
@@ -178,7 +178,7 @@ class IconPickerModal extends Modal {
 	}
 }
 
-/** Popup (traslucente) per modificare testo, data, ora e priorità di una task. */
+/** (Translucent) popup to edit a task's text, date, time and priority. */
 class TaskEditModal extends Modal {
 	constructor(private plugin: XyzlogPlugin, private todo: Todo) {
 		super(plugin.app);
@@ -246,18 +246,18 @@ class TaskEditModal extends Modal {
 }
 
 /**
- * Rendering condiviso tra la vista dedicata e i code block `xyz.log`
- * incorporati nelle note.
+ * Shared rendering between the dedicated view and the `xyz.log` code blocks
+ * embedded in notes.
  */
 export class TrackerRenderer {
 	private expanded = new Set<string>();
-	/** chiavi dei gruppi/categorie chiusi, per preservare il collasso tra i render */
+	/** keys of collapsed groups/categories, to preserve the collapse across renders */
 	private collapsed = new Set<string>();
-	/** pannello impostazioni aperto sotto l'abitudine espansa */
+	/** settings panel open under the expanded habit */
 	private settingsOpen = new Set<string>();
-	/** pagina attiva dello swipe mobile (0 = abitudini, 1 = attività) */
+	/** active page of the mobile swipe (0 = habits, 1 = tasks) */
 	private swipeIndex = 0;
-	/** riga della task appena creata, per animarne la comparsa */
+	/** line of the just-created task, to animate its appearance */
 	private pendingNew: string | null = null;
 
 	constructor(
@@ -298,8 +298,8 @@ export class TrackerRenderer {
 		this.restoreScroll(scroll);
 	}
 
-	/** Su mobile, quando si mostrano sia abitudini sia attività, si passa da una
-	   all'altra con lo swipe (o i due tab in alto) invece di impilarle. */
+	/** On mobile, when showing both habits and tasks, swipe between them (or use
+	   the two tabs on top) instead of stacking them. */
 	private useSwipe(): boolean {
 		return (
 			Platform.isMobile &&
@@ -337,13 +337,13 @@ export class TrackerRenderer {
 			if (i !== this.swipeIndex) setActive(i);
 		};
 
-		// ripristina la pagina attiva dopo il re-render (senza animazione)
+		// restore the active page after the re-render (no animation)
 		requestAnimationFrame(() => {
 			track.scrollLeft = this.swipeIndex * track.clientWidth;
 		});
 	}
 
-	/** Posizione di scroll dei contenitori, così lo spunto non riporta in cima. */
+	/** Scroll position of the containers, so checking off doesn't jump to the top. */
 	private captureScroll(): Record<string, number> {
 		const out: Record<string, number> = { __root: this.root.scrollTop };
 		for (const sel of TH_SCROLLERS) {
@@ -383,12 +383,12 @@ export class TrackerRenderer {
 		header.createEl("h1", { text: date, cls: "th-title" });
 	}
 
-	/* ---------------- Layout dashboard ---------------- */
+	/* ---------------- Dashboard layout ---------------- */
 
 	private renderCross(root: HTMLElement, data: TrackerData): void {
 		root.addClass("th-cross");
-		// dashboard split: attività a sinistra, abitudini a destra. Niente data in
-		// alto e niente cronologia (ridondante: le abitudini si espandono già).
+		// dashboard split: tasks left, habits right. No date on top and no history
+		// (redundant: habits already expand on their own).
 		const grid = root.createDiv({ cls: "th-cross-grid" });
 		const todoCell = grid.createDiv({ cls: "th-cross-cell th-cross-cell--todo" });
 		const habitsCell = grid.createDiv({ cls: "th-cross-cell th-cross-cell--habits" });
@@ -397,7 +397,7 @@ export class TrackerRenderer {
 		this.renderHabits(habitsCell, data);
 	}
 
-	/** Panoramica cronologia: una riga compatta per abitudine, raggruppata per categoria. */
+	/** History overview: one compact row per habit, grouped by category. */
 	private renderHistoryCell(cell: HTMLElement, data: TrackerData, today: string): void {
 		const section = cell.createDiv({ cls: "th-section" });
 		section.createEl("h2", { text: t("history"), cls: "th-section-title" });
@@ -433,7 +433,7 @@ export class TrackerRenderer {
 		}
 	}
 
-	/** Una riga: nome abitudine + striscia compatta degli ultimi giorni. */
+	/** One row: habit name + compact strip of the last days. */
 	private renderHistoryLine(
 		parent: HTMLElement,
 		habit: Habit,
@@ -456,7 +456,7 @@ export class TrackerRenderer {
 		}
 	}
 
-	/* ---------------- Abitudini ---------------- */
+	/* ---------------- Habits ---------------- */
 
 	private renderSingleHabit(root: HTMLElement, data: TrackerData): void {
 		const habit = data.habits.find((h) => h.id === this.opts.habitId);
@@ -525,7 +525,7 @@ export class TrackerRenderer {
 			text: name,
 			attr: { title: t("renameCategory") },
 		});
-		// chevron animato per minimizzare/espandere la categoria (al posto del contatore)
+		// animated chevron to collapse/expand the category (in place of the counter)
 		const chevron = head.createDiv({ cls: "th-cat-chevron", attr: { "aria-hidden": "true" } });
 		setIcon(chevron, "chevron-down");
 
@@ -564,7 +564,7 @@ export class TrackerRenderer {
 	}
 
 	private iconizeApi(): { getIconByName: (n: string) => unknown; setIconForNode: (n: string, el: HTMLElement) => void } | null {
-		// `plugins` non è nei tipi pubblici di Obsidian
+		// `plugins` is not part of Obsidian's public types
 		return (this.plugin.app as any).plugins?.getPlugin("obsidian-icon-folder")?.api ?? null;
 	}
 
@@ -586,7 +586,7 @@ export class TrackerRenderer {
 		}
 	}
 
-	/** Categorie esistenti (icona condivisa da ≥2 abitudini o nominate nel frontmatter). */
+	/** Existing categories (icon shared by ≥2 habits, or named in the frontmatter). */
 	private existingCategories(data: TrackerData): { icon: string; name: string }[] {
 		const count = new Map<string, number>();
 		for (const h of data.habits) if (h.icon) count.set(h.icon, (count.get(h.icon) ?? 0) + 1);
@@ -676,15 +676,15 @@ export class TrackerRenderer {
 		const row = card.createDiv({ cls: "th-habit-row" });
 
 		if (counterMode) {
-			// più volte al giorno (goal > 1) o conteggio libero (countable):
-			// tap = +1; il tasto "−" accanto = −1 (funziona anche su mobile, dove
-			// non esiste il clic destro).
+			// several times a day (goal > 1) or free count (countable):
+			// tap = +1; the "−" button next to it = −1 (works on mobile too, where
+			// there's no right-click).
 			const counter = row.createEl("button", {
 				cls: `th-count ${doneToday ? "is-done" : ""}`,
 				attr: { "aria-label": tf.markToday(habit.name), title: tf.markToday(habit.name) },
 			});
 			if (habit.goal > 1) {
-				// frazione compatta (stile ½): attuale sopra, obiettivo sotto
+				// compact fraction (½ style): current on top, goal below
 				counter.addClass("th-count-frac");
 				counter.createEl("sup", { text: String(countToday) });
 				counter.createSpan({ cls: "th-frac-slash", text: "⁄" });
@@ -695,7 +695,7 @@ export class TrackerRenderer {
 			const atGoal = !habit.countable && countToday >= habit.goal;
 			counter.onclick = (e) => {
 				e.stopPropagation();
-				if (atGoal) return; // goal raggiunto: non si va oltre
+				if (atGoal) return; // goal reached: don't go further
 				playCheckSound();
 				counter.addClass("th-pop");
 				void this.plugin.store.incrementHabit(habit.id, today);
@@ -730,7 +730,7 @@ export class TrackerRenderer {
 			};
 		}
 
-		// niente icona per la singola abitudine: le icone sono solo per la categoria
+		// no icon for a single habit: icons are only for the category
 		const name = row.createDiv({ cls: "th-habit-name" });
 		name.createSpan({ text: habit.name });
 
@@ -772,8 +772,8 @@ export class TrackerRenderer {
 		}
 	}
 
-	/** Pannello impostazioni dell'abitudine (sotto la heatmap, quando è espansa):
-	   quante volte al giorno, conteggio libero, cadenza e promemoria. */
+	/** Habit settings panel (under the heatmap, when expanded):
+	   times per day, free count, cadence and reminders. */
 	private renderHabitSettings(card: HTMLElement, habit: Habit): void {
 		const key = `s:${habit.id}`;
 		const open = this.settingsOpen.has(key);
@@ -791,7 +791,7 @@ export class TrackerRenderer {
 
 		const panel = card.createDiv({ cls: "th-habit-settings" });
 
-		// — quante volte al giorno (goal) —
+		// — times per day (goal) —
 		const goalRow = panel.createDiv({ cls: "th-setting" });
 		goalRow.createSpan({ cls: "th-setting-label", text: t("perDay") });
 		const stepper = goalRow.createDiv({ cls: "th-stepper" });
@@ -806,7 +806,7 @@ export class TrackerRenderer {
 		minusG.onclick = (e) => { e.stopPropagation(); setGoal(habit.goal - 1); };
 		plusG.onclick = (e) => { e.stopPropagation(); setGoal(habit.goal + 1); };
 
-		// — conteggio libero (countable) —
+		// — free count (countable) —
 		const cntRow = panel.createDiv({ cls: "th-setting" });
 		cntRow.createSpan({ cls: "th-setting-label", text: t("freeCount") });
 		const cntToggle = cntRow.createEl("button", {
@@ -821,7 +821,7 @@ export class TrackerRenderer {
 			});
 		};
 
-		// — cadenza (ogni N giorni) —
+		// — cadence (every N days) —
 		const cadRow = panel.createDiv({ cls: "th-setting" });
 		cadRow.createSpan({ cls: "th-setting-label", text: t("cadence") });
 		const cadStep = cadRow.createDiv({ cls: "th-stepper" });
@@ -836,7 +836,7 @@ export class TrackerRenderer {
 		minusC.onclick = (e) => { e.stopPropagation(); setCad(habit.cadence - 1); };
 		plusC.onclick = (e) => { e.stopPropagation(); setCad(habit.cadence + 1); };
 
-		// — promemoria (notifiche) —
+		// — reminders (notifications) —
 		const remRow = panel.createDiv({ cls: "th-setting th-setting-col" });
 		remRow.createSpan({ cls: "th-setting-label", text: t("reminders") });
 		const chips = remRow.createDiv({ cls: "th-rem-chips" });
@@ -868,7 +868,7 @@ export class TrackerRenderer {
 		};
 	}
 
-	/** Heatmap tipo GitHub: colonne = settimane (lun→dom), mesi segnati in alto. */
+	/** GitHub-style heatmap: columns = weeks (Mon→Sun), months labelled on top. */
 	private renderHeatmap(parent: HTMLElement, dates: Map<string, number>, today: string): void {
 		const weeks = this.plugin.settings.heatmapWeeks;
 		const scroller = parent.createDiv({ cls: "th-heatmap" });
@@ -876,7 +876,7 @@ export class TrackerRenderer {
 		const grid = scroller.createDiv({ cls: "th-heatmap-grid" });
 
 		const t0 = new Date();
-		const dow = (t0.getDay() + 6) % 7; // 0 = lunedì
+		const dow = (t0.getDay() + 6) % 7; // 0 = Monday
 		const mondayOfThisWeek = addDays(today, -dow);
 		const start = addDays(mondayOfThisWeek, -(weeks - 1) * 7);
 
@@ -917,7 +917,7 @@ export class TrackerRenderer {
 		return new Date(y, m - 1, d).toLocaleDateString(locale(), { month: "short" });
 	}
 
-	/* ---------------- Todo (per data) ---------------- */
+	/* ---------------- Todos (by date) ---------------- */
 
 	private renderTodos(root: HTMLElement, data: TrackerData): void {
 		const section = root.createDiv({ cls: "th-section" });
@@ -932,11 +932,11 @@ export class TrackerRenderer {
 		const open = data.todos.filter((t) => !t.done);
 		const byPrioThenDue = (a: Todo, b: Todo) =>
 			a.priority - b.priority || (a.due ?? "9999").localeCompare(b.due ?? "9999");
-		// senza data: più nuove in alto (ordine d'inserimento invertito)
+		// no date: newest on top (reverse insertion order)
 		const byNewest = (a: Todo, b: Todo) => b.lineNo - a.lineNo;
 
-		// Gli eventi con data futura (e di oggi) stanno sopra quelli scaduti/mancati;
-		// le task senza data chiudono in fondo (ordinate dalla più nuova).
+		// Events with a future date (and today's) sit above overdue/missed ones;
+		// undated tasks go last (newest first).
 		const groups: [string, Todo[], string, (a: Todo, b: Todo) => number][] = [
 			[t("today"), open.filter((td) => td.due === today), "", byPrioThenDue],
 			[t("next7"), open.filter((td) => td.due && td.due > today && td.due <= week), "", byPrioThenDue],
@@ -977,7 +977,7 @@ export class TrackerRenderer {
 		}
 	}
 
-	/* ---------------- Todo (a cartelle: lista → sezione) ---------------- */
+	/* ---------------- Todos (folders: list → section) ---------------- */
 
 	private renderFolders(root: HTMLElement, data: TrackerData): void {
 		const section = root.createDiv({ cls: "th-section" });
@@ -1055,7 +1055,7 @@ export class TrackerRenderer {
 			const text = input.value.trim();
 			if (!text) return;
 			const p = Number(prio.value) as Priority;
-			// riga attesa, per animarne la comparsa al prossimo render
+			// expected line, to animate its appearance on the next render
 			this.pendingNew = serializeTodo(text, p, date.value || null);
 			await this.plugin.store.addTodo(text, p, date.value || null);
 			input.value = "";
@@ -1068,7 +1068,7 @@ export class TrackerRenderer {
 
 	private renderTodoRow(parent: HTMLElement, todo: Todo, today: string): void {
 		const wrap = parent.createDiv({ cls: `th-todo ${todo.done ? "is-done" : ""}` });
-		// comparsa animata della task appena creata (inverso del collasso)
+		// animated appearance of the just-created task (inverse of the collapse)
 		if (this.pendingNew && todo.raw === this.pendingNew) {
 			wrap.addClass("th-appear");
 			this.pendingNew = null;
@@ -1086,15 +1086,15 @@ export class TrackerRenderer {
 				void this.plugin.store.toggleTodo(todo);
 				return;
 			}
-			// prima l'animazione del quadratino che si riempie (+ suono),
-			// poi, finita, il collasso con la curva gaussiana
+			// first the checkbox-fill animation (+ sound),
+			// then, once done, the collapse with the gaussian curve
 			playCheckSound();
 			check.addClass("is-done");
 			check.addClass("th-pop");
 			window.setTimeout(() => collapseThenRun(wrap, () => void this.plugin.store.toggleTodo(todo)), 300);
 		};
 
-		// tasto matita accanto all'icona: appare all'hover, apre il popup di modifica
+		// pencil button next to the icon: appears on hover, opens the edit popup
 		const editBtn = row.createEl("button", { cls: "th-edit", attr: { "aria-label": t("editTask") } });
 		setIcon(editBtn, "pencil");
 		editBtn.onclick = (e) => {
@@ -1111,7 +1111,7 @@ export class TrackerRenderer {
 
 		const text = row.createDiv({ cls: "th-todo-text", attr: { title: t("clickToRename") } });
 		renderRich(text, todo.text);
-		// clic sul testo = rinomina inline (ma non sui link dentro il testo)
+		// click on the text = inline rename (but not on the links inside the text)
 		text.onclick = (e) => {
 			if ((e.target as HTMLElement).closest("a")) return;
 			e.stopPropagation();
@@ -1146,7 +1146,7 @@ export class TrackerRenderer {
 		}
 	}
 
-	/** Rinomina inline: sostituisce il testo con un input, salva su Invio/blur. */
+	/** Inline rename: replace the text with an input, save on Enter/blur. */
 	private startRename(el: HTMLElement, todo: Todo): void {
 		const input = document.createElement("input");
 		input.type = "text";

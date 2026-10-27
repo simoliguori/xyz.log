@@ -1,7 +1,7 @@
-/* Modello della composizione modulare: il widget è fatto di "tab", ciascuna una
-   griglia di riquadri (tile). Ogni tile ha un tipo e un ingombro in unità di
-   griglia — largo (orizzontale) o alto (verticale) a piacere. Tutto è
-   personalizzabile e salvato nella config. */
+/* Model of the modular composition: the widget is made of "tabs", each a grid
+   of tiles. Every tile has a type and a footprint in grid units — wide
+   (horizontal) or tall (vertical) as you like. Everything is customizable and
+   saved in the config. */
 
 export type TileType =
 	| "header"
@@ -15,11 +15,11 @@ export type TileType =
 export interface Tile {
 	id: string;
 	type: TileType;
-	/** larghezza in colonne (1..COLS) */
+	/** width in columns (1..COLS) */
 	w: number;
-	/** altezza in righe (1..6) */
+	/** height in rows (1..6) */
 	h: number;
-	/** per type "habit": l'id dell'abitudine mostrata */
+	/** for type "habit": the id of the habit shown */
 	habitId?: string;
 }
 
@@ -33,18 +33,18 @@ export interface AppConfig {
 	folder: string;
 	lang: "it" | "en";
 	accent: string;
-	/** sincronizza l'accent col colore di Obsidian (appearance.json) */
+	/** sync the accent with Obsidian's color (appearance.json) */
 	syncAccent: boolean;
 	opacity: number;
 	pinned: boolean;
 	autostart: boolean;
 	notifications: boolean;
-	/** indice della tab lasciata aperta, ricordata tra un avvio e l'altro */
+	/** index of the tab left open, remembered between launches */
 	activeTab: number;
 	tabs: TabLayout[];
 }
 
-/** Colonne della griglia del widget. */
+/** Columns of the widget grid. */
 export const COLS = 4;
 export const MAX_H = 6;
 
@@ -77,8 +77,8 @@ export function newTile(type: TileType): Tile {
 }
 
 export function defaultTabs(): TabLayout[] {
-	// Dashboard come il plugin Obsidian: data in alto, attività a sinistra (alta),
-	// abitudini in alto a destra e cronologia sotto. Niente riquadro statistiche.
+	// Dashboard like the Obsidian plugin: date on top, tasks on the left (tall),
+	// habits top-right and history below. No summary tile.
 	return [
 		{
 			id: uid(),

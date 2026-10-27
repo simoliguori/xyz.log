@@ -1,23 +1,22 @@
 import { addDays, streak } from "./parser";
 import { Category, Habit, HabitLog, Priority, Todo, TrackerData } from "./types";
 
-/* View-model puro e condiviso: trasforma i dati grezzi del tracker in strutture
-   pronte da disegnare (gruppi di task, righe abitudini con streak/striscia).
-   Nessuna dipendenza dal DOM: ogni client disegna a modo suo. */
+/* Pure, shared view-model: turns raw tracker data into draw-ready structures
+   (task groups, habit rows with streak/strip). No DOM dependency: each client
+   renders it its own way. */
 
 export type TodoGroupId = "today" | "next7" | "later" | "overdue" | "nodate";
 
 export interface TodoGroup {
 	id: TodoGroupId;
 	todos: Todo[];
-	/** true per il gruppo degli eventi scaduti/mancati (stile visivo d'allerta) */
+	/** true for the overdue/missed group (alert styling) */
 	overdue: boolean;
 }
 
 /**
- * Ordine dei gruppi: gli eventi con una data **futura** (e quelli di oggi) stanno
- * **sopra** quelli **mancati/scaduti**; le task senza data chiudono in fondo.
- * (Richiesta esplicita: futuro sopra, missati sotto.)
+ * Group order: events with a **future** date (and today's) sit **above** the
+ * **missed/overdue** ones; undated tasks go last.
  */
 const GROUP_ORDER: TodoGroupId[] = ["today", "next7", "later", "overdue", "nodate"];
 
@@ -29,7 +28,7 @@ function sortDated(a: Todo, b: Todo): number {
 	return a.priority - b.priority;
 }
 
-/** Raggruppa le task aperte per scadenza, col nuovo ordinamento (futuro sopra i missati). */
+/** Group open tasks by due date, with the ordering above (future over missed). */
 export function groupTodos(todos: Todo[], today: string): TodoGroup[] {
 	const week = addDays(today, 7);
 	const open = todos.filter((t) => !t.done);
@@ -44,8 +43,7 @@ export function groupTodos(todos: Todo[], today: string): TodoGroup[] {
 	for (const id of GROUP_ORDER) {
 		const list = buckets[id];
 		if (list.length === 0) continue;
-		// "senza data": più nuove in alto (ordine d'inserimento invertito);
-		// gli altri gruppi per data/ora.
+		// "no date": newest on top (reverse insertion order); the other groups by date/time.
 		if (id === "nodate") list.sort((a, b) => b.lineNo - a.lineNo);
 		else list.sort(sortDated);
 		groups.push({ id, todos: list, overdue: id === "overdue" });
@@ -53,7 +51,7 @@ export function groupTodos(todos: Todo[], today: string): TodoGroup[] {
 	return groups;
 }
 
-/** Task completate, più recenti prima (per la sezione "Completate"). */
+/** Completed tasks, most recent first (for the "Completed" section). */
 export function doneTodos(todos: Todo[], limit = 30): Todo[] {
 	return todos
 		.filter((t) => t.done)
@@ -61,7 +59,7 @@ export function doneTodos(todos: Todo[], limit = 30): Todo[] {
 		.slice(0, limit);
 }
 
-/** Task aperte raggruppate per lista → sezione (vista a cartelle). */
+/** Open tasks grouped by list → section (folder view). */
 export interface FolderView {
 	list: string;
 	sections: { section: string; todos: Todo[] }[];
@@ -88,7 +86,7 @@ export function groupTodosByFolder(todos: Todo[], inboxLabel: string): FolderVie
 	return out;
 }
 
-/* ---------------- Abitudini ---------------- */
+/* ---------------- Habits ---------------- */
 
 export interface HabitView {
 	habit: Habit;
@@ -96,7 +94,7 @@ export interface HabitView {
 	doneToday: boolean;
 	countToday: number;
 	streak: number;
-	/** ultimi N giorni (più vecchio → oggi): true se raggiunto il goal */
+	/** last N days (oldest → today): true when the goal was reached */
 	last: { date: string; done: boolean; today: boolean }[];
 }
 
@@ -123,16 +121,16 @@ export function buildHabitView(
 	};
 }
 
-/** Un gruppo di abitudini: una categoria (icona condivisa da ≥2) o una singola. */
+/** A habit group: a category (icon shared by ≥2) or a single habit. */
 export interface HabitGroup {
-	/** categoria quando ≥2 abitudini condividono l'icona, altrimenti null */
+	/** category when ≥2 habits share the icon, otherwise null */
 	category: { icon: string; name: string } | null;
 	habits: HabitView[];
 }
 
 /**
- * Abitudini raggruppate come nel plugin: quando ≥2 abitudini condividono la
- * stessa icona formano una categoria (nome preso da `categories:` o dall'icona).
+ * Habits grouped as in the plugin: when ≥2 habits share the same icon they form
+ * a category (name taken from `categories:` or from the icon).
  */
 export function buildHabitGroups(data: TrackerData, today: string): HabitGroup[] {
 	const byIcon = new Map<string, Habit[]>();
@@ -163,7 +161,7 @@ export function buildHabitGroups(data: TrackerData, today: string): HabitGroup[]
 	return groups;
 }
 
-/* ---------------- Promemoria (notifiche) ---------------- */
+/* ---------------- Reminders (notifications) ---------------- */
 
 export interface Reminder {
 	kind: "habit" | "todo";
@@ -171,15 +169,15 @@ export interface Reminder {
 	title: string;
 	/** "HH:mm" */
 	time: string;
-	/** solo per i todo: la data dell'evento (i promemoria abitudine sono giornalieri) */
+	/** todos only: the event date (habit reminders are daily) */
 	date?: string;
 }
 
 /**
- * Elenco di tutti i promemoria dichiarati nei dati:
- * - abitudini con `reminders: ["HH:mm", …]` → uno al giorno per orario;
- * - todo aperti con `📅 data ⏰ orario` → un promemoria all'orario di quel giorno.
- * I client lo usano per programmare le notifiche native.
+ * Every reminder declared in the data:
+ * - habits with `reminders: ["HH:mm", …]` → one per day, per time;
+ * - open todos with `📅 date ⏰ time` → one reminder at that day's time.
+ * Clients use this list to schedule native notifications.
  */
 export function collectReminders(data: TrackerData): Reminder[] {
 	const out: Reminder[] = [];

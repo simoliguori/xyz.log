@@ -14,47 +14,47 @@ function todo(line: string): Todo {
 	return parseTodoLine(line, 0)!;
 }
 
-test("groupTodos mette gli eventi futuri (e di oggi) SOPRA i mancati", () => {
+test("groupTodos puts future (and today's) events ABOVE missed ones", () => {
 	const todos = [
-		todo("- [ ] Scaduto 📅 2026-10-10"),
-		todo("- [ ] Oggi 📅 2026-10-22"),
-		todo("- [ ] Domani 📅 2026-10-23"),
-		todo("- [ ] Senza data"),
+		todo("- [ ] Overdue 📅 2026-10-10"),
+		todo("- [ ] Today 📅 2026-10-22"),
+		todo("- [ ] Tomorrow 📅 2026-10-23"),
+		todo("- [ ] No date"),
 	];
 	const groups = groupTodos(todos, today);
 	const order = groups.map((g) => g.id);
-	// today/next7 prima di overdue; nodate in fondo
+	// today/next7 before overdue; nodate last
 	assert.deepEqual(order, ["today", "next7", "overdue", "nodate"]);
 	assert.ok(order.indexOf("overdue") > order.indexOf("next7"));
 	assert.ok(order.indexOf("overdue") > order.indexOf("today"));
 });
 
-test("groupTodos ordina gli eventi datati per data e ora", () => {
+test("groupTodos sorts dated events by date and time", () => {
 	const todos = [
 		todo("- [ ] B 📅 2026-11-30 ⏰ 09:00"),
 		todo("- [ ] A 📅 2026-10-25 ⏰ 18:00"),
 		todo("- [ ] C 📅 2026-10-25 ⏰ 08:00"),
 	];
 	const groups = groupTodos(todos, today);
-	// 25/10 è nei prossimi 7 giorni; stessa data → ordina per ora (C prima di A)
+	// 25/10 is within the next 7 days; same date → sort by time (C before A)
 	const next7 = groups.find((g) => g.id === "next7")!;
 	assert.deepEqual(next7.todos.map((t) => t.text), ["C", "A"]);
-	// 30/11 è "più avanti"
+	// 30/11 is "later"
 	const later = groups.find((g) => g.id === "later")!;
 	assert.deepEqual(later.todos.map((t) => t.text), ["B"]);
 });
 
-test("groupTodos: le task senza data vanno dalla più nuova alla più vecchia", () => {
+test("groupTodos: undated tasks go from newest to oldest", () => {
 	const todos = [
-		parseTodoLine("- [ ] vecchia", 2)!,
-		parseTodoLine("- [ ] media", 5)!,
-		parseTodoLine("- [ ] nuova", 9)!,
+		parseTodoLine("- [ ] old", 2)!,
+		parseTodoLine("- [ ] mid", 5)!,
+		parseTodoLine("- [ ] new", 9)!,
 	];
 	const nodate = groupTodos(todos, today).find((g) => g.id === "nodate")!;
-	assert.deepEqual(nodate.todos.map((t) => t.text), ["nuova", "media", "vecchia"]);
+	assert.deepEqual(nodate.todos.map((t) => t.text), ["new", "mid", "old"]);
 });
 
-test("collectReminders raccoglie promemoria di abitudini ed eventi", () => {
+test("collectReminders gathers habit and event reminders", () => {
 	const habit: Habit = {
 		id: "lamictal",
 		name: "Lamictal",
@@ -71,7 +71,7 @@ test("collectReminders raccoglie promemoria di abitudini ed eventi", () => {
 		habits: [habit],
 		categories: [],
 		log: new Map() as HabitLog,
-		todos: [todo("- [ ] Visita 📅 2026-10-25 ⏰ 15:30")],
+		todos: [todo("- [ ] Appointment 📅 2026-10-25 ⏰ 15:30")],
 	};
 	const rem = collectReminders(data);
 	assert.equal(rem.filter((r) => r.kind === "habit").length, 2);
@@ -80,7 +80,7 @@ test("collectReminders raccoglie promemoria di abitudini ed eventi", () => {
 	assert.equal(ev.date, "2026-10-25");
 });
 
-test("buildHabitView calcola doneToday con goal e la striscia", () => {
+test("buildHabitView computes doneToday with goal and the strip", () => {
 	const habit: Habit = {
 		id: "lamictal",
 		name: "Lamictal",

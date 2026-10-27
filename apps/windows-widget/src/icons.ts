@@ -1,7 +1,7 @@
 import { icons } from "lucide";
 
-/* Rende le icone lucide (quelle usate dal plugin Obsidian) come SVG inline, così
-   le abitudini mostrano la loro icona anche nel widget. */
+/* Renders lucide icons (the ones used by the Obsidian plugin) as inline SVG, so
+   habits show their icon in the widget too. */
 
 type IconNode = [string, Record<string, string>][];
 

@@ -23,7 +23,7 @@ struct AppState {
     fired: Mutex<HashSet<String>>,
 }
 
-/* ------------------------- comandi ------------------------- */
+/* ------------------------- commands ------------------------- */
 
 #[tauri::command]
 fn get_config(state: State<AppState>) -> AppConfig {
@@ -53,8 +53,8 @@ fn write_file(state: State<AppState>, which: String, content: String) -> Result<
 #[tauri::command]
 fn pick_folder(app: AppHandle) -> Option<String> {
     use tauri_plugin_dialog::DialogExt;
-    // dialog NON bloccante: il comando gira fuori dal thread della UI, quindi
-    // aspettare la scelta qui non congela la finestra (il blocking_* sì).
+    // non-blocking dialog: the command runs off the UI thread, so waiting for
+    // the choice here doesn't freeze the window (blocking_* would).
     let (tx, rx) = std::sync::mpsc::channel();
     app.dialog().file().pick_folder(move |path| {
         let _ = tx.send(path);
@@ -124,11 +124,11 @@ fn set_autostart(app: AppHandle, on: bool) -> Result<(), String> {
     }
 }
 
-/* ------------------------- supporto ------------------------- */
+/* ------------------------- support ------------------------- */
 
 fn build_tray(app: &tauri::App) -> tauri::Result<()> {
-    let show = MenuItem::with_id(app, "show", "Mostra / Nascondi", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Esci", true, None::<&str>)?;
+    let show = MenuItem::with_id(app, "show", "Show / Hide", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &quit])?;
     let _tray = TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
@@ -195,7 +195,7 @@ fn start_watcher(app: AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        // ricorda posizione e dimensione della finestra tra un avvio e l'altro
+        // remember the window position and size between launches
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -248,5 +248,5 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("errore nell'avvio del widget xyz.log");
+        .expect("failed to start the xyz.log widget");
 }

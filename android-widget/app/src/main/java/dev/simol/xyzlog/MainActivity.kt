@@ -172,7 +172,7 @@ private fun MainScreen(initialHabitId: String?) {
     val pager = rememberPagerState(pageCount = { 2 })
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // header con data + tab
+        // header with date + tabs
         val today = LocalDate.now()
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 16.dp, bottom = 6.dp),
@@ -205,14 +205,14 @@ private fun MainScreen(initialHabitId: String?) {
         }
 
         error?.let {
-            Text("Errore: $it", color = Tokens.overdue, fontSize = 12.sp, modifier = Modifier.padding(20.dp, 4.dp))
+            Text("Error: $it", color = Tokens.overdue, fontSize = 12.sp, modifier = Modifier.padding(20.dp, 4.dp))
         }
 
         val d = data
         if (d == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    if (treeUri == null) "Scegli la cartella del vault ⚙" else "Caricamento…",
+                    if (treeUri == null) "Pick the vault folder ⚙" else "Loading…",
                     color = Tokens.muted, fontFamily = FontFamily.Monospace,
                 )
             }
@@ -230,7 +230,7 @@ private fun MainScreen(initialHabitId: String?) {
 @Composable
 private fun TabsRow(current: Int, accent: Accent, serif: FontFamily, onSelect: (Int) -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf("Abitudini", "Attività").forEachIndexed { i, label ->
+        listOf("Habits", "Tasks").forEachIndexed { i, label ->
             val active = i == current
             Text(
                 label,
@@ -245,7 +245,7 @@ private fun TabsRow(current: Int, accent: Accent, serif: FontFamily, onSelect: (
     }
 }
 
-/* ---------------- pagina Abitudini ---------------- */
+/* ---------------- Habits page ---------------- */
 
 @Composable
 private fun HabitsPage(
@@ -258,13 +258,13 @@ private fun HabitsPage(
 ) {
     var newHabit by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-        AddRow(newHabit, { newHabit = it }, "Nuova abitudine…", accent) {
+        AddRow(newHabit, { newHabit = it }, "New habit…", accent) {
             val name = newHabit.trim()
             if (name.isNotEmpty()) { act { addHabit(name) }; newHabit = "" }
         }
         Spacer(Modifier.height(6.dp))
         if (data.habits.isEmpty()) {
-            Text("Nessuna abitudine.", color = Tokens.muted, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+            Text("No habits.", color = Tokens.muted, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
         }
         for (habit in data.habits) {
             val counts = data.log[habit.id] ?: emptyMap()
@@ -365,19 +365,19 @@ private fun HabitSettings(habit: Habit, accent: Accent, act: (suspend VaultRepos
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        StepperRow("Volte al giorno", habit.goal) { v -> act { setHabitFields(habit.id, mapOf("goal" to if (v == 1) "" else v.toString())) } }
+        StepperRow("Times per day", habit.goal) { v -> act { setHabitFields(habit.id, mapOf("goal" to if (v == 1) "" else v.toString())) } }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Conteggio libero", color = Tokens.muted, fontFamily = FontFamily.Monospace, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text("Free count", color = Tokens.muted, fontFamily = FontFamily.Monospace, fontSize = 13.sp, modifier = Modifier.weight(1f))
             Switch(
                 checked = habit.countable,
                 onCheckedChange = { on -> act { setHabitFields(habit.id, mapOf("countable" to if (on) "true" else "")) } },
                 colors = SwitchDefaults.colors(checkedTrackColor = accent.base, checkedThumbColor = Tokens.text),
             )
         }
-        StepperRow("Ogni N giorni", habit.cadence) { v -> act { setHabitFields(habit.id, mapOf("cadence" to if (v == 1) "" else v.toString())) } }
+        StepperRow("Every N days", habit.cadence) { v -> act { setHabitFields(habit.id, mapOf("cadence" to if (v == 1) "" else v.toString())) } }
         RemindersEditor(habit, accent, act)
         Text(
-            "Elimina abitudine",
+            "Delete habit",
             color = Tokens.overdue,
             fontFamily = FontFamily.Monospace,
             fontSize = 12.sp,
@@ -390,7 +390,7 @@ private fun HabitSettings(habit: Habit, accent: Accent, act: (suspend VaultRepos
 private fun RemindersEditor(habit: Habit, accent: Accent, act: (suspend VaultRepository.() -> Unit) -> Unit) {
     var newTime by remember { mutableStateOf("") }
     Column {
-        Text("Promemoria", color = Tokens.muted, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+        Text("Reminders", color = Tokens.muted, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
         Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             for (time in habit.reminders) {
                 Row(
@@ -437,20 +437,20 @@ private fun StepperRow(label: String, value: Int, onChange: (Int) -> Unit) {
     }
 }
 
-/* ---------------- pagina Attività ---------------- */
+/* ---------------- Tasks page ---------------- */
 
 @Composable
 private fun TasksPage(data: TrackerData, today: LocalDate, accent: Accent, act: (suspend VaultRepository.() -> Unit) -> Unit) {
     var newTodo by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-        AddRow(newTodo, { newTodo = it }, "Nuova attività…", accent) {
+        AddRow(newTodo, { newTodo = it }, "New task…", accent) {
             val text = newTodo.trim()
             if (text.isNotEmpty()) { act { addTodo(text, TaskPriority.NONE, null, null) }; newTodo = "" }
         }
         Spacer(Modifier.height(6.dp))
         val groups = MarkdownParser.groupTodos(data.todos, today)
         if (groups.isEmpty()) {
-            Text("Tutto fatto ✨", color = Tokens.muted, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+            Text("All done ✨", color = Tokens.muted, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
         }
         for ((group, todos) in groups) {
             Text(
@@ -482,7 +482,7 @@ private fun TodoRow(todo: Todo, today: LocalDate, accent: Accent, act: (suspend 
         Text(todo.text, color = Tokens.text, fontFamily = FontFamily.Monospace, fontSize = 13.sp, modifier = Modifier.weight(1f))
         val due = todo.due
         val label = listOfNotNull(
-            due?.let { if (it == today) "oggi" else it.format(DateTimeFormatter.ofPattern("d MMM", Locale.ITALIAN)) },
+            due?.let { if (it == today) "today" else it.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)) },
             todo.time,
         ).joinToString(" ")
         if (label.isNotEmpty()) {
@@ -492,7 +492,7 @@ private fun TodoRow(todo: Todo, today: LocalDate, accent: Accent, act: (suspend 
     }
 }
 
-/* ---------------- impostazioni ---------------- */
+/* ---------------- settings ---------------- */
 
 @Composable
 private fun SettingsSheet(
@@ -513,19 +513,19 @@ private fun SettingsSheet(
         Modifier.fillMaxWidth().padding(16.dp).background(Tokens.bg2, RoundedCornerShape(12.dp)).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(if (treeConfigured) "Vault collegato ✓" else "Nessun vault configurato.", color = if (treeConfigured) accent.bright else Tokens.overdue, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+        Text(if (treeConfigured) "Vault connected ✓" else "No vault configured.", color = if (treeConfigured) accent.bright else Tokens.overdue, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
         Button(onClick = onPick, colors = ButtonDefaults.buttonColors(containerColor = accent.base, contentColor = Tokens.text)) {
-            Text("Scegli la cartella del vault", fontFamily = FontFamily.Monospace)
+            Text("Pick the vault folder", fontFamily = FontFamily.Monospace)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Notifiche promemoria", color = Tokens.text, fontFamily = FontFamily.Monospace, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text("Reminder notifications", color = Tokens.text, fontFamily = FontFamily.Monospace, fontSize = 13.sp, modifier = Modifier.weight(1f))
             Switch(
                 checked = notif,
                 onCheckedChange = { on -> notif = on; prefs.notificationsEnabled = on; NotificationScheduler.scheduleNext(context) },
                 colors = SwitchDefaults.colors(checkedTrackColor = accent.base, checkedThumbColor = Tokens.text),
             )
         }
-        Text("Opacità sfondo widget: ${alpha.toInt()}%", color = Tokens.text, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+        Text("Widget background opacity: ${alpha.toInt()}%", color = Tokens.text, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
         Slider(
             value = alpha, onValueChange = { alpha = it },
             onValueChangeFinished = { prefs.widgetAlpha = alpha.toInt(); onReload() },
@@ -551,7 +551,7 @@ private fun SettingsSheet(
     }
 }
 
-/* ---------------- helper UI ---------------- */
+/* ---------------- UI helpers ---------------- */
 
 @Composable
 private fun AddRow(value: String, onValue: (String) -> Unit, placeholder: String, accent: Accent, onAdd: () -> Unit) {
@@ -572,11 +572,11 @@ private fun AddRow(value: String, onValue: (String) -> Unit, placeholder: String
 }
 
 private fun groupLabel(g: MarkdownParser.TodoGroup): String = when (g) {
-    MarkdownParser.TodoGroup.TODAY -> "OGGI"
-    MarkdownParser.TodoGroup.NEXT7 -> "PROSSIMI 7 GIORNI"
-    MarkdownParser.TodoGroup.LATER -> "PIÙ AVANTI"
-    MarkdownParser.TodoGroup.OVERDUE -> "IN RITARDO"
-    MarkdownParser.TodoGroup.NODATE -> "SENZA DATA"
+    MarkdownParser.TodoGroup.TODAY -> "TODAY"
+    MarkdownParser.TodoGroup.NEXT7 -> "NEXT 7 DAYS"
+    MarkdownParser.TodoGroup.LATER -> "LATER"
+    MarkdownParser.TodoGroup.OVERDUE -> "OVERDUE"
+    MarkdownParser.TodoGroup.NODATE -> "NO DATE"
 }
 
 private fun prioColor(p: TaskPriority, accent: Accent): Color = when (p) {
@@ -589,8 +589,8 @@ private fun prioColor(p: TaskPriority, accent: Accent): Color = when (p) {
 }
 
 private fun headerDate(today: LocalDate): String {
-    val s = today.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ITALIAN))
-    return s.replaceFirstChar { it.uppercase(Locale.ITALIAN) }
+    val s = today.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH))
+    return s.replaceFirstChar { it.uppercase(Locale.ENGLISH) }
 }
 
 @Composable
@@ -612,7 +612,7 @@ private fun GithubHeatmap(dates: Set<LocalDate>, today: LocalDate, accent: Accen
                     Box(Modifier.width(12.dp).height(16.dp)) {
                         if (weekStart.monthValue != prevMonth) {
                             Text(
-                                weekStart.format(DateTimeFormatter.ofPattern("MMM", Locale.ITALIAN)),
+                                weekStart.format(DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH)),
                                 style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = Tokens.muted),
                                 maxLines = 1, softWrap = false,
                                 modifier = Modifier.wrapContentWidthStart(),
@@ -642,7 +642,7 @@ private fun GithubHeatmap(dates: Set<LocalDate>, today: LocalDate, accent: Accen
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text("$done completamenti nelle ultime $weeks settimane", style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = Tokens.muted))
+        Text("$done completions in the last $weeks weeks", style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = Tokens.muted))
     }
 }
 

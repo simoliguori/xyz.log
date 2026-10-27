@@ -1,7 +1,7 @@
 {
   "name": "@xyzlog/core",
   "version": "0.1.0",
-  "description": "Logica condivisa (parser markdown, view-model, i18n) di xyz.log, riusata da tutti i client.",
+  "description": "xyz.log shared logic (markdown parser, view-model, i18n), reused by every client.",
   "license": "MIT",
   "type": "commonjs",
   "main": "dist/index.js",

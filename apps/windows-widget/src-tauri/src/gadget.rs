@@ -1,11 +1,11 @@
-//! Comportamento "gadget da desktop" su Windows: opacità della finestra e
-//! aggancio al livello del wallpaper (WorkerW) così che il widget resti visibile
-//! anche con "mostra desktop" e non compaia nella barra delle applicazioni
-//! (skip_taskbar + alwaysOnBottom sono già impostati in tauri.conf.json).
+//! "Desktop gadget" behavior on Windows: window opacity and pinning to the
+//! wallpaper layer (WorkerW) so the widget stays visible even with "show desktop"
+//! and doesn't appear in the taskbar (skip_taskbar + alwaysOnBottom are already
+//! set in tauri.conf.json).
 //!
-//! NB: le API Win32 cambiano tra le versioni del crate `windows`; se la build
-//! segnala differenze di firma, è qui che vanno allineate. Fuori da Windows
-//! tutte le funzioni sono no-op, così il codice resta multipiattaforma.
+//! NB: the Win32 APIs change between versions of the `windows` crate; if the build
+//! reports signature differences, this is where to align them. Outside Windows all
+//! functions are no-ops, so the code stays cross-platform.
 
 use tauri::WebviewWindow;
 
@@ -23,8 +23,8 @@ pub fn set_opacity(window: &WebviewWindow, pct: u32) {
 }
 
 pub fn set_pinned(window: &WebviewWindow, on: bool) {
-    // in modalità gadget la finestra resta in fondo (sul desktop); disattivandola
-    // torna normale. Si tiene l'icona nella taskbar così non va mai "persa".
+    // in gadget mode the window stays at the bottom (on the desktop); turning it
+    // off makes it normal again. The taskbar icon is kept so it's never "lost".
     let _ = window.set_always_on_bottom(on);
     #[cfg(windows)]
     {
@@ -79,7 +79,7 @@ mod win {
         let hwnd = HWND(hwnd as *mut _);
         unsafe {
             if on {
-                // chiede a Progman di creare il WorkerW dietro le icone del desktop
+                // ask Progman to create the WorkerW behind the desktop icons
                 if let Ok(progman) = FindWindowW(w!("Progman"), PCWSTR::null()) {
                     let mut res: usize = 0;
                     let _ = SendMessageTimeoutW(
@@ -99,7 +99,7 @@ mod win {
                     let _ = SetParent(hwnd, HWND(w as *mut _));
                 }
             } else {
-                // stacca dal wallpaper: torna finestra normale (sempre in fondo)
+                // detach from the wallpaper: back to a normal window (still at the bottom)
                 let _ = SetParent(hwnd, HWND(std::ptr::null_mut()));
             }
         }

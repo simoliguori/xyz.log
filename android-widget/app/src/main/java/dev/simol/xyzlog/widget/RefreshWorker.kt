@@ -11,8 +11,8 @@ import dev.simol.xyzlog.notify.NotificationScheduler
 import java.util.concurrent.TimeUnit
 
 /**
- * Rinfresca periodicamente i widget così che le modifiche arrivate
- * via Obsidian Sync compaiano anche senza aprire l'app.
+ * Periodically refreshes the widgets so that changes arriving
+ * via Obsidian Sync show up without opening the app.
  */
 class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 

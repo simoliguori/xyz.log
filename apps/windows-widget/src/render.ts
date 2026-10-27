@@ -22,7 +22,7 @@ import { clear, el, renderRich } from "./dom";
 import { lucideSvg } from "./icons";
 import { playComplete } from "./sfx";
 
-/** Rinomina inline: sostituisce il testo con un input, salva su Invio/blur. */
+/** Inline rename: replace the text with an input, save on Enter/blur. */
 function startRename(textEl: HTMLElement, todo: Todo, ctx: RenderCtx): void {
 	const input = el("input", { cls: "xl-todo-rename", attr: { type: "text", value: todo.text } }) as HTMLInputElement;
 	textEl.replaceWith(input);
@@ -43,7 +43,7 @@ function startRename(textEl: HTMLElement, todo: Todo, ctx: RenderCtx): void {
 	input.onblur = () => commit(true);
 }
 
-/** Collassa l'elemento (altezza → 0) e poi esegue `fn`, come nel plugin. */
+/** Collapse the element (height → 0) then run `fn`, like in the plugin. */
 function collapseThenRun(node: HTMLElement, fn: () => void): void {
 	node.style.maxHeight = `${node.scrollHeight}px`;
 	node.style.overflow = "hidden";
@@ -79,9 +79,9 @@ export interface RenderCtx {
 	settingsOpen: Set<string>;
 	heatmapWeeks: number;
 	rerender: () => void;
-	/** apre il popup di modifica di una task (implementato dall'app) */
+	/** opens a task's edit popup (implemented by the app) */
 	editTodo: (todo: Todo) => void;
-	/** apre il selettore di icone lucide (implementato dall'app) */
+	/** opens the lucide icon picker (implemented by the app) */
 	pickIcon: (current: string, onChoose: (icon: string) => void) => void;
 }
 
@@ -221,7 +221,7 @@ function habitRow(v: HabitView, ctx: RenderCtx): HTMLElement {
 	if (counterMode) {
 		const counter = el("button", { cls: `xl-count ${v.doneToday ? "is-done" : ""}` });
 		if (habit.goal > 1) {
-			// frazione compatta (stile ½): attuale sopra, obiettivo sotto
+			// compact fraction (½ style): current on top, goal below
 			counter.classList.add("xl-count-frac");
 			counter.innerHTML = `<sup>${v.countToday}</sup><span class="xl-frac-slash">⁄</span><sub>${habit.goal}</sub>`;
 		} else {
@@ -262,7 +262,7 @@ function habitRow(v: HabitView, ctx: RenderCtx): HTMLElement {
 		row.appendChild(check);
 	}
 
-	// niente icona per la singola abitudine: le icone sono solo per la categoria
+	// no icon for a single habit: icons are only for the category
 	row.appendChild(el("span", { cls: "xl-habit-name", text: habit.name, attr: { title: habit.name } }));
 	if (v.streak > 0) row.appendChild(el("span", { cls: "xl-streak", text: `${v.streak}×` }));
 
@@ -561,14 +561,14 @@ function todoRow(todo: Todo, ctx: RenderCtx): HTMLElement {
 	}
 	const text = el("div", { cls: "xl-todo-text", attr: { title: ctx.lang === "it" ? "Clicca per rinominare" : "Click to rename" } });
 	renderRich(text, todo.text);
-	// clic sul testo = rinomina inline (ma non sui link)
+	// click on the text = inline rename (but not on the links)
 	text.onclick = (e) => {
 		if ((e.target as HTMLElement).closest("a")) return;
 		e.stopPropagation();
 		startRename(text, todo, ctx);
 	};
 	row.appendChild(text);
-	// clic nello spazio vuoto della riga = popup di modifica
+	// click in the empty space of the row = edit popup
 	row.onclick = () => ctx.editTodo(todo);
 
 	if (todo.due || todo.time) {
