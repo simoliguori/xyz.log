@@ -5,6 +5,7 @@ import {
 	doneTodos,
 	groupTodos,
 	groupTodosByFolder,
+	groupTodosBySource,
 	Habit,
 	HabitView,
 	Lang,
@@ -83,6 +84,8 @@ export interface RenderCtx {
 	editTodo: (todo: Todo) => void;
 	/** opens the lucide icon picker (implemented by the app) */
 	pickIcon: (current: string, onChoose: (icon: string) => void) => void;
+	/** opens a vault note in Obsidian (path without `.md`) */
+	openNote: (source: string) => void;
 }
 
 const PRIO_CLASS: Record<Priority, string> = {
@@ -440,9 +443,23 @@ export function renderTodos(host: HTMLElement, ctx: RenderCtx): void {
 	section.appendChild(todoAddForm(ctx));
 	const list = el("div", { cls: "xl-todo-scroll" });
 
+	// tasks exported from a note: one section per note, above everything else
+	const sources = groupTodosBySource(ctx.data.todos);
 	const groups = groupTodos(ctx.data.todos, ctx.today);
-	if (groups.length === 0) {
+	if (groups.length === 0 && sources.length === 0) {
 		list.appendChild(el("div", { cls: "xl-empty", text: ui("allDone", ctx.lang) + " ✨" }));
+	}
+	for (const g of sources) {
+		const groupEl = el("details", { cls: "xl-group xl-group-source", attr: { open: "" } });
+		groupEl.appendChild(
+			el("summary", { cls: "xl-group-title" }, [
+				el("span", { cls: "xl-group-name", text: g.title }),
+				el("span", { cls: "xl-group-count", text: String(g.todos.length) }),
+				noteLink(g.source, ctx),
+			])
+		);
+		for (const todo of g.todos) groupEl.appendChild(todoRow(todo, ctx));
+		list.appendChild(groupEl);
 	}
 	for (const g of groups) {
 		const groupEl = el("details", { cls: `xl-group ${g.overdue ? "xl-group-overdue" : ""}`, attr: { open: "" } });
@@ -488,6 +505,7 @@ export function renderFolders(host: HTMLElement, ctx: RenderCtx): void {
 			el("summary", { cls: "xl-folder-title" }, [
 				el("span", { text: folder.list }),
 				el("span", { cls: "xl-group-count", text: String(count) }),
+				folder.source ? noteLink(folder.source, ctx) : null,
 			])
 		);
 		for (const sec of folder.sections) {
@@ -509,6 +527,19 @@ export function renderFolders(host: HTMLElement, ctx: RenderCtx): void {
 	}
 	section.appendChild(scroll);
 	host.appendChild(section);
+}
+
+/** Button that opens, in Obsidian, the note a section's tasks were exported from. */
+function noteLink(source: string, ctx: RenderCtx): HTMLElement {
+	const label = ctx.lang === "it" ? "Apri la nota in Obsidian" : "Open the note in Obsidian";
+	const btn = el("button", { cls: "xl-note-link", attr: { title: label, "aria-label": label }, html: lucideSvg("arrow-up-right", 12) ?? "↗" });
+	btn.onclick = (e) => {
+		// inside a <summary>: don't toggle the group
+		e.preventDefault();
+		e.stopPropagation();
+		ctx.openNote(source);
+	};
+	return btn;
 }
 
 function todoAddForm(ctx: RenderCtx): HTMLElement {

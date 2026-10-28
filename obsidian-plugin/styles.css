@@ -1346,3 +1346,98 @@
 .th-root .th-count sup { vertical-align: 0.3em; }
 .th-root .th-count sub { vertical-align: -0.2em; }
 .th-root .th-count .th-frac-slash { font-size: 9px; margin: 0 -1px; opacity: 0.85; }
+
+/* ---------- tasks exported from a note ---------- */
+
+/* the note's section sits above the date groups, marked by the accent */
+.th-group-source .th-group-title {
+	color: var(--th-accent-bright);
+}
+.th-group-source .th-group-name,
+.th-folder-title > span:first-child {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
+}
+
+/* button that opens the source note */
+.th-root .th-note-link {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	color: var(--th-muted);
+	cursor: pointer;
+	padding: 2px;
+	height: auto;
+	display: inline-flex;
+	align-items: center;
+	border-radius: 4px;
+	transition: color 0.12s ease, background 0.12s ease;
+}
+.th-root .th-note-link:hover {
+	color: var(--th-accent-bright);
+	background: var(--th-surface);
+}
+.th-root .th-note-link svg {
+	width: 13px;
+	height: 13px;
+}
+
+/* "Export tasks into xyz.log": appears while hovering a task list in a note */
+.th-export-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	height: auto;
+	padding: 2px 8px;
+	border-radius: 999px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	box-shadow: none;
+	color: var(--text-muted);
+	font-family: var(--font-interface);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.4;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: opacity 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.th-export-btn:hover {
+	color: var(--text-accent);
+	border-color: var(--interactive-accent);
+}
+.th-export-icon {
+	display: inline-flex;
+}
+.th-export-icon svg {
+	width: 12px;
+	height: 12px;
+}
+
+/* reading view: top-right corner of the list, visible on hover */
+ul.th-exportable {
+	position: relative;
+}
+ul.th-exportable > .th-export-btn {
+	position: absolute;
+	top: 0;
+	right: 0;
+	opacity: 0;
+	pointer-events: none;
+}
+ul.th-exportable:hover > .th-export-btn {
+	opacity: 1;
+	pointer-events: auto;
+}
+/* no hover on touch screens: keep it visible but discreet */
+.is-mobile ul.th-exportable > .th-export-btn {
+	opacity: 0.6;
+	pointer-events: auto;
+}
+
+/* editor: after the first task of the hovered list */
+.th-export-btn.th-export-btn--inline {
+	margin-left: 10px;
+	vertical-align: middle;
+}

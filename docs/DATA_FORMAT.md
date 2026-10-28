@@ -121,6 +121,29 @@ Structure:
 - **Indented, non-task lines** right under a task → its **description** (joined). It may
   contain markdown links `[text](url)` and bare URLs, which are rendered clickable.
 
+### Tasks exported from a note
+
+In Obsidian, **Export tasks into xyz.log** (command palette, or the button that shows up
+while hovering a task list in a note) copies the note's open tasks into a section of their
+own, whose `##` heading is a link to the note:
+
+```markdown
+## [[Projects/Launch plan|Launch plan]]
+
+- [ ] Write the brief 📅 2026-11-02
+	context from the note
+- [ ] Book the venue
+```
+
+- Heading: `## [[path/to/Note]]` or `## [[path/to/Note|Title]]` (vault path, no `.md`). The
+  list takes the note's title (alias, or the file name).
+- Every client shows these sections **above all the date groups** (latest export first,
+  note order inside), with a button that opens the note in Obsidian.
+- Only open tasks are copied, flattened to the top level, each with its description (the
+  lines indented deeper right below it). Fenced code blocks are skipped.
+- Exporting again adds only the tasks whose text isn't in the section yet, so nothing is
+  duplicated. The note itself is not modified.
+
 Task fields (all optional, any order after the text):
 
 | Field | Syntax | Notes |
@@ -150,4 +173,5 @@ Rules:
 > implementation is **`packages/core`** (TypeScript), reused by the Windows widget; the
 > Obsidian plugin has its own copy and the Android app mirrors it in Kotlin
 > (`MarkdownParser.kt`). All three now cover `icon`/`cadence`/`goal`/`countable`/`start`/
-> `duration`/`reminders`, categories, Todo sub-folders/descriptions and the `⏰` time.
+> `duration`/`reminders`, categories, Todo sub-folders/descriptions, the `⏰` time and the
+> `## [[Note]]` sections of exported tasks.

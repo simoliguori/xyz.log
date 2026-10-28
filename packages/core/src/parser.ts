@@ -189,6 +189,7 @@ export function parseTodos(content: string): Todo[] {
 	const lines = content.split(/\r?\n/);
 	let list = "";
 	let section = "";
+	let source = "";
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
 		const h2 = line.match(/^##\s+(.+?)\s*$/);
@@ -198,7 +199,10 @@ export function parseTodos(content: string): Todo[] {
 			continue;
 		}
 		if (h2) {
-			list = h2[1].trim();
+			// `## [[Note]]` = tasks exported from a note: the list takes its title
+			const src = parseSourceHeading(h2[1]);
+			list = src ? src.title : h2[1].trim();
+			source = src ? src.source : "";
 			section = "";
 			continue;
 		}
@@ -214,10 +218,127 @@ export function parseTodos(content: string): Todo[] {
 		}
 		if (list) t.list = list;
 		if (section) t.section = section;
+		if (source) t.source = source;
 		if (desc.length) t.description = desc.join("\n");
 		todos.push(t);
 	}
 	return todos;
+}
+
+/* ---------- tasks exported from a note ---------- */
+
+/** Heading text `[[path/to/Note]]` or `[[path/to/Note|Title]]`. */
+const SOURCE_HEADING_RE = /^\[\[([^\]|]+?)(?:\|([^\]]+))?\]\]$/;
+
+/** Read a `##` heading as a link to the note its tasks were exported from. */
+export function parseSourceHeading(heading: string): { source: string; title: string } | null {
+	const m = heading.trim().match(SOURCE_HEADING_RE);
+	if (!m) return null;
+	const source = m[1].trim().replace(/\.md$/i, "");
+	const title = (m[2] ?? source.split("/").pop() ?? source).trim();
+	return { source, title };
+}
+
+/** The `##` heading for the tasks of the note at `path` (vault-relative). */
+export function sourceHeading(path: string): string {
+	const source = path.replace(/\.md$/i, "");
+	const title = source.split("/").pop() ?? source;
+	return source === title ? `## [[${source}]]` : `## [[${source}|${title}]]`;
+}
+
+/**
+ * Open tasks of a note, ready to be copied into Todo.md: one block per task
+ * (the task flattened to the top level, then its description — the lines
+ * indented deeper right below it — tab-indented). Done tasks and fenced code
+ * blocks are skipped; `from`/`to` limit the scan to a line range (inclusive).
+ */
+export function extractNoteTasks(content: string, from = 0, to = Infinity): string[][] {
+	const lines = content.split(/\r?\n/);
+	const blocks: string[][] = [];
+	let fence = "";
+	let cur: { indent: number; lines: string[] } | null = null;
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		const f = line.match(/^\s*(`{3,}|~{3,})/);
+		if (f) {
+			if (!fence) fence = f[1][0];
+			else if (f[1][0] === fence) fence = "";
+			cur = null;
+			continue;
+		}
+		if (fence || i < from || i > to) {
+			cur = null;
+			continue;
+		}
+		const m = line.match(TODO_LINE_RE);
+		if (m) {
+			cur = null;
+			const text = m[3].trim();
+			if (m[2] !== " " || !text) continue;
+			const block = [`- [ ] ${text}`];
+			blocks.push(block);
+			cur = { indent: m[1].length, lines: block };
+		} else if (cur && line.trim() !== "" && (line.match(/^\s*/)?.[0].length ?? 0) > cur.indent) {
+			cur.lines.push(`\t${line.trim()}`);
+		} else {
+			cur = null;
+		}
+	}
+	return blocks;
+}
+
+/**
+ * Add task blocks (from `extractNoteTasks`) to the Todo.md section of the note
+ * at `path`, creating the section at the end of the file when missing. Tasks
+ * already in the section (same text, done or not) are skipped, so exporting
+ * the same note twice doesn't duplicate anything.
+ */
+export function addSourceTasks(
+	content: string,
+	path: string,
+	blocks: string[][]
+): { content: string; added: number } {
+	const source = path.replace(/\.md$/i, "");
+	const lines = content.split(/\r?\n/);
+	let start = -1;
+	let end = lines.length;
+	for (let i = 0; i < lines.length; i++) {
+		const h2 = lines[i].match(/^##\s+(.+?)\s*$/);
+		if (start < 0 && h2 && parseSourceHeading(h2[1])?.source === source) {
+			start = i;
+		} else if (start >= 0 && /^#{1,2}\s/.test(lines[i])) {
+			end = i;
+			break;
+		}
+	}
+
+	const seen = new Set<string>();
+	if (start >= 0) {
+		for (let i = start + 1; i < end; i++) {
+			const t = parseTodoLine(lines[i], i);
+			if (t) seen.add(t.text);
+		}
+	}
+	const fresh = blocks.filter((b) => {
+		const t = parseTodoLine(b[0], 0);
+		if (!t || seen.has(t.text)) return false;
+		seen.add(t.text);
+		return true;
+	});
+	if (fresh.length === 0) return { content, added: 0 };
+
+	if (start < 0) {
+		let last = lines.length - 1;
+		while (last >= 0 && lines[last].trim() === "") last--;
+		const head = lines.slice(0, last + 1);
+		if (head.length) head.push("");
+		head.push(sourceHeading(path), "", ...fresh.flat(), "");
+		return { content: head.join("\n"), added: fresh.length };
+	}
+	let at = end;
+	while (at > start + 1 && lines[at - 1].trim() === "") at--;
+	lines.splice(at, 0, ...fresh.flat());
+	return { content: lines.join("\n"), added: fresh.length };
 }
 
 export function serializeTodo(

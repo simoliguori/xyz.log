@@ -2,6 +2,7 @@ package dev.simol.xyzlog
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -448,9 +449,30 @@ private fun TasksPage(data: TrackerData, today: LocalDate, accent: Accent, act: 
             if (text.isNotEmpty()) { act { addTodo(text, TaskPriority.NONE, null, null) }; newTodo = "" }
         }
         Spacer(Modifier.height(6.dp))
+        val sources = MarkdownParser.groupBySource(data.todos)
         val groups = MarkdownParser.groupTodos(data.todos, today)
-        if (groups.isEmpty()) {
+        if (groups.isEmpty() && sources.isEmpty()) {
             Text("All done ✨", color = Tokens.muted, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+        }
+        // tasks exported from a note: one section per note, above everything else
+        val context = LocalContext.current
+        for (g in sources) {
+            Row(Modifier.padding(top = 10.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(g.title.uppercase(), color = accent.bright, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                Text(
+                    "↗",
+                    color = Tokens.muted,
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .clickable {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(MarkdownParser.obsidianOpenUrl(g.source))))
+                            }
+                        }
+                        .padding(horizontal = 8.dp),
+                )
+            }
+            for (todo in g.todos) TodoRow(todo, today, accent, act)
         }
         for ((group, todos) in groups) {
             Text(

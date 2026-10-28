@@ -31,7 +31,8 @@ function sortDated(a: Todo, b: Todo): number {
 /** Group open tasks by due date, with the ordering above (future over missed). */
 export function groupTodos(todos: Todo[], today: string): TodoGroup[] {
 	const week = addDays(today, 7);
-	const open = todos.filter((t) => !t.done);
+	// tasks exported from a note have their own section (groupTodosBySource)
+	const open = todos.filter((t) => !t.done && !t.source);
 	const buckets: Record<TodoGroupId, Todo[]> = {
 		today: open.filter((t) => t.due === today),
 		next7: open.filter((t) => t.due && t.due > today && t.due <= week),
@@ -51,6 +52,34 @@ export function groupTodos(todos: Todo[], today: string): TodoGroup[] {
 	return groups;
 }
 
+/** Open tasks exported from a note (`## [[Note]]` in Todo.md), one group per note. */
+export interface SourceGroup {
+	/** vault path of the note (no `.md`), to open it */
+	source: string;
+	/** the note's title, used as the section heading */
+	title: string;
+	todos: Todo[];
+}
+
+/**
+ * Exported tasks, grouped by note: these sections sit above every date group.
+ * Latest export first (new sections are appended at the end of the file);
+ * inside a section the tasks keep the note's order.
+ */
+export function groupTodosBySource(todos: Todo[]): SourceGroup[] {
+	const groups = new Map<string, SourceGroup>();
+	for (const t of todos) {
+		if (t.done || !t.source) continue;
+		let g = groups.get(t.source);
+		if (!g) {
+			g = { source: t.source, title: t.list ?? t.source, todos: [] };
+			groups.set(t.source, g);
+		}
+		g.todos.push(t);
+	}
+	return [...groups.values()].reverse();
+}
+
 /** Completed tasks, most recent first (for the "Completed" section). */
 export function doneTodos(todos: Todo[], limit = 30): Todo[] {
 	return todos
@@ -62,6 +91,8 @@ export function doneTodos(todos: Todo[], limit = 30): Todo[] {
 /** Open tasks grouped by list → section (folder view). */
 export interface FolderView {
 	list: string;
+	/** set when the list holds tasks exported from a note (vault path, no `.md`) */
+	source?: string;
 	sections: { section: string; todos: Todo[] }[];
 }
 
@@ -78,10 +109,9 @@ export function groupTodosByFolder(todos: Todo[], inboxLabel: string): FolderVie
 	}
 	const out: FolderView[] = [];
 	for (const [list, secs] of lists) {
-		out.push({
-			list,
-			sections: [...secs.entries()].map(([section, todos]) => ({ section, todos })),
-		});
+		const sections = [...secs.entries()].map(([section, todos]) => ({ section, todos }));
+		const source = sections[0].todos[0].source;
+		out.push(source ? { list, source, sections } : { list, sections });
 	}
 	return out;
 }

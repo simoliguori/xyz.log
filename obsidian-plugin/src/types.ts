@@ -56,4 +56,6 @@ export interface Todo {
 	section?: string;
 	/** free description (indented lines under the task), may contain markdown links */
 	description?: string;
+	/** vault path (no `.md`) of the note the task was exported from (heading `## [[Note]]`) */
+	source?: string;
 }

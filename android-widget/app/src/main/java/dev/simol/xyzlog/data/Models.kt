@@ -48,6 +48,15 @@ data class Todo(
     val list: String? = null,
     val section: String? = null,
     val description: String? = null,
+    /** vault path (no `.md`) of the note the task was exported from (heading `## [[Note]]`) */
+    val source: String? = null,
+)
+
+/** Open tasks exported from one note (mirror of core::SourceGroup). */
+data class SourceGroup(
+    val source: String,
+    val title: String,
+    val todos: List<Todo>,
 )
 
 /** habitId -> (date -> number of completions that day) */

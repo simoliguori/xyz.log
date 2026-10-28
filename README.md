@@ -55,6 +55,10 @@ step instead of drifting apart.
 - **Sub-folders** — group with `## list` / `### section` headings.
 - **Descriptions** — indented lines under a task, with clickable links.
 - Two views: grouped **by date** (upcoming above overdue, undated last) or **by folder**.
+- **Export from any note** — hover a task list in a note (or use the command
+  palette) and pick **Export tasks into xyz.log**: the open tasks land in a
+  section named after the note, shown above all the others in the plugin and
+  in the widgets, with a button that takes you back to the note.
 
 ## Import from TickTick
 

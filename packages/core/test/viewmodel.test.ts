@@ -1,8 +1,9 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { parseTodoLine } from "../src/parser";
+import { parseTodoLine, parseTodos } from "../src/parser";
 import {
 	groupTodos,
+	groupTodosBySource,
 	collectReminders,
 	buildHabitView,
 } from "../src/viewmodel";
@@ -100,4 +101,21 @@ test("buildHabitView computes doneToday with goal and the strip", () => {
 	assert.equal(v.last.length, 7);
 	assert.equal(v.last[6].today, true);
 	assert.equal(v.last[6].done, true);
+});
+
+test("exported tasks get their own section, out of the date groups", () => {
+	const todos = parseTodos(
+		"# Todo\n\n- [ ] Loose 📅 2026-10-10\n\n## [[Notes/Trip]]\n\n- [ ] Book train 📅 2026-10-10\n- [ ] Pack\n\n## [[Shopping]]\n\n- [ ] Milk\n- [x] Bread"
+	);
+	const groups = groupTodos(todos, today);
+	assert.deepEqual(groups.map((g) => [g.id, g.todos.map((t) => t.text)]), [["overdue", ["Loose"]]]);
+	const sources = groupTodosBySource(todos);
+	// latest export (end of file) on top; note order inside
+	assert.deepEqual(
+		sources.map((g) => [g.title, g.source, g.todos.map((t) => t.text)]),
+		[
+			["Shopping", "Shopping", ["Milk"]],
+			["Trip", "Notes/Trip", ["Book train", "Pack"]],
+		]
+	);
 });

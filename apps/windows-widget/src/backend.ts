@@ -31,6 +31,8 @@ export interface Backend {
 	setOpacity(pct: number): Promise<void>;
 	setPinned(on: boolean): Promise<void>;
 	setAutostart(on: boolean): Promise<void>;
+	/** open a vault note (path without `.md`, relative to the vault) in Obsidian */
+	openNote(source: string): Promise<void>;
 	/** Obsidian's current accent color (from appearance.json), or null */
 	obsidianAccent(): Promise<string | null>;
 	minimizeWindow(): Promise<void>;
@@ -135,6 +137,10 @@ class TauriBackend implements Backend {
 		await this.ready;
 		return this.invoke<string | null>("obsidian_accent");
 	}
+	async openNote(source: string): Promise<void> {
+		await this.ready;
+		await this.invoke("open_note", { note: source });
+	}
 	async minimizeWindow(): Promise<void> {
 		await this.ready;
 		await this.invoke("minimize_window");
@@ -211,6 +217,11 @@ categories:
 - [ ] lidar prototype
 	description on indented lines
 	with a [link](https://example.com)
+
+## [[Projects/Launch plan|Launch plan]]
+
+- [ ] Write the brief 📅 ${iso(1)}
+- [ ] Book the venue
 `,
 };
 
@@ -279,6 +290,10 @@ class MockBackend implements Backend {
 	async setAutostart(_on: boolean): Promise<void> {}
 	async obsidianAccent(): Promise<string | null> {
 		return null;
+	}
+	async openNote(source: string): Promise<void> {
+		// no vault in the preview: hand the link to the browser
+		window.open(`obsidian://open?file=${encodeURIComponent(source)}`);
 	}
 	async minimizeWindow(): Promise<void> {}
 	async closeWindow(): Promise<void> {}

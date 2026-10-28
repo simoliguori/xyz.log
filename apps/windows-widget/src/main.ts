@@ -203,6 +203,7 @@ class App {
 				this.iconPicker = { current, onChoose };
 				this.render();
 			},
+			openNote: (source) => void this.backend.openNote(source),
 		};
 	}
 

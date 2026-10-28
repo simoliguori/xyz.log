@@ -935,18 +935,41 @@ export class TrackerRenderer {
 		// no date: newest on top (reverse insertion order)
 		const byNewest = (a: Todo, b: Todo) => b.lineNo - a.lineNo;
 
+		// Tasks exported from a note get their own section, above everything else.
+		const dated = open.filter((td) => !td.source);
 		// Events with a future date (and today's) sit above overdue/missed ones;
 		// undated tasks go last (newest first).
 		const groups: [string, Todo[], string, (a: Todo, b: Todo) => number][] = [
-			[t("today"), open.filter((td) => td.due === today), "", byPrioThenDue],
-			[t("next7"), open.filter((td) => td.due && td.due > today && td.due <= week), "", byPrioThenDue],
-			[t("later"), open.filter((td) => td.due && td.due > week), "", byPrioThenDue],
-			[t("overdue"), open.filter((td) => td.due && td.due < today), "th-group-overdue", byPrioThenDue],
-			[t("noDate"), open.filter((td) => !td.due), "", byNewest],
+			[t("today"), dated.filter((td) => td.due === today), "", byPrioThenDue],
+			[t("next7"), dated.filter((td) => td.due && td.due > today && td.due <= week), "", byPrioThenDue],
+			[t("later"), dated.filter((td) => td.due && td.due > week), "", byPrioThenDue],
+			[t("overdue"), dated.filter((td) => td.due && td.due < today), "th-group-overdue", byPrioThenDue],
+			[t("noDate"), dated.filter((td) => !td.due), "", byNewest],
 		];
 
 		if (open.length === 0) {
 			list.createDiv({ cls: "th-empty", text: t("allDone") });
+		}
+
+		// one section per note, latest export first (sections are appended to Todo.md)
+		const bySource = new Map<string, Todo[]>();
+		for (const td of open) {
+			if (!td.source) continue;
+			if (!bySource.has(td.source)) bySource.set(td.source, []);
+			bySource.get(td.source)!.push(td);
+		}
+		for (const [source, todos] of [...bySource].reverse()) {
+			const key = `s:${source}`;
+			const group = list.createEl("details", {
+				cls: "th-group th-group-source",
+				attr: this.collapsibleOpen(key),
+			});
+			this.trackCollapse(group, key);
+			const h = group.createEl("summary", { cls: "th-group-title" });
+			h.createSpan({ cls: "th-group-name", text: todos[0].list ?? source });
+			h.createSpan({ cls: "th-group-count", text: String(todos.length) });
+			this.renderNoteLink(h, source);
+			for (const todo of todos) this.renderTodoRow(group, todo, today);
 		}
 
 		for (const [label, todos, cls, sortFn] of groups) {
@@ -1008,6 +1031,8 @@ export class TrackerRenderer {
 			sum.createSpan({ text: listName });
 			const count = [...secs.values()].reduce((a, b) => a + b.length, 0);
 			sum.createSpan({ cls: "th-group-count", text: String(count) });
+			const source = [...secs.values()][0][0].source;
+			if (source) this.renderNoteLink(sum, source);
 
 			for (const [secName, todos] of secs) {
 				if (secName) {
@@ -1021,6 +1046,21 @@ export class TrackerRenderer {
 				}
 			}
 		}
+	}
+
+	/** Button that opens the note a section's tasks were exported from. */
+	private renderNoteLink(parent: HTMLElement, source: string): void {
+		const btn = parent.createEl("button", {
+			cls: "th-note-link",
+			attr: { "aria-label": t("openNote"), title: t("openNote") },
+		});
+		setIcon(btn, "arrow-up-right");
+		btn.onclick = (e) => {
+			// inside a <summary>: don't toggle the group
+			e.preventDefault();
+			e.stopPropagation();
+			void this.plugin.app.workspace.openLinkText(source, this.plugin.store.todoPath, Platform.isMobile ? false : "tab");
+		};
 	}
 
 	private renderAddForm(section: HTMLElement): void {

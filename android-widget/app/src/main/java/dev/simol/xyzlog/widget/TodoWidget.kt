@@ -1,6 +1,8 @@
 package dev.simol.xyzlog.widget
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -16,6 +18,7 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
@@ -39,6 +42,7 @@ import androidx.glance.unit.ColorProvider
 import dev.simol.xyzlog.MainActivity
 import dev.simol.xyzlog.R
 import dev.simol.xyzlog.data.MarkdownParser
+import dev.simol.xyzlog.data.SourceGroup
 import dev.simol.xyzlog.data.TaskPriority
 import dev.simol.xyzlog.data.Todo
 import dev.simol.xyzlog.data.TrackerData
@@ -105,10 +109,12 @@ class TodoWidget : GlanceAppWidget() {
                     modifier = GlanceModifier.clickable(actionStartActivity<MainActivity>())
                 )
                 else -> {
-                    // order: today/future on top, overdue below, undated last
-                    val open = MarkdownParser.groupTodos(data.todos, today)
-                        .flatMap { it.second }
-                        .take(30)
+                    // order: sections exported from a note first (with their heading),
+                    // then today/future, overdue below, undated last
+                    val open: List<Any> = (
+                        MarkdownParser.groupBySource(data.todos).flatMap { listOf(it) + it.todos } +
+                            MarkdownParser.groupTodos(data.todos, today).flatMap { it.second }
+                        ).take(30)
                     if (open.isEmpty()) {
                         Text(
                             text = "Tutto fatto ✨",
@@ -116,11 +122,36 @@ class TodoWidget : GlanceAppWidget() {
                         )
                     } else {
                         LazyColumn {
-                            items(open) { todo -> TodoRow(todo, today, accent) }
+                            items(open) { item ->
+                                when (item) {
+                                    is SourceGroup -> SourceHeader(item, accent)
+                                    is Todo -> TodoRow(item, today, accent)
+                                    else -> {}
+                                }
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+
+    /** Heading of the tasks exported from a note: tap to open it in Obsidian. */
+    @Composable
+    private fun SourceHeader(group: SourceGroup, accent: Accent) {
+        val open = Intent(Intent.ACTION_VIEW, Uri.parse(MarkdownParser.obsidianOpenUrl(group.source)))
+        Row(
+            modifier = GlanceModifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp)
+                .clickable(actionStartActivity(open)),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = group.title.uppercase(),
+                style = TextStyle(color = ColorProvider(accent.bright), fontSize = 11.sp, fontFamily = FontFamily.Monospace),
+                maxLines = 1,
+                modifier = GlanceModifier.defaultWeight()
+            )
+            Text(text = "↗", style = TextStyle(color = ColorProvider(Tokens.muted), fontSize = 13.sp))
         }
     }
 

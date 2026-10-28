@@ -866,6 +866,36 @@ body {
 	color: var(--xl-overdue);
 }
 
+/* tasks exported from a note: their own section, above the date groups */
+.xl-group-source .xl-group-title {
+	color: var(--xl-accent-bright);
+}
+
+.xl-group-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
+}
+
+/* opens the source note in Obsidian */
+.xl-note-link {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px;
+	border: none;
+	border-radius: 4px;
+	background: transparent;
+	color: var(--xl-muted);
+	cursor: pointer;
+	transition: color 0.12s ease, background 0.12s ease;
+}
+
+.xl-note-link:hover {
+	color: var(--xl-accent-bright);
+	background: var(--xl-surface);
+}
+
 .xl-todo {
 	padding: 3px 6px;
 	border-radius: 6px;

@@ -93,6 +93,14 @@ const S = {
 	// commands / ribbon
 	openTracker: { en: "Open xyz.log", it: "Apri xyz.log" },
 	insertBlock: { en: "Insert xyz.log block", it: "Inserisci blocco xyz.log" },
+	// export tasks from a note
+	exportTasks: { en: "Export tasks into xyz.log", it: "Esporta le task in xyz.log" },
+	exportNone: { en: "No open tasks to export here.", it: "Nessuna task aperta da esportare qui." },
+	exportUpToDate: {
+		en: "These tasks are already in xyz.log.",
+		it: "Queste task sono già in xyz.log.",
+	},
+	openNote: { en: "Open the note", it: "Apri la nota" },
 } as const;
 
 export function t(key: keyof typeof S): string {
@@ -137,6 +145,10 @@ export const tf = {
 		LANG === "it"
 			? `Trovate ${tasks} attività in ${lists} liste.`
 			: `Found ${tasks} tasks across ${lists} lists.`,
+	exported: (n: number, note: string) =>
+		LANG === "it"
+			? `${n === 1 ? "1 task esportata" : `${n} task esportate`} da "${note}" in xyz.log.`
+			: `Exported ${n === 1 ? "1 task" : `${n} tasks`} from "${note}" into xyz.log.`,
 	importDone: (n: number) =>
 		LANG === "it" ? `Importate ${n} attività da TickTick.` : `Imported ${n} tasks from TickTick.`,
 };

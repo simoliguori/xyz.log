@@ -3,6 +3,8 @@ import { test } from "node:test";
 import {
 	parseHabits,
 	parseTodos,
+	extractNoteTasks,
+	addSourceTasks,
 	parseLog,
 	parseTodoLine,
 	serializeTodo,
@@ -115,4 +117,58 @@ test("addHabitToFrontmatter and setHabitFields write reminders as an array", () 
 	const b = habits.find((h) => h.id === "b")!;
 	assert.equal(b.goal, 2);
 	assert.deepEqual(b.reminders, ["08:00", "20:00"]);
+});
+
+/* ---------- tasks exported from a note ---------- */
+
+test("parseTodos reads a `## [[Note]]` heading as the note the tasks came from", () => {
+	const todos = parseTodos(
+		"# Todo\n\n## [[Projects/Launch plan|Launch plan]]\n\n- [ ] Write the brief\n\n## [[Groceries]]\n\n- [ ] Milk\n\n## Inbox\n\n- [ ] Plain"
+	);
+	assert.equal(todos[0].list, "Launch plan");
+	assert.equal(todos[0].source, "Projects/Launch plan");
+	assert.equal(todos[1].list, "Groceries");
+	assert.equal(todos[1].source, "Groceries");
+	assert.equal(todos[2].list, "Inbox");
+	assert.equal(todos[2].source, undefined);
+});
+
+test("extractNoteTasks keeps open tasks with their description, skips done ones and code", () => {
+	const note = [
+		"# Plan",
+		"- [ ] Draft 📅 2026-11-02",
+		"  some context",
+		"  - [ ] Sub step",
+		"- [x] Already done",
+		"  hidden note",
+		"```",
+		"- [ ] not a task",
+		"```",
+		"Text",
+		"- [ ] Last",
+	].join("\n");
+	assert.deepEqual(extractNoteTasks(note), [
+		["- [ ] Draft 📅 2026-11-02", "\tsome context"],
+		["- [ ] Sub step"],
+		["- [ ] Last"],
+	]);
+	// line range: only the last task
+	assert.deepEqual(extractNoteTasks(note, 10, 10), [["- [ ] Last"]]);
+});
+
+test("addSourceTasks creates the section once and doesn't duplicate on re-export", () => {
+	const todo = "# Todo\n\n- [ ] Existing\n";
+	const first = addSourceTasks(todo, "Projects/Launch plan.md", [["- [ ] A", "\tdesc"], ["- [ ] B"]]);
+	assert.equal(first.added, 2);
+	assert.equal(
+		first.content,
+		"# Todo\n\n- [ ] Existing\n\n## [[Projects/Launch plan|Launch plan]]\n\n- [ ] A\n\tdesc\n- [ ] B\n"
+	);
+	const second = addSourceTasks(first.content, "Projects/Launch plan.md", [["- [ ] A"], ["- [ ] C"]]);
+	assert.equal(second.added, 1);
+	assert.equal(
+		second.content,
+		"# Todo\n\n- [ ] Existing\n\n## [[Projects/Launch plan|Launch plan]]\n\n- [ ] A\n\tdesc\n- [ ] B\n- [ ] C\n"
+	);
+	assert.equal(addSourceTasks(second.content, "Projects/Launch plan.md", [["- [ ] B"]]).added, 0);
 });

@@ -19,6 +19,7 @@ object MarkdownParser {
     private val YAML_FIELD = Regex("""^\s+(\w+):\s*(.*)$""")
     private val H2 = Regex("""^##\s+(.+?)\s*$""")
     private val H3 = Regex("""^###\s+(.+?)\s*$""")
+    private val SOURCE_HEADING = Regex("""^\[\[([^\]|]+?)(?:\|([^\]]+))?]]$""")
 
     private fun unquote(s: String): String {
         val t = s.trim()
@@ -198,13 +199,22 @@ object MarkdownParser {
         val lines = content.split(Regex("\r?\n"))
         var list = ""
         var section = ""
+        var source = ""
         var i = 0
         while (i < lines.size) {
             val line = lines[i]
             val h3 = H3.find(line)
             if (h3 != null) { section = h3.groupValues[1].trim(); i++; continue }
             val h2 = H2.find(line)
-            if (h2 != null) { list = h2.groupValues[1].trim(); section = ""; i++; continue }
+            if (h2 != null) {
+                // `## [[Note]]` = tasks exported from a note: the list takes its title
+                val src = parseSourceHeading(h2.groupValues[1])
+                list = src?.second ?: h2.groupValues[1].trim()
+                source = src?.first ?: ""
+                section = ""
+                i++
+                continue
+            }
             val t = parseTodoLine(line)
             if (t == null) { i++; continue }
             // description: indented non-task lines right below
@@ -220,12 +230,25 @@ object MarkdownParser {
                     list = list.ifEmpty { null },
                     section = section.ifEmpty { null },
                     description = if (desc.isEmpty()) null else desc.joinToString("\n"),
+                    source = source.ifEmpty { null },
                 )
             )
             i++
         }
         return todos
     }
+
+    /** A `##` heading read as a note link: (vault path without `.md`, title), or null. */
+    fun parseSourceHeading(heading: String): Pair<String, String>? {
+        val m = SOURCE_HEADING.find(heading.trim()) ?: return null
+        val source = m.groupValues[1].trim().replace(Regex("""\.md$""", RegexOption.IGNORE_CASE), "")
+        val title = m.groupValues[2].ifEmpty { source.substringAfterLast('/') }.trim()
+        return source to title
+    }
+
+    /** `obsidian://` link that opens a vault note (path without `.md`). */
+    fun obsidianOpenUrl(source: String): String =
+        "obsidian://open?file=" + java.net.URLEncoder.encode(source, "UTF-8").replace("+", "%20")
 
     fun serializeTodo(text: String, priority: TaskPriority, due: LocalDate?, time: String? = null): String {
         var line = "- [ ] ${text.trim()}"
@@ -293,7 +316,8 @@ object MarkdownParser {
      */
     fun groupTodos(todos: List<Todo>, today: LocalDate): List<Pair<TodoGroup, List<Todo>>> {
         val week = today.plusDays(7)
-        val open = todos.filter { !it.done }
+        // tasks exported from a note have their own section (groupBySource)
+        val open = todos.filter { !it.done && it.source == null }
         fun datedSort(t: Todo) = (t.due?.toString() ?: "9999") + (t.time ?: "99:99") + t.priority.ordinal
         val buckets = linkedMapOf(
             TodoGroup.TODAY to open.filter { it.due == today },
@@ -310,6 +334,16 @@ object MarkdownParser {
                 else list.sortedBy { datedSort(it) }
             }
     }
+
+    /**
+     * Open tasks exported from a note, one group per note: shown above the date
+     * groups, latest export first, note order inside.
+     */
+    fun groupBySource(todos: List<Todo>): List<SourceGroup> =
+        todos.filter { !it.done && it.source != null }
+            .groupBy { it.source!! }
+            .map { (source, list) -> SourceGroup(source, list.first().list ?: source, list) }
+            .reversed()
 
     fun collectReminders(data: TrackerData): List<Reminder> {
         val out = mutableListOf<Reminder>()

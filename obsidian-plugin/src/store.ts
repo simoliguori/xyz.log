@@ -1,7 +1,9 @@
 import { App, TFile, normalizePath } from "obsidian";
 import {
 	addHabitToFrontmatter,
+	addSourceTasks,
 	appendLine,
+	extractNoteTasks,
 	logLine,
 	parseCategories,
 	parseHabits,
@@ -147,6 +149,29 @@ export class Store {
 			const trimmed = data.replace(/\s+$/, "");
 			return `${trimmed}\n${markdown.replace(/^\n+/, "")}\n`;
 		});
+	}
+
+	/**
+	 * Copy the open tasks of a note (optionally only lines `from`..`to`) into
+	 * its own `## [[Note]]` section of Todo.md. `found` = open tasks in the
+	 * note, `added` = the ones that weren't in xyz.log yet.
+	 */
+	async exportNoteTasks(
+		file: TFile,
+		from?: number,
+		to?: number
+	): Promise<{ found: number; added: number }> {
+		const blocks = extractNoteTasks(await this.app.vault.read(file), from, to);
+		let added = 0;
+		if (blocks.length) {
+			await this.ensureFiles();
+			await this.process(this.todoPath, (data) => {
+				const res = addSourceTasks(data, file.path, blocks);
+				added = res.added;
+				return res.content;
+			});
+		}
+		return { found: blocks.length, added };
 	}
 
 	/** Create a new habit, generating a unique slug id from the name. */

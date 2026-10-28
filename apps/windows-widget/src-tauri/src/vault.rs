@@ -169,3 +169,52 @@ pub fn signature(folder: &str) -> u128 {
     }
     sig
 }
+
+/// The vault root: the first folder from `folder` upwards that holds `.obsidian`.
+fn vault_root(folder: &str) -> Option<PathBuf> {
+    if folder.trim().is_empty() {
+        return None;
+    }
+    let mut dir = Path::new(folder).to_path_buf();
+    for _ in 0..8 {
+        if dir.join(".obsidian").is_dir() {
+            return Some(dir);
+        }
+        if !dir.pop() {
+            break;
+        }
+    }
+    None
+}
+
+/// Percent-encode a URL query value (RFC 3986 unreserved characters kept).
+fn url_encode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
+/// Open a vault note in Obsidian through its `obsidian://` URL scheme.
+/// `note` is the path relative to the vault, without `.md` (as in `## [[Note]]`).
+pub fn open_note(folder: &str, note: &str) -> std::io::Result<()> {
+    let url = match vault_root(folder) {
+        Some(root) => {
+            let rel: PathBuf = format!("{note}.md").split('/').collect();
+            format!("obsidian://open?path={}", url_encode(&root.join(rel).to_string_lossy()))
+        }
+        // vault not found: let Obsidian resolve the path in the last open vault
+        None => format!("obsidian://open?file={}", url_encode(note)),
+    };
+    #[cfg(windows)]
+    let mut cmd = std::process::Command::new("explorer");
+    #[cfg(target_os = "macos")]
+    let mut cmd = std::process::Command::new("open");
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let mut cmd = std::process::Command::new("xdg-open");
+    cmd.arg(url).spawn().map(|_| ())
+}

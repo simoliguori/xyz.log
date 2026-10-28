@@ -79,6 +79,12 @@ fn obsidian_accent(state: State<AppState>) -> Option<String> {
 }
 
 #[tauri::command]
+fn open_note(state: State<AppState>, note: String) -> Result<(), String> {
+    let folder = state.config.lock().unwrap().folder.clone();
+    vault::open_note(&folder, &note).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn minimize_window(window: WebviewWindow) {
     let _ = window.minimize();
 }
@@ -216,6 +222,7 @@ pub fn run() {
             set_pinned,
             set_autostart,
             obsidian_accent,
+            open_note,
             locate_data_folder,
             create_data_folder,
             minimize_window,

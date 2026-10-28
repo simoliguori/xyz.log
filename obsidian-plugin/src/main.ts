@@ -1,8 +1,9 @@
-import { debounce, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { debounce, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { exportEditorExtension, exportPostProcessor } from "./export";
 import { TrackerRenderer, RenderOptions } from "./renderer";
 import { DEFAULT_SETTINGS, TrackerSettings, TrackerSettingTab } from "./settings";
 import { Store } from "./store";
-import { setLang, t } from "./strings";
+import { setLang, t, tf } from "./strings";
 import { TrackerView, VIEW_TYPE } from "./view";
 
 export default class XyzlogPlugin extends Plugin {
@@ -45,6 +46,21 @@ export default class XyzlogPlugin extends Plugin {
 			});
 		}
 
+		// copy a note's tasks into their own section of Todo.md: from the palette
+		// on the whole note, or from the button shown while hovering a task list
+		this.addCommand({
+			id: "export-tasks",
+			name: t("exportTasks"),
+			checkCallback: (checking) => {
+				const file = this.app.workspace.getActiveFile();
+				if (!file || file.extension !== "md" || this.store.isTrackedPath(file.path)) return false;
+				if (!checking) void this.exportTasks(file);
+				return true;
+			},
+		});
+		this.registerMarkdownPostProcessor(exportPostProcessor(this));
+		this.registerEditorExtension(exportEditorExtension(this));
+
 		this.addSettingTab(new TrackerSettingTab(this.app, this));
 
 		// ```xyz.log``` block, embeddable in any note
@@ -78,6 +94,14 @@ export default class XyzlogPlugin extends Plugin {
 					this.refreshView();
 				}
 			})
+		);
+	}
+
+	/** Export the open tasks of `file` (optionally lines `from`..`to`, 0-based) into xyz.log. */
+	async exportTasks(file: TFile, from?: number, to?: number): Promise<void> {
+		const { found, added } = await this.store.exportNoteTasks(file, from, to);
+		new Notice(
+			found === 0 ? t("exportNone") : added === 0 ? t("exportUpToDate") : tf.exported(added, file.basename)
 		);
 	}
 
