@@ -16,7 +16,7 @@ export function locale(): string {
 /** Static strings: key → { en, it }. */
 const S = {
 	habits: { en: "Habits", it: "Abitudini" },
-	todos: { en: "To-do", it: "Todo" },
+	todos: { en: "Tasks", it: "Task" },
 	tasks: { en: "Tasks", it: "Task" },
 	history: { en: "History", it: "Cronologia" },
 	today: { en: "Today", it: "Oggi" },
@@ -95,6 +95,7 @@ const S = {
 	insertBlock: { en: "Insert xyz.log block", it: "Inserisci blocco xyz.log" },
 	// export tasks from a note
 	exportTasks: { en: "Export tasks into xyz.log", it: "Esporta le task in xyz.log" },
+	addToTasks: { en: "Add to tasks", it: "Aggiungi ai task" },
 	exportNone: { en: "No open tasks to export here.", it: "Nessuna task aperta da esportare qui." },
 	exportUpToDate: {
 		en: "These tasks are already in xyz.log.",

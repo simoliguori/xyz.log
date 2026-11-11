@@ -1204,10 +1204,12 @@
 	width: 14px;
 	height: 14px;
 }
-.th-category:not([open]) > .th-category-head .th-cat-chevron {
+.th-category:not([open]) > .th-category-head .th-cat-chevron,
+.th-group:not([open]) > .th-group-title .th-cat-chevron {
 	transform: rotate(-90deg);
 }
-.th-category-head:hover .th-cat-chevron {
+.th-category-head:hover .th-cat-chevron,
+.th-group-title:hover .th-cat-chevron {
 	color: var(--th-text);
 }
 
@@ -1414,30 +1416,112 @@
 	width: 12px;
 	height: 12px;
 }
+/* The export affordance: a pair of brackets [ … ] in the note's left and right
+   margins, embracing the tasks that will be exported, plus an "Add to tasks"
+   button in the right margin. Appears on hover. Accent colour + flat thin lines
+   keep it in the plugin's design language; the pop-in uses the same eased curve
+   as the check-off animation. */
+@keyframes th-exp-pop {
+	0% { transform: scale(0.7); opacity: 0; }
+	60% { transform: scale(1.06); opacity: 1; }
+	100% { transform: scale(1); opacity: 1; }
+}
+@keyframes th-exp-fade {
+	from { opacity: 0; }
+	to { opacity: 0.85; }
+}
 
-/* reading view: top-right corner of the list, visible on hover */
+/* ---- editor (live preview / source): brackets from CodeMirror line decos ---- */
+.cm-line.th-exp {
+	position: relative;
+}
+/* left bracket [ */
+.cm-line.th-exp::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: -14px;
+	width: 6px;
+	border-left: 2px solid var(--interactive-accent);
+	opacity: 0.85;
+	pointer-events: none;
+	animation: th-exp-fade 0.16s ease;
+}
+/* right bracket ] */
+.cm-line.th-exp::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	right: -14px;
+	width: 6px;
+	border-right: 2px solid var(--interactive-accent);
+	opacity: 0.85;
+	pointer-events: none;
+	animation: th-exp-fade 0.16s ease;
+}
+/* serifs that close the brackets at the top and bottom of the run */
+.cm-line.th-exp-top::before,
+.cm-line.th-exp-top::after {
+	border-top: 2px solid var(--interactive-accent);
+}
+.cm-line.th-exp-bottom::before,
+.cm-line.th-exp-bottom::after {
+	border-bottom: 2px solid var(--interactive-accent);
+}
+/* the "Add to tasks" button, in the right margin beside the first task */
+.th-export-btn.th-export-btn--margin {
+	position: absolute;
+	top: -2px;
+	right: -150px;
+	z-index: 5;
+	animation: th-exp-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---- reading view: same brackets + button around the whole task list ---- */
 ul.th-exportable {
 	position: relative;
 }
-ul.th-exportable > .th-export-btn {
+ul.th-exportable::before,
+ul.th-exportable::after {
+	content: "";
 	position: absolute;
 	top: 0;
-	right: 0;
+	bottom: 0;
+	width: 6px;
+	border-top: 2px solid var(--interactive-accent);
+	border-bottom: 2px solid var(--interactive-accent);
 	opacity: 0;
 	pointer-events: none;
+	transition: opacity 0.14s ease;
 }
+ul.th-exportable::before {
+	left: -14px;
+	border-left: 2px solid var(--interactive-accent);
+}
+ul.th-exportable::after {
+	right: -14px;
+	border-right: 2px solid var(--interactive-accent);
+}
+ul.th-exportable > .th-export-btn {
+	position: absolute;
+	top: -2px;
+	right: -150px;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.14s ease;
+}
+ul.th-exportable:hover::before,
+ul.th-exportable:hover::after { opacity: 0.85; }
 ul.th-exportable:hover > .th-export-btn {
 	opacity: 1;
 	pointer-events: auto;
 }
 /* no hover on touch screens: keep it visible but discreet */
+.is-mobile ul.th-exportable::before,
+.is-mobile ul.th-exportable::after { opacity: 0.5; }
 .is-mobile ul.th-exportable > .th-export-btn {
 	opacity: 0.6;
 	pointer-events: auto;
-}
-
-/* editor: after the first task of the hovered list */
-.th-export-btn.th-export-btn--inline {
-	margin-left: 10px;
-	vertical-align: middle;
 }

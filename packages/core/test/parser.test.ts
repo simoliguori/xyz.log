@@ -16,6 +16,10 @@ import {
 	addHabitToFrontmatter,
 	setHabitFieldsInFrontmatter,
 	serializeTimeList,
+	parseCategories,
+	setCategoryNameInFrontmatter,
+	setCategoryIconInFrontmatter,
+	reorderHabitsInFrontmatter,
 } from "../src/parser";
 import { Priority } from "../src/types";
 
@@ -171,4 +175,58 @@ test("addSourceTasks creates the section once and doesn't duplicate on re-export
 		"# Todo\n\n- [ ] Existing\n\n## [[Projects/Launch plan|Launch plan]]\n\n- [ ] A\n\tdesc\n- [ ] B\n- [ ] C\n"
 	);
 	assert.equal(addSourceTasks(second.content, "Projects/Launch plan.md", [["- [ ] B"]]).added, 0);
+});
+
+/* ---------- categories (edit, icon change, reorder) ---------- */
+
+const CAT_MD = `---
+habits:
+  - id: med
+    name: Meditation
+    icon: lucide-flower
+  - id: lam
+    name: Lamictal
+    icon: lucide-pill
+  - id: min
+    name: Minoxidil
+    icon: lucide-pill
+  - id: read
+    name: Reading
+    icon: lucide-book
+categories:
+  - icon: lucide-pill
+    name: Meds
+---
+# h
+`;
+
+test("setCategoryNameInFrontmatter renames the category for its icon", () => {
+	const md = setCategoryNameInFrontmatter(CAT_MD, "lucide-pill", "Medicine");
+	assert.equal(parseCategories(md).find((c) => c.icon === "lucide-pill")?.name, "Medicine");
+	// a brand-new category (no prior entry) is created
+	const md2 = setCategoryNameInFrontmatter(CAT_MD, "lucide-book", "Study");
+	assert.equal(parseCategories(md2).find((c) => c.icon === "lucide-book")?.name, "Study");
+});
+
+test("setCategoryIconInFrontmatter reassigns every member and carries the name", () => {
+	const md = setCategoryIconInFrontmatter(CAT_MD, "lucide-pill", "lucide-heart");
+	const habits = parseHabits(md);
+	// both members moved to the new icon, nothing left on the old one
+	assert.deepEqual(
+		habits.filter((h) => h.icon === "lucide-heart").map((h) => h.id).sort(),
+		["lam", "min"]
+	);
+	assert.equal(habits.filter((h) => h.icon === "lucide-pill").length, 0);
+	// the saved name follows the new icon; the stale entry is gone
+	const cats = parseCategories(md);
+	assert.equal(cats.find((c) => c.icon === "lucide-heart")?.name, "Meds");
+	assert.equal(cats.find((c) => c.icon === "lucide-pill"), undefined);
+});
+
+test("reorderHabitsInFrontmatter rewrites habit order (and keeps unnamed ones)", () => {
+	// move the two pill habits after reading; omit 'med' (kept, trailing)
+	const md = reorderHabitsInFrontmatter(CAT_MD, ["read", "lam", "min"]);
+	assert.deepEqual(parseHabits(md).map((h) => h.id), ["read", "lam", "min", "med"]);
+	// fields survive the move intact
+	assert.equal(parseHabits(md).find((h) => h.id === "lam")?.name, "Lamictal");
 });

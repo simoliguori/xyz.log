@@ -218,3 +218,124 @@ pub fn open_note(folder: &str, note: &str) -> std::io::Result<()> {
     let mut cmd = std::process::Command::new("xdg-open");
     cmd.arg(url).spawn().map(|_| ())
 }
+
+/* ---------------------------- media attachments ---------------------------- */
+
+/// Copy raw bytes into `<folder>/attachments/<name>` (deduping the filename) and
+/// return the vault-relative path, e.g. "attachments/photo.png".
+pub fn attach_media(folder: &str, name: &str, data: &[u8]) -> std::io::Result<String> {
+    if folder.trim().is_empty() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "no data folder",
+        ));
+    }
+    let dir = Path::new(folder).join("attachments");
+    std::fs::create_dir_all(&dir)?;
+    let safe = sanitize_name(name);
+    let (stem, ext) = split_ext(&safe);
+    let mut target = dir.join(&safe);
+    let mut i = 2;
+    while target.exists() {
+        let cand = if ext.is_empty() {
+            format!("{stem}-{i}")
+        } else {
+            format!("{stem}-{i}.{ext}")
+        };
+        target = dir.join(cand);
+        i += 1;
+    }
+    std::fs::write(&target, data)?;
+    let fname = target
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or(&safe)
+        .to_string();
+    Ok(format!("attachments/{fname}"))
+}
+
+/// Read a vault-relative attachment and return it as a `data:` URL for the webview.
+pub fn media_data_url(folder: &str, rel: &str) -> std::io::Result<String> {
+    if folder.trim().is_empty() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "no data folder",
+        ));
+    }
+    let bytes = std::fs::read(Path::new(folder).join(rel))?;
+    Ok(format!("data:{};base64,{}", mime_of(rel), b64_encode(&bytes)))
+}
+
+/// Keep only the final path component and drop characters illegal in a filename.
+fn sanitize_name(name: &str) -> String {
+    let base = name.rsplit(['/', '\u{5c}']).next().unwrap_or(name);
+    let cleaned: String = base
+        .chars()
+        .map(|c| match c {
+            '<' | '>' | ':' | '"' | '|' | '?' | '*' => '_',
+            c if (c as u32) < 0x20 => '_',
+            c => c,
+        })
+        .collect();
+    let trimmed = cleaned.trim().trim_matches('.').to_string();
+    if trimmed.is_empty() {
+        "file".to_string()
+    } else {
+        trimmed
+    }
+}
+
+fn split_ext(name: &str) -> (String, String) {
+    match name.rfind('.') {
+        Some(i) if i > 0 && i < name.len() - 1 => {
+            (name[..i].to_string(), name[i + 1..].to_string())
+        }
+        _ => (name.to_string(), String::new()),
+    }
+}
+
+fn mime_of(name: &str) -> &'static str {
+    let ext = name.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+    match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "svg" => "image/svg+xml",
+        "bmp" => "image/bmp",
+        "avif" => "image/avif",
+        "mp4" => "video/mp4",
+        "webm" => "video/webm",
+        "mov" => "video/quicktime",
+        "mp3" => "audio/mpeg",
+        "wav" => "audio/wav",
+        "ogg" => "audio/ogg",
+        "pdf" => "application/pdf",
+        _ => "application/octet-stream",
+    }
+}
+
+/// Minimal standard base64 encoder (no external crate).
+fn b64_encode(data: &[u8]) -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    for chunk in data.chunks(3) {
+        let b0 = chunk[0];
+        let b1 = *chunk.get(1).unwrap_or(&0);
+        let b2 = *chunk.get(2).unwrap_or(&0);
+        let n = ((b0 as u32) << 16) | ((b1 as u32) << 8) | (b2 as u32);
+        out.push(T[((n >> 18) & 63) as usize] as char);
+        out.push(T[((n >> 12) & 63) as usize] as char);
+        out.push(if chunk.len() > 1 {
+            T[((n >> 6) & 63) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            T[(n & 63) as usize] as char
+        } else {
+            '='
+        });
+    }
+    out
+}

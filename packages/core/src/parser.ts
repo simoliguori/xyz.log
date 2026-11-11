@@ -692,3 +692,87 @@ export function setCategoryNameInFrontmatter(
 	}
 	return content.replace(fm[0], `---\n${lines.join("\n")}\n---`);
 }
+
+/** Remove the `categories:` entry whose icon matches (leaves habits untouched). */
+export function removeCategoryFromFrontmatter(content: string, icon: string): string {
+	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+	if (!fm) return content;
+	const lines = fm[1].split(/\r?\n/);
+	const idx = lines.findIndex((l) => /^categories:\s*$/.test(l));
+	if (idx < 0) return content;
+	const end = habitsBlockEnd(lines, idx);
+	const starts: number[] = [];
+	for (let i = idx + 1; i < end; i++) if (/^\s*-\s+\w+:/.test(lines[i])) starts.push(i);
+	for (let k = 0; k < starts.length; k++) {
+		const start = starts[k];
+		const stop = k + 1 < starts.length ? starts[k + 1] : end;
+		for (let i = start; i < stop; i++) {
+			const m = lines[i].match(/^\s*(?:-\s+)?icon:\s*(.*)$/);
+			if (m && unquote(m[1]) === icon) {
+				lines.splice(start, stop - start);
+				return content.replace(fm[0], `---\n${lines.join("\n")}\n---`);
+			}
+		}
+	}
+	return content;
+}
+
+/** Change a category's icon: membership is by icon, so reassign every member
+    habit from `oldIcon` to `newIcon` and carry the saved category name across. */
+export function setCategoryIconInFrontmatter(content: string, oldIcon: string, newIcon: string): string {
+	if (!newIcon || newIcon === oldIcon) return content;
+	const name = parseCategories(content).find((c) => c.icon === oldIcon)?.name ?? "";
+	let out = content;
+	for (const h of parseHabits(content)) {
+		if (h.icon === oldIcon) out = setHabitFieldsInFrontmatter(out, h.id, { icon: newIcon });
+	}
+	out = removeCategoryFromFrontmatter(out, oldIcon);
+	if (name) out = setCategoryNameInFrontmatter(out, newIcon, name);
+	return out;
+}
+
+/** Reorder the items in the `habits:` block to match `orderedIds`. Habits not
+    named in the list keep their relative order, appended after the ordered ones.
+    Category order follows habit order, so this also reorders categories. */
+export function reorderHabitsInFrontmatter(content: string, orderedIds: string[]): string {
+	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+	if (!fm) return content;
+	const lines = fm[1].split(/\r?\n/);
+	const idx = lines.findIndex((l) => /^habits:\s*$/.test(l));
+	if (idx < 0) return content;
+	const end = habitsBlockEnd(lines, idx);
+	const starts: number[] = [];
+	for (let i = idx + 1; i < end; i++) if (/^\s*-\s+\w+:/.test(lines[i])) starts.push(i);
+	if (starts.length < 2) return content;
+	const idOf = (start: number, stop: number): string => {
+		for (let i = start; i < stop; i++) {
+			const m = lines[i].match(/^\s*(?:-\s+)?id:\s*(.*)$/);
+			if (m) return unquote(m[1]);
+		}
+		return "";
+	};
+	const chunks: { id: string; body: string[] }[] = [];
+	for (let k = 0; k < starts.length; k++) {
+		const start = starts[k];
+		const stop = k + 1 < starts.length ? starts[k + 1] : end;
+		chunks.push({ id: idOf(start, stop), body: lines.slice(start, stop) });
+	}
+	const byId = new Map(chunks.map((c) => [c.id, c]));
+	const seen = new Set<string>();
+	const out: string[] = lines.slice(idx + 1, starts[0]); // keep any preamble
+	for (const id of orderedIds) {
+		const c = byId.get(id);
+		if (c && !seen.has(id)) {
+			out.push(...c.body);
+			seen.add(id);
+		}
+	}
+	for (const c of chunks) {
+		if (!seen.has(c.id)) {
+			out.push(...c.body);
+			seen.add(c.id);
+		}
+	}
+	lines.splice(idx + 1, end - (idx + 1), ...out);
+	return content.replace(fm[0], `---\n${lines.join("\n")}\n---`);
+}

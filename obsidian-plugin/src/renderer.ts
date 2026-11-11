@@ -969,6 +969,7 @@ export class TrackerRenderer {
 			h.createSpan({ cls: "th-group-name", text: todos[0].list ?? source });
 			h.createSpan({ cls: "th-group-count", text: String(todos.length) });
 			this.renderNoteLink(h, source);
+			setIcon(h.createDiv({ cls: "th-cat-chevron", attr: { "aria-hidden": "true" } }), "chevron-down");
 			for (const todo of todos) this.renderTodoRow(group, todo, today);
 		}
 
@@ -983,6 +984,7 @@ export class TrackerRenderer {
 			const h = group.createEl("summary", { cls: "th-group-title" });
 			h.createSpan({ text: label });
 			h.createSpan({ cls: "th-group-count", text: String(todos.length) });
+			setIcon(h.createDiv({ cls: "th-cat-chevron", attr: { "aria-hidden": "true" } }), "chevron-down");
 			for (const todo of todos.sort(sortFn)) {
 				this.renderTodoRow(group, todo, today);
 			}
@@ -1134,14 +1136,6 @@ export class TrackerRenderer {
 			window.setTimeout(() => collapseThenRun(wrap, () => void this.plugin.store.toggleTodo(todo)), 300);
 		};
 
-		// pencil button next to the icon: appears on hover, opens the edit popup
-		const editBtn = row.createEl("button", { cls: "th-edit", attr: { "aria-label": t("editTask") } });
-		setIcon(editBtn, "pencil");
-		editBtn.onclick = (e) => {
-			e.stopPropagation();
-			new TaskEditModal(this.plugin, todo).open();
-		};
-
 		if (todo.priority !== Priority.None) {
 			row.createSpan({
 				cls: `th-prio-dot ${PRIO_CLASS[todo.priority]}`,
@@ -1170,6 +1164,14 @@ export class TrackerRenderer {
 				text: [dateText, todo.time].filter(Boolean).join(" "),
 			});
 		}
+
+		// pencil + delete on the right, so they never shift the task text
+		const editBtn = row.createEl("button", { cls: "th-edit", attr: { "aria-label": t("editTask") } });
+		setIcon(editBtn, "pencil");
+		editBtn.onclick = (e) => {
+			e.stopPropagation();
+			new TaskEditModal(this.plugin, todo).open();
+		};
 
 		const del = row.createEl("button", { cls: "th-del", attr: { "aria-label": t("delete") } });
 		setIcon(del, "x");

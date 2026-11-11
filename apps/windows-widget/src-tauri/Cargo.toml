@@ -1,6 +1,6 @@
 [package]
 name = "xyzlog-widget"
-version = "0.1.0"
+version = "0.2.0"
 description = "xyz.log — Windows desktop widget (always-on gadget, modular, with notifications)"
 authors = ["simol"]
 edition = "2021"
@@ -19,6 +19,8 @@ tauri-plugin-notification = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-window-state = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = "0.4"
@@ -28,6 +30,8 @@ windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
     "Win32_Graphics_Gdi",
+    "UI",
+    "UI_ViewManagement",
 ] }
 
 [profile.release]

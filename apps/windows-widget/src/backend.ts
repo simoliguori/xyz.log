@@ -15,6 +15,11 @@ export type FileKey = "habits" | "log" | "todo";
 export interface Backend {
 	readFiles(): Promise<VaultFiles>;
 	writeFile(which: FileKey, content: string): Promise<void>;
+	/** copy picked bytes into the vault's `attachments/` folder; returns the
+	   vault-relative path (e.g. "attachments/photo.png") to embed in a task/note */
+	attachMedia(name: string, bytes: number[]): Promise<string>;
+	/** a displayable URL (data: or asset) for a vault-relative attachment path */
+	mediaSrc(rel: string): Promise<string>;
 	getConfig(): Promise<AppConfig>;
 	setConfig(cfg: AppConfig): Promise<void>;
 	pickFolder(): Promise<string | null>;
@@ -24,6 +29,8 @@ export interface Backend {
 	createDataFolder(parent: string): Promise<string>;
 	/** notify the backend when one of the files changes (external edit / sync) */
 	onFilesChanged(cb: () => void): void;
+	/** fires when a reminder notification is shown, so the UI can play a sound */
+	onReminderFired(cb: () => void): void;
 	/** hand the backend the list of reminders to schedule as notifications */
 	syncReminders(reminders: Reminder[]): Promise<void>;
 	/** show a notification right away (used by the "Test notification" button) */
@@ -35,6 +42,8 @@ export interface Backend {
 	openNote(source: string): Promise<void>;
 	/** Obsidian's current accent color (from appearance.json), or null */
 	obsidianAccent(): Promise<string | null>;
+	/** Windows' current accent color as #rrggbb, or null */
+	windowsAccent(): Promise<string | null>;
 	minimizeWindow(): Promise<void>;
 	closeWindow(): Promise<void>;
 	readonly isReal: boolean;
@@ -43,12 +52,18 @@ export interface Backend {
 const DEFAULT_CONFIG = (): AppConfig => ({
 	folder: "",
 	lang: "en",
+	dateFormat: "dmy",
 	accent: "#44437a",
 	opacity: 95,
 	pinned: false,
 	autostart: true,
 	notifications: true,
+	accentSource: "obsidian",
 	syncAccent: true,
+	notifSound: "chime",
+	todoSort: "date",
+	todoDraggable: false,
+	overdueTop: false,
 	activeTab: 0,
 	tabs: defaultTabs(),
 });
@@ -89,6 +104,14 @@ class TauriBackend implements Backend {
 		await this.ready;
 		await this.invoke("write_file", { which, content });
 	}
+	async attachMedia(name: string, bytes: number[]): Promise<string> {
+		await this.ready;
+		return this.invoke<string>("attach_media", { name, data: bytes });
+	}
+	async mediaSrc(rel: string): Promise<string> {
+		await this.ready;
+		return this.invoke<string>("media_data_url", { rel });
+	}
 	async getConfig(): Promise<AppConfig> {
 		await this.ready;
 		const cfg = await this.invoke<Partial<AppConfig>>("get_config");
@@ -113,6 +136,9 @@ class TauriBackend implements Backend {
 	onFilesChanged(cb: () => void): void {
 		void this.ready.then(() => this.changeEvent("vault-changed", cb));
 	}
+	onReminderFired(cb: () => void): void {
+		void this.ready.then(() => this.changeEvent("reminder-fired", cb));
+	}
 	async syncReminders(reminders: Reminder[]): Promise<void> {
 		await this.ready;
 		await this.invoke("sync_reminders", { reminders });
@@ -136,6 +162,10 @@ class TauriBackend implements Backend {
 	async obsidianAccent(): Promise<string | null> {
 		await this.ready;
 		return this.invoke<string | null>("obsidian_accent");
+	}
+	async windowsAccent(): Promise<string | null> {
+		await this.ready;
+		return this.invoke<string | null>("windows_accent");
 	}
 	async openNote(source: string): Promise<void> {
 		await this.ready;
@@ -253,6 +283,16 @@ class MockBackend implements Backend {
 		save(LS_FILES, this.files);
 		for (const cb of this.listeners) cb();
 	}
+	private media = new Map<string, string>();
+	async attachMedia(name: string, bytes: number[]): Promise<string> {
+		let rel = `attachments/${name}`;
+		for (let i = 2; this.media.has(rel); i++) rel = `attachments/${dedupeName(name, i)}`;
+		this.media.set(rel, `data:${mimeOf(name)};base64,${bytesToB64(bytes)}`);
+		return rel;
+	}
+	async mediaSrc(rel: string): Promise<string> {
+		return this.media.get(rel) ?? "";
+	}
 	async getConfig(): Promise<AppConfig> {
 		const saved = load<AppConfig>(LS_CONFIG);
 		const cfg = { ...DEFAULT_CONFIG(), ...saved };
@@ -275,6 +315,9 @@ class MockBackend implements Backend {
 	onFilesChanged(cb: () => void): void {
 		this.listeners.push(cb);
 	}
+	onReminderFired(_cb: () => void): void {
+		/* no native scheduler in the browser preview */
+	}
 	async syncReminders(_reminders: Reminder[]): Promise<void> {
 		/* in the preview there's no native scheduler */
 	}
@@ -291,12 +334,44 @@ class MockBackend implements Backend {
 	async obsidianAccent(): Promise<string | null> {
 		return null;
 	}
+	async windowsAccent(): Promise<string | null> {
+		return null;
+	}
 	async openNote(source: string): Promise<void> {
 		// no vault in the preview: hand the link to the browser
 		window.open(`obsidian://open?file=${encodeURIComponent(source)}`);
 	}
 	async minimizeWindow(): Promise<void> {}
 	async closeWindow(): Promise<void> {}
+}
+
+/** mime type guessed from a filename extension (for the preview's data URLs) */
+function mimeOf(name: string): string {
+	const ext = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
+	const map: Record<string, string> = {
+		png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif",
+		webp: "image/webp", svg: "image/svg+xml", bmp: "image/bmp", avif: "image/avif",
+		mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime",
+		mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg",
+		pdf: "application/pdf",
+	};
+	return map[ext] ?? "application/octet-stream";
+}
+
+/** "foo.png", 3 → "foo-3.png" */
+function dedupeName(name: string, i: number): string {
+	const dot = name.lastIndexOf(".");
+	return dot > 0 ? `${name.slice(0, dot)}-${i}${name.slice(dot)}` : `${name}-${i}`;
+}
+
+/** bytes → base64, chunked so large files don't blow the call stack */
+function bytesToB64(bytes: number[]): string {
+	let bin = "";
+	const CHUNK = 0x8000;
+	for (let i = 0; i < bytes.length; i += CHUNK) {
+		bin += String.fromCharCode(...bytes.slice(i, i + CHUNK));
+	}
+	return btoa(bin);
 }
 
 function load<T>(key: string): T | null {

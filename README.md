@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/logo-lockup.svg" alt="xyz.log" width="300" />
+</p>
+
 # xyz.log
 
 A habit tracker and to-do list that lives in your notes. Everything is plain

@@ -51,6 +51,18 @@ fn write_file(state: State<AppState>, which: String, content: String) -> Result<
 }
 
 #[tauri::command]
+fn attach_media(state: State<AppState>, name: String, data: Vec<u8>) -> Result<String, String> {
+    let folder = state.config.lock().unwrap().folder.clone();
+    vault::attach_media(&folder, &name, &data).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn media_data_url(state: State<AppState>, rel: String) -> Result<String, String> {
+    let folder = state.config.lock().unwrap().folder.clone();
+    vault::media_data_url(&folder, &rel).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn pick_folder(app: AppHandle) -> Option<String> {
     use tauri_plugin_dialog::DialogExt;
     // non-blocking dialog: the command runs off the UI thread, so waiting for
@@ -70,6 +82,19 @@ fn locate_data_folder(vault: String) -> Option<String> {
 #[tauri::command]
 fn create_data_folder(parent: String) -> Result<String, String> {
     vault::create_data_folder(&parent).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn windows_accent() -> Option<String> {
+    #[cfg(windows)]
+    {
+        use windows::UI::ViewManagement::{UIColorType, UISettings};
+        let settings = UISettings::new().ok()?;
+        let c = settings.GetColorValue(UIColorType::Accent).ok()?;
+        return Some(format!("#{:02X}{:02X}{:02X}", c.R, c.G, c.B));
+    }
+    #[allow(unreachable_code)]
+    None
 }
 
 #[tauri::command]
@@ -170,8 +195,13 @@ fn start_scheduler(app: AppHandle) {
             let mut fired = state.fired.lock().unwrap();
             notify::due_now(chrono::Local::now(), &reminders, &mut fired)
         };
+        let fired = !due.is_empty();
         for (title, body) in due {
             let _ = app.notification().builder().title(title).body(body).show();
+        }
+        // let the frontend play the chosen custom sound
+        if fired {
+            let _ = app.emit("reminder-fired", ());
         }
     });
 }
@@ -203,6 +233,9 @@ pub fn run() {
     tauri::Builder::default()
         // remember the window position and size between launches
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        // self-update from GitHub releases, and relaunch after installing
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
@@ -215,6 +248,8 @@ pub fn run() {
             set_config,
             read_files,
             write_file,
+            attach_media,
+            media_data_url,
             pick_folder,
             sync_reminders,
             notify_now,
@@ -222,6 +257,7 @@ pub fn run() {
             set_pinned,
             set_autostart,
             obsidian_accent,
+            windows_accent,
             open_note,
             locate_data_folder,
             create_data_folder,

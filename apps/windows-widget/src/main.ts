@@ -7,12 +7,14 @@ import {
 	parseHabits,
 	parseLog,
 	parseTodos,
-	PRIORITY_EMOJI,
 	Priority,
 	removeHabitFromFrontmatter,
+	reorderHabitsInFrontmatter,
 	replaceLine,
 	serializeTimeList,
 	serializeTodo,
+	setCategoryIconInFrontmatter,
+	setCategoryNameInFrontmatter,
 	setHabitFieldsInFrontmatter,
 	slugifyHabitId,
 	todayISO,
@@ -23,16 +25,63 @@ import {
 	updateTodoLine,
 } from "@xyzlog/core";
 import { createBackend, type Backend, type FileKey, type VaultFiles } from "./backend";
+import { dateField, datePlaceholder, DATE_FORMATS } from "./datefmt";
 import { clear, el } from "./dom";
 import { lucideIconNames, lucideSvg } from "./icons";
+import { NF, PRIO_PICK } from "./nf";
+import { reorderTodoFile, insertTodoLine } from "./reorder";
+import { sortComparator, type TodoSort } from "./sort";
+import { NOTIF_SOUNDS, playNotifSound } from "./sounds";
 import { COLS, MAX_H, newTile, Tile, TILE_META, TileType, uid, type AppConfig, type TabLayout } from "./layout";
-import { renderTileBody, type RenderCtx, type Store } from "./render";
+import { renderTileBody, extractMedia, isImagePath, mediaEmbed, type RenderCtx, type Store } from "./render";
 
-/** Logo: rounded square with a check, used in the intro and the onboarding. */
-const LOGO_SVG = `<svg class="xl-logo-svg" viewBox="0 0 120 120" aria-hidden="true">
-	<rect x="10" y="10" width="100" height="100" rx="26" class="xl-logo-bg" />
-	<path d="M38 62 L53 77 L84 42" class="xl-logo-check" fill="none" />
+/** Brand mark (the "xyz" glyph in its box), used docked in the header and in the
+   onboarding. Its ids are suffixed `-m` so they can't clash with the boot splash
+   copy (index.html), which lives in the same document at launch. */
+const LOGO_SVG = `<svg class="xl-logo-svg" viewBox="40 40 160 160" aria-hidden="true">
+	<defs>
+		<clipPath id="xlbox-m"><rect x="48" y="48" width="144" height="144" rx="1.5"/></clipPath>
+		<clipPath id="xlshape-m">
+			<polygon points="77.73,65 162.27,65 205.73,47 34.27,47"/>
+			<polygon points="34.27,193 205.73,193 162.27,175 77.73,175"/>
+			<polygon points="162.27,65 34.27,193 77.73,175 205.73,47"/>
+			<polygon points="34.27,47 113.64,126.36 126.36,113.64 77.73,65"/>
+			<polygon points="113.64,126.36 162.27,175 205.73,193 126.36,113.64"/>
+		</clipPath>
+		<linearGradient id="xlsheen-m" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#ffffff" stop-opacity="0.42"/>
+			<stop offset="0.38" stop-color="#ffffff" stop-opacity="0.07"/>
+			<stop offset="0.62" stop-color="#000000" stop-opacity="0.06"/>
+			<stop offset="1" stop-color="#000000" stop-opacity="0.44"/>
+		</linearGradient>
+		<linearGradient id="xlbslash-m" gradientUnits="userSpaceOnUse" x1="56" y1="56" x2="184" y2="184">
+			<stop offset="0" stop-color="#a0a3d7"/><stop offset="1" stop-color="#5e639e"/>
+		</linearGradient>
+		<linearGradient id="xldiag-m" gradientUnits="userSpaceOnUse" x1="184" y1="56" x2="56" y2="184">
+			<stop offset="0" stop-color="#767ebf"/><stop offset="0.5" stop-color="#6e76b9"/><stop offset="1" stop-color="#626aae"/>
+		</linearGradient>
+		<filter id="xldrop-m" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="#000000" flood-opacity="0.33"/></filter>
+	</defs>
+	<g clip-path="url(#xlbox-m)">
+		<g clip-path="url(#xlshape-m)">
+			<g filter="url(#xldrop-m)">
+				<polygon points="77.73,65 162.27,65 205.73,47 34.27,47" fill="#6e76b9" stroke="#6e76b9" stroke-width="2.5" stroke-linejoin="round"/>
+				<polygon points="34.27,193 205.73,193 162.27,175 77.73,175" fill="#6e76b9" stroke="#6e76b9" stroke-width="2.5" stroke-linejoin="round"/>
+			</g>
+			<g filter="url(#xldrop-m)">
+				<polygon points="34.27,47 113.64,126.36 162.27,175 205.73,193 126.36,113.64 77.73,65" fill="url(#xlbslash-m)" stroke="url(#xlbslash-m)" stroke-width="2.5" stroke-linejoin="round"/>
+			</g>
+			<g filter="url(#xldrop-m)">
+				<polygon points="162.27,65 34.27,193 77.73,175 205.73,47" fill="url(#xldiag-m)" stroke="url(#xldiag-m)" stroke-width="2.5" stroke-linejoin="round"/>
+			</g>
+		</g>
+		<rect x="48" y="48" width="144" height="144" fill="url(#xlsheen-m)" clip-path="url(#xlshape-m)"/>
+	</g>
 </svg>`;
+
+/** When the module started running — used to keep the boot splash on screen for a
+   minimum time so the logo motion-graphic always reads as a clean "split second". */
+const BOOT_T0 = performance.now();
 
 class App {
 	private backend: Backend = createBackend();
@@ -43,13 +92,15 @@ class App {
 	private edit = false;
 	private showSettings = false;
 	private intro = true;
-	private docked = false;
-	private logoOnly = true;
+	private docked = true;
+	private logoOnly = false;
 	private slideDir = 0;
 	private brand: HTMLElement | null = null;
 	private obsAccent: string | null = null;
+	private winAccent: string | null = null;
 	private expanded = new Set<string>();
 	private settingsOpen = new Set<string>();
+	private collapsedGroups = new Set<string>();
 	private editing: Todo | null = null;
 	private iconPicker: { current: string; onChoose: (icon: string) => void } | null = null;
 	private onboardVault: string | null = null;
@@ -65,15 +116,17 @@ class App {
 		this.applyTheme();
 		this.setupAutoHide();
 		this.backend.onFilesChanged(() => void this.reload());
+		this.backend.onReminderFired(() => playNotifSound(this.config.notifSound));
 		// data ready BEFORE the first draw: no blank screen
 		await this.loadData();
-		if (this.config.syncAccent) {
-			this.obsAccent = await this.backend.obsidianAccent();
-			this.applyTheme();
-		}
+		await this.refreshAccent();
 		this.ensureBrand();
 		this.render();
-		this.playIntro();
+		this.finishBoot();
+		// check GitHub for a newer release (native build only)
+		if (this.backend.isReal) {
+			void import("./updater").then((m) => m.checkForUpdate());
+		}
 	}
 
 	private ensureBrand(): void {
@@ -93,19 +146,22 @@ class App {
 		window.setTimeout(() => document.body.classList.remove("xl-reveal"), 2600);
 	}
 
-	/** Intro: the logo appears ALONE in the center for a moment, then the content
-	   entra (pop) e il logo si aggancia in alto. Nessun overlay sul contenuto. */
-	private playIntro(): void {
-		window.setTimeout(() => {
-			this.logoOnly = false;
-			this.docked = true;
-			this.intro = true;
-			this.render();
-		}, 750);
+	/** The inline boot splash (index.html) has been showing the logo motion-graphic
+	   since the first frame. Keep it up for a clean split-second, then fade it out to
+	   reveal the app behind; the content's entrance animation plays as it dissolves. */
+	private finishBoot(): void {
 		window.setTimeout(() => {
 			this.intro = false;
 			this.root.classList.remove("xl-intro");
-		}, 1700);
+		}, 1100);
+		const boot = document.getElementById("xl-boot");
+		if (!boot) return;
+		const MIN = 820; // ms the logo stays on screen even if the app is ready sooner
+		const wait = Math.max(0, MIN - (performance.now() - BOOT_T0));
+		window.setTimeout(() => {
+			boot.classList.add("is-hiding");
+			window.setTimeout(() => boot.remove(), 460);
+		}, wait);
 	}
 
 	private async loadData(): Promise<void> {
@@ -128,9 +184,21 @@ class App {
 		};
 	}
 
-	/** effective accent: Obsidian's if sync is on, otherwise the custom one */
+	/** effective accent, following the chosen source (falls back to the custom color) */
 	private effectiveAccent(): string {
-		return this.config.syncAccent && this.obsAccent ? this.obsAccent : this.config.accent;
+		if (this.config.accentSource === "obsidian") return this.obsAccent ?? this.config.accent;
+		if (this.config.accentSource === "windows") return this.winAccent ?? this.config.accent;
+		return this.config.accent;
+	}
+
+	/** fetch the accent from the chosen source (Obsidian / Windows), then re-theme */
+	private async refreshAccent(): Promise<void> {
+		if (this.config.accentSource === "obsidian") {
+			this.obsAccent = await this.backend.obsidianAccent();
+		} else if (this.config.accentSource === "windows") {
+			this.winAccent = await this.backend.windowsAccent();
+		}
+		this.applyTheme();
 	}
 
 	private applyTheme(): void {
@@ -168,6 +236,20 @@ class App {
 			void this.mutate("todo", replaceLine(this.files.todo, todo.raw, () => updateTodoLine(todo, fields))),
 		addTodo: (text, prio, due, time) =>
 			void this.mutate("todo", appendLine(this.files.todo, serializeTodo(text, prio, due, time))),
+		addTodoSorted: (text, prio, due, time, sort) => {
+			const line = serializeTodo(text, prio, due, time);
+			const open = this.data.todos.filter((t) => !t.done && !t.source);
+			const maxLine = open.reduce((m, t) => Math.max(m, t.lineNo), 0);
+			const fake = { lineNo: maxLine + 1, priority: prio, due } as unknown as Todo;
+			const cmp = sortComparator(sort);
+			const target = [...open].sort((a, b) => a.lineNo - b.lineNo).find((t) => cmp(fake, t) < 0);
+			void this.mutate("todo", insertTodoLine(this.files.todo, line, target ? target.lineNo : null));
+		},
+		reorderTodos: (orderedLineNos) => {
+			const open = this.data.todos.filter((t) => !t.done && !t.source);
+			const movable = open.map((t) => t.lineNo).sort((a, b) => a - b);
+			void this.mutate("todo", reorderTodoFile(this.files.todo, movable, orderedLineNos));
+		},
 		addHabit: (name, icon) => {
 			const existing = parseHabits(this.files.habits);
 			const base = slugifyHabitId(name);
@@ -183,6 +265,9 @@ class App {
 				"habits",
 				setHabitFieldsInFrontmatter(this.files.habits, id, { reminders: times.length ? serializeTimeList(times) : "" })
 			),
+		setCategoryName: (icon, name) => void this.mutate("habits", setCategoryNameInFrontmatter(this.files.habits, icon, name)),
+		setCategoryIcon: (oldIcon, newIcon) => void this.mutate("habits", setCategoryIconInFrontmatter(this.files.habits, oldIcon, newIcon)),
+		reorderHabits: (orderedIds) => void this.mutate("habits", reorderHabitsInFrontmatter(this.files.habits, orderedIds)),
 	};
 
 	private ctx(): RenderCtx {
@@ -190,9 +275,17 @@ class App {
 			data: this.data,
 			today: todayISO(),
 			lang: this.config.lang,
+			dateFormat: this.config.dateFormat,
+			sort: this.config.todoSort,
+			draggable: this.config.todoDraggable,
+			overdueTop: this.config.overdueTop,
+			setTodoSort: (s) => this.setTodoSort(s),
+			setTodoDraggable: (on) => this.setTodoDraggable(on),
+			setOverdueTop: (on) => this.setOverdueTop(on),
 			store: this.store,
 			expanded: this.expanded,
 			settingsOpen: this.settingsOpen,
+			collapsedGroups: this.collapsedGroups,
 			heatmapWeeks: 52,
 			rerender: () => this.render(),
 			editTodo: (todo) => {
@@ -204,6 +297,8 @@ class App {
 				this.render();
 			},
 			openNote: (source) => void this.backend.openNote(source),
+			attachMedia: (name, bytes) => this.backend.attachMedia(name, bytes),
+			mediaSrc: (rel) => this.backend.mediaSrc(rel),
 		};
 	}
 
@@ -213,6 +308,41 @@ class App {
 
 	private saveConfig(): void {
 		void this.backend.setConfig(this.config);
+	}
+
+	private setTodoSort(s: TodoSort): void {
+		this.config.todoSort = s;
+		this.saveConfig();
+		if (this.config.todoDraggable && s !== "date") this.seedTodoOrder(s);
+		else this.render();
+	}
+
+	private setOverdueTop(on: boolean): void {
+		this.config.overdueTop = on;
+		this.saveConfig();
+		this.render();
+	}
+
+	private setTodoDraggable(on: boolean): void {
+		this.config.todoDraggable = on;
+		// a manual order needs a flat list; enabling it from the date view switches
+		// to "added (oldest)" = current file order as the starting point
+		if (on && this.config.todoSort === "date") this.config.todoSort = "added-asc";
+		this.saveConfig();
+		if (on && this.config.todoSort !== "date") this.seedTodoOrder(this.config.todoSort);
+		else this.render();
+	}
+
+	/** Write the current sort order into Todo.md, so draggable starts from it. */
+	private seedTodoOrder(sort: TodoSort): void {
+		const open = this.data.todos.filter((t) => !t.done && !t.source);
+		if (!open.length) {
+			this.render();
+			return;
+		}
+		const movable = open.map((t) => t.lineNo).sort((a, b) => a - b);
+		const ordered = [...open].sort(sortComparator(sort)).map((t) => t.lineNo);
+		void this.mutate("todo", reorderTodoFile(this.files.todo, movable, ordered));
 	}
 
 	/* ---------- render ---------- */
@@ -304,31 +434,79 @@ class App {
 		const panel = el("div", { cls: "xl-task-modal" });
 		panel.appendChild(el("div", { cls: "xl-tm-title", text: T("Modifica attività", "Edit task") }));
 
-		const textInput = el("input", { cls: "xl-tm-text", attr: { type: "text", value: todo.text } }) as HTMLInputElement;
+		// split media embeds out of the text: edit the clean text here, manage the
+		// attachments in the gallery below (recombined on save)
+		const { clean, paths } = extractMedia(todo.text);
+		let media = [...paths];
+
+		const textInput = el("input", { cls: "xl-tm-text", attr: { type: "text", value: clean } }) as HTMLInputElement;
 		panel.appendChild(textInput);
 
 		const row = el("div", { cls: "xl-tm-row" });
-		const dateInput = el("input", { cls: "xl-tm-date", attr: { type: "date", value: todo.due ?? "" } }) as HTMLInputElement;
+		const dateInput = dateField(todo.due ?? null, this.config.dateFormat, "xl-tm-datefield");
 		const timeInput = el("input", { cls: "xl-tm-time", attr: { type: "time", value: todo.time ?? "" } }) as HTMLInputElement;
 		const prio = el("select", { cls: "xl-tm-prio" }) as HTMLSelectElement;
-		for (const p of [Priority.None, Priority.Lowest, Priority.Low, Priority.Medium, Priority.High, Priority.Highest]) {
-			const opt = el("option", { text: p === Priority.None ? "—" : PRIORITY_EMOJI[p], attr: { value: String(p) } });
-			if (p === todo.priority) opt.setAttribute("selected", "");
+		for (const c of PRIO_PICK) {
+			const label = this.config.lang === "it" ? c.it : c.en;
+			const opt = el("option", { text: `${c.glyph}  ${label}`, attr: { value: String(c.value) } });
+			if (c.value === todo.priority) opt.setAttribute("selected", "");
 			prio.appendChild(opt);
 		}
 		prio.value = String(todo.priority);
-		row.append(dateInput, timeInput, prio);
+		row.append(dateInput.root, timeInput, prio);
 		panel.appendChild(row);
+
+		// --- media gallery (full-size thumbnails, click to zoom, × to remove) ---
+		const fileInput = el("input", { cls: "xl-file-hidden", attr: { type: "file", multiple: "" } }) as HTMLInputElement;
+		const gallery = el("div", { cls: "xl-tm-media" });
+		const renderGallery = () => {
+			clear(gallery);
+			for (const p of media) {
+				const cell = el("div", { cls: "xl-tm-mcell", attr: { title: p } });
+				if (isImagePath(p)) {
+					const img = el("img", { cls: "xl-tm-mthumb", attr: { alt: "", loading: "lazy" } }) as HTMLImageElement;
+					void this.backend.mediaSrc(p).then((src) => { if (src) img.src = src; });
+					img.onclick = () => void this.backend.mediaSrc(p).then((src) => { if (src) this.openLightbox(src, p); });
+					cell.appendChild(img);
+				} else {
+					cell.appendChild(el("span", { cls: "xl-tm-mfile", text: "" }));
+					cell.appendChild(el("span", { cls: "xl-tm-mname", text: p.split("/").pop() ?? p }));
+				}
+				const rm = el("button", { cls: "xl-tm-mrm", text: "×", attr: { type: "button", title: T("Rimuovi", "Remove") } });
+				rm.onclick = () => {
+					media = media.filter((m) => m !== p);
+					renderGallery();
+				};
+				cell.appendChild(rm);
+				gallery.appendChild(cell);
+			}
+			const add = el("button", { cls: "xl-tm-madd", text: "", attr: { type: "button", title: T("Allega media…", "Attach media…") } });
+			add.onclick = () => fileInput.click();
+			gallery.appendChild(add);
+		};
+		fileInput.onchange = async () => {
+			for (const f of Array.from(fileInput.files ?? [])) {
+				const bytes = Array.from(new Uint8Array(await f.arrayBuffer()));
+				const rel = await this.backend.attachMedia(f.name, bytes);
+				if (rel) media.push(rel);
+			}
+			fileInput.value = "";
+			renderGallery();
+		};
+		renderGallery();
+		panel.append(gallery, fileInput);
 
 		const actions = el("div", { cls: "xl-tm-actions" });
 		const cancel = el("button", { cls: "xl-tm-cancel", text: T("Annulla", "Cancel") });
 		cancel.onclick = close;
 		const save = el("button", { cls: "xl-tm-save", text: T("Salva", "Save") });
 		const commit = () => {
+			const base = textInput.value.trim();
+			const text = [base, ...media.map(mediaEmbed)].filter(Boolean).join(" ").trim() || todo.text;
 			this.store.updateTodo(todo, {
-				text: textInput.value.trim() || todo.text,
+				text,
 				priority: Number(prio.value) as Priority,
-				due: dateInput.value || null,
+				due: dateInput.getIso(),
 				time: timeInput.value || null,
 			});
 			this.editing = null;
@@ -344,6 +522,24 @@ class App {
 		overlay.appendChild(panel);
 		requestAnimationFrame(() => textInput.focus());
 		return overlay;
+	}
+
+	/** A transient full-screen image viewer (click or Esc to dismiss). */
+	private openLightbox(src: string, alt: string): void {
+		const ov = el("div", { cls: "xl-lightbox" });
+		const dismiss = () => {
+			ov.remove();
+			window.removeEventListener("keydown", onKey);
+		};
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") dismiss();
+		};
+		ov.onclick = dismiss;
+		const img = el("img", { cls: "xl-lightbox-img", attr: { src, alt } }) as HTMLImageElement;
+		img.onclick = (e) => e.stopPropagation();
+		ov.appendChild(img);
+		window.addEventListener("keydown", onKey);
+		document.body.appendChild(ov);
 	}
 
 	/* ---------- window controls (no Windows title bar) ---------- */
@@ -466,10 +662,7 @@ class App {
 		this.config.folder = path;
 		this.onboardVault = null;
 		this.saveConfig();
-		if (this.config.syncAccent) {
-			this.obsAccent = await this.backend.obsidianAccent();
-			this.applyTheme();
-		}
+		await this.refreshAccent();
 		await this.loadData();
 		this.render();
 	}
@@ -792,17 +985,39 @@ class App {
 			})
 		);
 
-		// accent: synced with Obsidian or customized
+		// date format
 		panel.appendChild(
-			this.toggleRow(T("Accent come Obsidian", "Accent from Obsidian"), this.config.syncAccent, async (on) => {
-				this.config.syncAccent = on;
-				this.saveConfig();
-				if (on) this.obsAccent = await this.backend.obsidianAccent();
-				this.applyTheme();
-				this.render();
-			})
+			this.selectRow(
+				T("Formato data", "Date format"),
+				DATE_FORMATS.map((f) => [f, datePlaceholder(f)] as [string, string]),
+				this.config.dateFormat,
+				(v) => {
+					this.config.dateFormat = v as typeof this.config.dateFormat;
+					this.saveConfig();
+					this.render();
+				}
+			)
 		);
-		if (!this.config.syncAccent) {
+
+		// accent source: Obsidian / Windows / custom color
+		panel.appendChild(
+			this.selectRow(
+				T("Sorgente accent", "Accent source"),
+				[
+					["obsidian", "Obsidian"],
+					["windows", "Windows"],
+					["custom", T("Personalizzato", "Custom")],
+				],
+				this.config.accentSource,
+				async (v) => {
+					this.config.accentSource = v as typeof this.config.accentSource;
+					this.saveConfig();
+					await this.refreshAccent();
+					this.render();
+				}
+			)
+		);
+		if (this.config.accentSource === "custom") {
 			const accentRow = el("div", { cls: "xl-set-row" });
 			accentRow.appendChild(el("span", { cls: "xl-set-label", text: T("Colore accento", "Accent color") }));
 			const color = el("input", { attr: { type: "color", value: this.config.accent } }) as HTMLInputElement;
@@ -848,11 +1063,32 @@ class App {
 			})
 		);
 
+		// notification sound (with a ▶ preview)
+		{
+			const soundRow = this.selectRow(
+				T("Suono notifica", "Notification sound"),
+				NOTIF_SOUNDS.map((s) => [s.id, s.id === "none" ? T("Nessuno", "None") : s.label] as [string, string]),
+				this.config.notifSound,
+				(v) => {
+					this.config.notifSound = v;
+					this.saveConfig();
+					playNotifSound(v);
+				}
+			);
+			const preview = el("button", { cls: "xl-set-btn xl-set-play", text: NF.play, attr: { title: T("Ascolta", "Preview") } });
+			preview.onclick = () => playNotifSound(this.config.notifSound);
+			soundRow.appendChild(preview);
+			panel.appendChild(soundRow);
+		}
+
 		// prova notifica
 		const testRow = el("div", { cls: "xl-set-row" });
 		testRow.appendChild(el("span", { cls: "xl-set-label", text: T("Prova notifica", "Test notification") }));
 		const testBtn = el("button", { cls: "xl-set-btn", text: T("Invia", "Send") });
-		testBtn.onclick = () => void this.backend.notify("xyz.log", T("Notifica di prova ✓", "Test notification ✓"));
+		testBtn.onclick = () => {
+			playNotifSound(this.config.notifSound);
+			void this.backend.notify("xyz.log", T("Notifica di prova ✓", "Test notification ✓"));
+		};
 		testRow.appendChild(testBtn);
 		panel.appendChild(testRow);
 

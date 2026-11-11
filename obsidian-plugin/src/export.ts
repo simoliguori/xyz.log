@@ -12,9 +12,10 @@ const TASK_RE = /^\s*- \[.\]\s/;
 function exportButton(onClick: () => void): HTMLElement {
 	const btn = document.createElement("button");
 	btn.className = "th-export-btn";
-	btn.setAttribute("aria-label", t("exportTasks"));
-	setIcon(btn.createSpan({ cls: "th-export-icon" }), "list-checks");
-	btn.createSpan({ text: t("exportTasks") });
+	btn.setAttribute("aria-label", t("addToTasks"));
+	btn.setAttribute("title", t("exportTasks"));
+	setIcon(btn.createSpan({ cls: "th-export-icon" }), "list-plus");
+	btn.createSpan({ text: t("addToTasks") });
 	// keep the editor cursor where it is
 	btn.onmousedown = (e) => e.preventDefault();
 	btn.onclick = (e) => {
@@ -65,21 +66,39 @@ function taskRun(doc: Text, n: number): { from: number; to: number } | null {
 	return from <= n ? { from, to } : null;
 }
 
+/** Every contiguous task list in the document, top to bottom. */
+function allTaskRuns(doc: Text): { from: number; to: number }[] {
+	const runs: { from: number; to: number }[] = [];
+	let i = 1;
+	while (i <= doc.lines) {
+		if (TASK_RE.test(doc.line(i).text)) {
+			const run = taskRun(doc, i);
+			if (run) {
+				runs.push(run);
+				i = run.to + 1;
+				continue;
+			}
+		}
+		i++;
+	}
+	return runs;
+}
+
+/* The icon that exports the whole note, parked in the right margin beside the
+   topmost task. The bracket itself is drawn in CSS from the line decorations. */
 class ExportWidget extends WidgetType {
-	constructor(private plugin: XyzlogPlugin, private line: number) {
+	constructor(private plugin: XyzlogPlugin) {
 		super();
 	}
-	eq(other: ExportWidget): boolean {
-		return other.line === this.line;
+	eq(): boolean {
+		return true;
 	}
 	toDOM(view: EditorView): HTMLElement {
 		const btn = exportButton(() => {
 			const file = view.state.field(editorInfoField).file;
-			const run = taskRun(view.state.doc, Math.min(this.line, view.state.doc.lines));
-			if (!(file instanceof TFile) || !run) return;
-			void this.plugin.exportTasks(file, run.from - 1, run.to - 1);
+			if (file instanceof TFile) void this.plugin.exportTasks(file);
 		});
-		btn.addClass("th-export-btn--inline");
+		btn.addClass("th-export-btn--margin");
 		return btn;
 	}
 	ignoreEvent(): boolean {
@@ -87,58 +106,71 @@ class ExportWidget extends WidgetType {
 	}
 }
 
-/** First line of the hovered task list (null = none). */
-const setHovered = StateEffect.define<number | null>();
+/** Bracket every task run and park the export icon beside the first one. */
+function buildDecorations(doc: Text, plugin: XyzlogPlugin): DecorationSet {
+	const b = new RangeSetBuilder<Decoration>();
+	allTaskRuns(doc).forEach((run, idx) => {
+		for (let n = run.from; n <= run.to; n++) {
+			const line = doc.line(n);
+			const cls = ["th-exp"];
+			if (n === run.from) cls.push("th-exp-top");
+			if (n === run.to) cls.push("th-exp-bottom");
+			b.add(line.from, line.from, Decoration.line({ class: cls.join(" ") }));
+			if (idx === 0 && n === run.from) {
+				b.add(line.to, line.to, Decoration.widget({ widget: new ExportWidget(plugin), side: 1 }));
+			}
+		}
+	});
+	return b.finish();
+}
+
+/** Whether a task list is being hovered (shows the bracket and icon). */
+const setActive = StateEffect.define<boolean>();
 
 export function exportEditorExtension(plugin: XyzlogPlugin) {
-	const field = StateField.define<{ line: number | null; deco: DecorationSet }>({
-		create: () => ({ line: null, deco: Decoration.none }),
+	const field = StateField.define<{ active: boolean; deco: DecorationSet }>({
+		create: () => ({ active: false, deco: Decoration.none }),
 		update(value, tr) {
-			let line = value.line;
-			for (const e of tr.effects) if (e.is(setHovered)) line = e.value;
-			if (tr.docChanged && line !== null) {
-				// follow edits; drop the button if the list is gone
-				const from = tr.startState.doc.line(line).from;
-				line = tr.state.doc.lineAt(tr.changes.mapPos(from)).number;
-				if (!TASK_RE.test(tr.state.doc.line(line).text)) line = null;
-			}
-			if (line === value.line && !tr.docChanged) return value;
-			const b = new RangeSetBuilder<Decoration>();
-			if (line !== null) {
-				const at = tr.state.doc.line(line).to;
-				b.add(at, at, Decoration.widget({ widget: new ExportWidget(plugin, line), side: 1 }));
-			}
-			return { line, deco: b.finish() };
+			let active = value.active;
+			for (const e of tr.effects) if (e.is(setActive)) active = e.value;
+			if (active === value.active && !tr.docChanged) return value;
+			return {
+				active,
+				deco: active ? buildDecorations(tr.state.doc, plugin) : Decoration.none,
+			};
 		},
 		provide: (f) => EditorView.decorations.from(f, (v) => v.deco),
 	});
 
+	// Listen on the scroller, not the text content: the bracket and icon live in
+	// the right margin (outside .cm-content), so tracking the content alone would
+	// drop the button the instant the cursor left the text — making it unclickable.
 	const hover = ViewPlugin.define((view) => {
-		const set = (line: number | null) => {
-			if (view.state.field(field).line !== line) view.dispatch({ effects: setHovered.of(line) });
+		const set = (active: boolean) => {
+			if (view.state.field(field).active !== active) view.dispatch({ effects: setActive.of(active) });
 		};
-		const file = () => view.state.field(editorInfoField).file;
+		const onMove = (e: MouseEvent) => {
+			const f = view.state.field(editorInfoField).file;
+			if (!(f instanceof TFile) || plugin.store.isTrackedPath(f.path)) {
+				set(false);
+				return;
+			}
+			const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }, false);
+			if (pos == null) {
+				set(false);
+				return;
+			}
+			set(taskRun(view.state.doc, view.state.doc.lineAt(pos).number) !== null);
+		};
+		const onLeave = () => set(false);
+		view.scrollDOM.addEventListener("mousemove", onMove);
+		view.scrollDOM.addEventListener("mouseleave", onLeave);
 		return {
-			mousemove(e: MouseEvent) {
-				const f = file();
-				if (!f || plugin.store.isTrackedPath(f.path)) return;
-				const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }, false);
-				const run = taskRun(view.state.doc, view.state.doc.lineAt(pos).number);
-				set(run ? run.from : null);
-			},
-			mouseleave() {
-				set(null);
+			destroy() {
+				view.scrollDOM.removeEventListener("mousemove", onMove);
+				view.scrollDOM.removeEventListener("mouseleave", onLeave);
 			},
 		};
-	}, {
-		eventHandlers: {
-			mousemove(e) {
-				this.mousemove(e);
-			},
-			mouseleave() {
-				this.mouseleave();
-			},
-		},
 	});
 
 	return [field, hover];

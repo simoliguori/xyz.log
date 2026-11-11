@@ -1,5 +1,16 @@
 /* xyz.log — widget desktop Windows. Design token condivisi con il plugin. */
 
+/* Nerd Font (symbols only): bundled locally so the UI icons don't fall back to
+   Windows' emoji font. Latin text still comes from Roboto Mono; only glyphs it
+   lacks (the PUA/FontAwesome icon range) resolve from this. */
+@font-face {
+	font-family: "Symbols Nerd Font Mono";
+	src: url("/fonts/SymbolsNerdFontMono-Regular.ttf") format("truetype");
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+}
+
 :root {
 	--xl-bg: #1e1e1e;
 	--xl-bg2: #262626;
@@ -17,11 +28,16 @@
 	--xl-prio-low: #6f8f7a;
 	--xl-prio-lowest: #5d7264;
 	--xl-opacity: 0.9;
-	--xl-mono: "Roboto Mono", ui-monospace, monospace;
+	--xl-mono: "Roboto Mono", "Symbols Nerd Font Mono", ui-monospace, monospace;
+	/* icon-only font for UI glyphs */
+	--xl-nerd: "Symbols Nerd Font Mono", monospace;
 	/* header come nelle note Obsidian: NType82 se installato, poi Space Grotesk */
 	--xl-serif: "NType82-Headline", "NType82 Headline", "NType 82", "Space Grotesk", system-ui, sans-serif;
 	--xl-gap: 10px;
 	--xl-row: 92px;
+	/* shared easing for panels / menus opening */
+	--xl-ease: cubic-bezier(0.22, 1, 0.36, 1);
+	--xl-ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 * {
@@ -36,6 +52,10 @@ body {
 	overflow: hidden;
 	font-family: var(--xl-mono);
 	color: var(--xl-text);
+	/* native controls (select popups, date/time pickers) render dark, not black-on-white */
+	color-scheme: dark;
+	/* …and their selection highlight follows the app accent, not browser blue */
+	accent-color: var(--xl-accent);
 	-webkit-user-select: none;
 	user-select: none;
 }
@@ -74,6 +94,11 @@ body {
 	font-size: 15px;
 	color: var(--xl-accent-bright);
 	letter-spacing: 0.02em;
+	/* match the docked 24px logo's line-box so the wordmark centres on it */
+	display: inline-flex;
+	align-items: center;
+	height: 24px;
+	line-height: 1;
 	/* space for the intro logo that docks here on the left */
 	margin-left: 30px;
 }
@@ -458,6 +483,28 @@ body {
 	color: var(--xl-text);
 }
 
+/* pie counter: the BOX ITSELF is the pie — wedges radiate from the centre to the
+   square's edges and fill it as the daily goal is met (no inscribed circle) */
+.xl-count-pie {
+	padding: 0;
+	overflow: hidden;
+}
+.xl-pie {
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+.xl-pie .xl-pie-on {
+	/* same accent as a completed habit's filled square */
+	fill: var(--xl-accent);
+	transition: fill 0.25s var(--xl-ease);
+}
+.xl-pie .xl-pie-off {
+	/* empty wedge = the hollow box interior */
+	fill: transparent;
+	transition: fill 0.25s var(--xl-ease);
+}
+
 .xl-count-minus {
 	width: 18px;
 	height: 18px;
@@ -553,10 +600,59 @@ body {
 	align-items: center;
 	gap: 8px;
 	padding: 2px 4px;
+	margin-bottom: 7px;
 	color: var(--xl-muted);
 	font-size: 11px;
 	text-transform: uppercase;
 	letter-spacing: 0.1em;
+	cursor: grab;
+	border-radius: 6px;
+	transition: background 0.14s var(--xl-ease);
+}
+.xl-category-head:active {
+	cursor: grabbing;
+}
+/* the editable bits (icon + name) light up on hover to invite a click */
+.xl-cat-editable {
+	cursor: pointer;
+	border-radius: 5px;
+	transition: color 0.14s var(--xl-ease), background 0.14s var(--xl-ease);
+}
+.xl-category-name.xl-cat-editable {
+	padding: 1px 5px;
+	margin: 0 -2px;
+}
+.xl-category-head:hover .xl-category-name.xl-cat-editable {
+	background: var(--xl-surface);
+	color: var(--xl-text);
+}
+.xl-category-icon.xl-cat-editable:hover {
+	color: var(--xl-accent-bright);
+}
+.xl-category-name-input {
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-accent);
+	border-radius: 5px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 11px;
+	letter-spacing: 0.06em;
+	padding: 1px 6px;
+	min-width: 0;
+	flex: 1 1 auto;
+	outline: none;
+}
+/* drag-to-reorder feedback (categories reuse the task drop indicators) */
+.xl-category.is-dragging {
+	opacity: 0.5;
+}
+.xl-category.xl-drop-before,
+.xl-habit.xl-drop-before {
+	box-shadow: inset 0 2px 0 var(--xl-accent-bright);
+}
+.xl-category.xl-drop-after,
+.xl-habit.xl-drop-after {
+	box-shadow: inset 0 -2px 0 var(--xl-accent-bright);
 }
 
 .xl-category-body {
@@ -815,10 +911,159 @@ body {
 	min-width: 90px;
 }
 
+/* quick-add highlight overlay: the field holds a mirror layer that paints the
+   recognised smart-text, with a transparent-text input (visible caret) on top */
+.xl-add-field {
+	position: relative;
+	flex: 1;
+	min-width: 90px;
+	height: 27px;
+}
+.xl-add-field .xl-add-text {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	box-sizing: border-box;
+	background: transparent;
+	color: transparent;
+	caret-color: var(--xl-text);
+	z-index: 1;
+}
+.xl-add-field .xl-add-text::placeholder {
+	color: var(--xl-muted);
+}
+.xl-add-mirror {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	box-sizing: border-box;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	padding: 4px 6px;
+	font-family: var(--xl-mono);
+	font-size: 12px;
+	line-height: 17px;
+	white-space: pre;
+	overflow: hidden;
+	color: var(--xl-text);
+	pointer-events: none;
+}
+.xl-smart {
+	color: var(--xl-accent-bright);
+	font-weight: 600;
+}
+
 .xl-add-date,
 .xl-add-time,
 .xl-add-prio {
 	flex: 0 0 auto;
+}
+
+/* priority picker button: matches the other compact controls */
+.xl-add-prio {
+	width: 34px;
+	height: 27px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 6px;
+	font-family: var(--xl-nerd);
+	font-size: 15px;
+	line-height: 1;
+	cursor: pointer;
+	padding: 0;
+	transition: border-color 0.15s var(--xl-ease), background 0.15s var(--xl-ease);
+}
+.xl-add-prio:hover {
+	border-color: var(--xl-accent-bright);
+}
+.xl-add-prio.is-set {
+	border-color: currentColor;
+	background: color-mix(in srgb, currentColor 14%, var(--xl-bg2));
+}
+
+/* date / time pickers as compact icon buttons (no visible text) */
+.xl-pickbtn-wrap {
+	position: relative;
+	flex: 0 0 auto;
+	display: inline-flex;
+}
+.xl-pickbtn {
+	width: 30px;
+	height: 27px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 6px;
+	font-family: var(--xl-nerd);
+	font-size: 14px;
+	line-height: 1;
+	color: var(--xl-muted);
+	cursor: pointer;
+	padding: 0;
+	transition: border-color 0.15s var(--xl-ease), background 0.15s var(--xl-ease), color 0.15s var(--xl-ease);
+}
+.xl-pickbtn:hover {
+	border-color: var(--xl-accent-bright);
+	color: var(--xl-text);
+}
+.xl-pickbtn.is-set {
+	border-color: var(--xl-accent-bright);
+	color: var(--xl-accent-bright);
+	background: color-mix(in srgb, var(--xl-accent) 14%, var(--xl-bg2));
+}
+/* the native input only anchors the picker popup near the button; it's invisible */
+.xl-pickbtn-wrap .xl-df-native {
+	position: absolute;
+	left: 4px;
+	bottom: 0;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	border: 0;
+	padding: 0;
+	pointer-events: none;
+}
+
+/* media attach */
+.xl-file-hidden {
+	display: none;
+}
+.xl-media-strip {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	flex: 0 0 auto;
+	margin-left: 6px;
+}
+.xl-media-thumb {
+	width: 22px;
+	height: 22px;
+	object-fit: cover;
+	border-radius: 4px;
+	border: 1px solid var(--xl-border);
+	background: var(--xl-bg2);
+	display: block;
+}
+.xl-media-file {
+	width: 22px;
+	height: 22px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--xl-border);
+	border-radius: 4px;
+	font-family: var(--xl-nerd);
+	font-size: 13px;
+	color: var(--xl-muted);
+}
+.xl-media-more {
+	font-size: 10px;
+	color: var(--xl-muted);
 }
 
 .xl-add-btn {
@@ -909,7 +1154,7 @@ body {
 
 .xl-todo-main {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: 7px;
 }
 
@@ -921,6 +1166,8 @@ body {
 .xl-todo-text {
 	flex: 1;
 	min-width: 0;
+	/* long words / URLs wrap inside the text column, before the date */
+	overflow-wrap: anywhere;
 }
 
 .xl-todo-desc {
@@ -961,6 +1208,8 @@ body {
 	color: var(--xl-muted);
 	font-size: 11px;
 	white-space: nowrap;
+	flex-shrink: 0;
+	padding-top: 2px;
 }
 
 .xl-due.is-overdue {
@@ -1063,6 +1312,7 @@ body {
 	align-items: center;
 	justify-content: center;
 	z-index: 10;
+	animation: xl-backdrop-in 0.22s ease both;
 }
 
 .xl-settings {
@@ -1076,6 +1326,29 @@ body {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+	animation: xl-panel-in 0.34s var(--xl-ease) both;
+}
+
+@keyframes xl-backdrop-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+@keyframes xl-panel-in {
+	from { opacity: 0; transform: translateY(14px) scale(0.96); }
+	to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes xl-fade-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.xl-overlay,
+	.xl-settings,
+	.xl-task-modal,
+	.xl-ctx-menu { animation: none; }
 }
 
 .xl-settings-title {
@@ -1542,6 +1815,7 @@ body.xl-reveal .xl-brand {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+	animation: xl-panel-in 0.34s var(--xl-ease) both;
 }
 .xl-tm-title {
 	font-family: var(--xl-serif);
@@ -1602,6 +1876,109 @@ body.xl-reveal .xl-brand {
 	padding: 8px 14px;
 	cursor: pointer;
 	font-family: var(--xl-mono);
+}
+
+/* ---------- edit-modal media gallery + lightbox ---------- */
+.xl-tm-media {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+.xl-tm-mcell {
+	position: relative;
+	width: 64px;
+	height: 64px;
+	border-radius: 9px;
+	overflow: hidden;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+}
+.xl-tm-mthumb {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	cursor: zoom-in;
+	display: block;
+}
+.xl-tm-mfile {
+	font-family: var(--xl-nerd);
+	font-size: 22px;
+	color: var(--xl-accent-bright);
+	line-height: 1;
+}
+.xl-tm-mname {
+	font-family: var(--xl-mono);
+	font-size: 8px;
+	color: var(--xl-muted);
+	max-width: 58px;
+	padding: 0 3px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.xl-tm-mrm {
+	position: absolute;
+	top: 2px;
+	right: 2px;
+	width: 16px;
+	height: 16px;
+	line-height: 14px;
+	text-align: center;
+	border: none;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.6);
+	color: #fff;
+	cursor: pointer;
+	font-size: 12px;
+	padding: 0;
+	opacity: 0;
+	transition: opacity 0.14s var(--xl-ease);
+}
+.xl-tm-mcell:hover .xl-tm-mrm {
+	opacity: 1;
+}
+.xl-tm-madd {
+	width: 64px;
+	height: 64px;
+	border-radius: 9px;
+	border: 1px dashed var(--xl-border);
+	background: transparent;
+	color: var(--xl-muted);
+	font-family: var(--xl-nerd);
+	font-size: 20px;
+	cursor: pointer;
+	transition: color 0.14s var(--xl-ease), border-color 0.14s var(--xl-ease);
+}
+.xl-tm-madd:hover {
+	color: var(--xl-accent-bright);
+	border-color: var(--xl-accent);
+}
+.xl-lightbox {
+	position: fixed;
+	inset: 0;
+	z-index: 300;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 28px;
+	background: rgba(0, 0, 0, 0.78);
+	-webkit-backdrop-filter: blur(6px);
+	backdrop-filter: blur(6px);
+	cursor: zoom-out;
+	animation: xl-fade-in 0.18s var(--xl-ease) both;
+}
+.xl-lightbox-img {
+	max-width: 100%;
+	max-height: 100%;
+	border-radius: 10px;
+	box-shadow: 0 20px 70px rgba(0, 0, 0, 0.6);
+	cursor: default;
 }
 
 /* ---------- fix di polish (icone, +, scrollbar, slide, unlink) ---------- */
@@ -1772,4 +2149,209 @@ body.xl-reveal .xl-brand {
 body.xl-reveal .xl-topbar {
 	transform: none;
 	opacity: 1;
+}
+
+/* ---------- compact date field (format-aware) ---------- */
+.xl-datefield {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	flex: 0 0 auto;
+}
+.xl-datefield .xl-df-text {
+	/* snug to the 10-char date formats (dd/mm/yyyy etc.): 8px left + ~74px text +
+	   23px for the calendar button, with no slack */
+	width: 105px;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 6px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 12px;
+	height: 27px;
+	padding: 4px 23px 4px 8px; /* room for the calendar button */
+}
+.xl-datefield .xl-df-text::placeholder {
+	color: var(--xl-muted);
+}
+.xl-datefield .xl-df-text.is-bad {
+	border-color: var(--xl-overdue);
+}
+.xl-datefield .xl-df-native {
+	position: absolute;
+	right: 24px;
+	bottom: 0;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+	border: 0;
+	padding: 0;
+	margin: 0;
+}
+.xl-df-cal {
+	position: absolute;
+	right: 2px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: 0;
+	border-radius: 4px;
+	cursor: pointer;
+	font-family: var(--xl-nerd);
+	font-size: 12px;
+	line-height: 1;
+	padding: 0;
+	color: var(--xl-text);
+	opacity: 0.75;
+}
+.xl-df-cal:hover {
+	opacity: 1;
+	background: var(--xl-surface);
+}
+.xl-tm-datefield .xl-df-text {
+	height: auto;
+	width: 105px;
+	border-radius: 7px;
+	padding: 6px 23px 6px 8px;
+}
+
+/* ---------- notification sound preview ---------- */
+.xl-set-play {
+	margin-left: 6px;
+	min-width: 30px;
+	font-family: var(--xl-nerd);
+	color: var(--xl-text);
+}
+
+/* ---------- right-click context menu ---------- */
+.xl-ctx-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 50;
+	background: rgba(0, 0, 0, 0.28);
+	animation: xl-backdrop-in 0.16s ease both;
+}
+.xl-ctx-menu {
+	position: absolute;
+	min-width: 186px;
+	padding: 6px;
+	background: rgba(30, 30, 34, 0.86);
+	-webkit-backdrop-filter: blur(20px) saturate(1.3);
+	backdrop-filter: blur(20px) saturate(1.3);
+	border: 1px solid var(--xl-border);
+	border-radius: 12px;
+	box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	transform-origin: top left;
+	animation: xl-ctx-in 0.2s var(--xl-ease-pop) both;
+}
+@keyframes xl-ctx-in {
+	from { opacity: 0; transform: scale(0.9) translateY(-4px); }
+	to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.xl-ctx-item {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	width: 100%;
+	text-align: left;
+	background: transparent;
+	border: 0;
+	border-radius: 8px;
+	color: var(--xl-text);
+	font-family: var(--xl-mono);
+	font-size: 12.5px;
+	padding: 7px 9px;
+	cursor: pointer;
+}
+.xl-ctx-item:hover {
+	background: var(--xl-accent-soft);
+}
+.xl-ctx-item.is-danger {
+	color: var(--xl-overdue);
+}
+.xl-ctx-item.is-danger:hover {
+	background: color-mix(in srgb, var(--xl-overdue) 24%, transparent);
+}
+.xl-ctx-item.is-disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+.xl-ctx-item.is-disabled:hover {
+	background: transparent;
+}
+.xl-ctx-icon {
+	width: 16px;
+	text-align: center;
+	font-family: var(--xl-nerd);
+	color: var(--xl-text);
+	opacity: 0.85;
+}
+.xl-ctx-label {
+	flex: 1;
+}
+.xl-ctx-arrow {
+	opacity: 0.6;
+	font-size: 10px;
+}
+.xl-ctx-sep {
+	height: 1px;
+	margin: 4px 6px;
+	background: var(--xl-border);
+}
+
+/* ---------- sort control + separator in the add row ---------- */
+.xl-sort-btn {
+	width: 30px;
+	height: 27px;
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--xl-bg2);
+	border: 1px solid var(--xl-border);
+	border-radius: 6px;
+	color: var(--xl-text);
+	font-size: 14px;
+	line-height: 1;
+	padding: 0;
+	cursor: pointer;
+	transition: border-color 0.15s var(--xl-ease);
+}
+.xl-sort-btn:hover {
+	border-color: var(--xl-accent-bright);
+}
+.xl-add-sep {
+	flex: 0 0 auto;
+	width: 1px;
+	align-self: stretch;
+	margin: 2px 1px;
+	background: var(--xl-border);
+}
+
+/* align the first-line markers with wrapped task text */
+.xl-todo-main > .xl-prio-dot {
+	margin-top: 5px;
+}
+
+/* ---------- draggable tasks ---------- */
+.xl-draggable {
+	cursor: grab;
+}
+.xl-draggable.is-dragging {
+	opacity: 0.5;
+}
+.xl-draggable.xl-drop-before {
+	box-shadow: inset 0 2px 0 var(--xl-accent-bright);
+}
+.xl-draggable.xl-drop-after {
+	box-shadow: inset 0 -2px 0 var(--xl-accent-bright);
 }

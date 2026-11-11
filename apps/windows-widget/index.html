@@ -4,14 +4,151 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 		<title>xyz.log</title>
+		<link rel="icon" type="image/svg+xml" href="/logo.svg" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link
 			href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap"
 			rel="stylesheet"
 		/>
 		<link rel="stylesheet" href="/src/styles.css" />
+		<!-- Boot splash: inline + critical so it paints on the FIRST frame, before the
+		     module loads. Shows the logo motion-graphic for a split second, hiding the
+		     translucent "empty window" flash, then fades to reveal the app behind. -->
+		<style id="xl-boot-css">
+			#xl-boot {
+				position: fixed;
+				inset: 0;
+				z-index: 9999;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: #1e1e1e;
+				-webkit-app-region: drag;
+				transition: opacity 0.42s ease;
+			}
+			#xl-boot.is-hiding {
+				opacity: 0;
+				pointer-events: none;
+			}
+			#xl-boot .b-stage {
+				position: relative;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 15px;
+				transform: translateY(-4px);
+			}
+			#xl-boot .b-stage::before {
+				content: "";
+				position: absolute;
+				top: 14px;
+				width: 150px;
+				height: 150px;
+				border-radius: 50%;
+				background: radial-gradient(circle, rgba(110, 118, 185, 0.38), transparent 68%);
+				filter: blur(6px);
+				z-index: -1;
+				animation: b-glow 1.15s ease-out both;
+			}
+			#xl-boot svg {
+				width: 94px;
+				height: 94px;
+				overflow: visible;
+			}
+			/* the whole glyph pops in; its inner shapes then "ink" in, staggered */
+			#xl-boot .b-logo {
+				transform-origin: center;
+				animation: b-pop 0.64s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+			}
+			#xl-boot .bg-bars { opacity: 0; animation: b-ink 0.3s ease 0.06s both; }
+			#xl-boot .bg-back { opacity: 0; animation: b-ink 0.42s ease 0.24s both; }
+			#xl-boot .bg-diag { opacity: 0; animation: b-ink 0.42s ease 0.36s both; }
+			#xl-boot .b-word {
+				font-family: "Space Grotesk", system-ui, sans-serif;
+				font-size: 22px;
+				letter-spacing: 0.02em;
+				color: #dcdcdc;
+				opacity: 0;
+				animation: b-fade 0.5s ease 0.5s both;
+			}
+			@keyframes b-pop {
+				0% { transform: scale(0.4); }
+				60% { transform: scale(1.06); }
+				100% { transform: scale(1); }
+			}
+			@keyframes b-ink {
+				from { opacity: 0; }
+				to { opacity: 1; }
+			}
+			@keyframes b-fade {
+				from { opacity: 0; transform: translateY(6px); }
+				to { opacity: 1; transform: none; }
+			}
+			@keyframes b-glow {
+				0% { transform: scale(0.5); opacity: 0; }
+				45% { opacity: 0.9; }
+				100% { transform: scale(1.25); opacity: 0; }
+			}
+			@media (prefers-reduced-motion: reduce) {
+				#xl-boot .b-logo,
+				#xl-boot .bg-bars,
+				#xl-boot .bg-back,
+				#xl-boot .bg-diag,
+				#xl-boot .b-word,
+				#xl-boot .b-stage::before { animation: none; }
+				#xl-boot .bg-bars,
+				#xl-boot .bg-back,
+				#xl-boot .bg-diag { opacity: 1; }
+				#xl-boot .b-word { opacity: 1; }
+			}
+		</style>
 	</head>
 	<body>
+		<div id="xl-boot" aria-hidden="true">
+			<div class="b-stage">
+				<svg class="b-logo" viewBox="40 40 160 160">
+					<defs>
+						<clipPath id="xlbox-b"><rect x="48" y="48" width="144" height="144" rx="1.5" /></clipPath>
+						<clipPath id="xlshape-b">
+							<polygon points="77.73,65 162.27,65 205.73,47 34.27,47" />
+							<polygon points="34.27,193 205.73,193 162.27,175 77.73,175" />
+							<polygon points="162.27,65 34.27,193 77.73,175 205.73,47" />
+							<polygon points="34.27,47 113.64,126.36 126.36,113.64 77.73,65" />
+							<polygon points="113.64,126.36 162.27,175 205.73,193 126.36,113.64" />
+						</clipPath>
+						<linearGradient id="xlsheen-b" x1="0" y1="0" x2="1" y2="1">
+							<stop offset="0" stop-color="#ffffff" stop-opacity="0.42" />
+							<stop offset="0.38" stop-color="#ffffff" stop-opacity="0.07" />
+							<stop offset="0.62" stop-color="#000000" stop-opacity="0.06" />
+							<stop offset="1" stop-color="#000000" stop-opacity="0.44" />
+						</linearGradient>
+						<linearGradient id="xlbslash-b" gradientUnits="userSpaceOnUse" x1="56" y1="56" x2="184" y2="184">
+							<stop offset="0" stop-color="#a0a3d7" /><stop offset="1" stop-color="#5e639e" />
+						</linearGradient>
+						<linearGradient id="xldiag-b" gradientUnits="userSpaceOnUse" x1="184" y1="56" x2="56" y2="184">
+							<stop offset="0" stop-color="#767ebf" /><stop offset="0.5" stop-color="#6e76b9" /><stop offset="1" stop-color="#626aae" />
+						</linearGradient>
+						<filter id="xldrop-b" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="#000000" flood-opacity="0.33" /></filter>
+					</defs>
+					<g clip-path="url(#xlbox-b)">
+						<g clip-path="url(#xlshape-b)">
+							<g class="bg-bars" filter="url(#xldrop-b)">
+								<polygon points="77.73,65 162.27,65 205.73,47 34.27,47" fill="#6e76b9" stroke="#6e76b9" stroke-width="2.5" stroke-linejoin="round" />
+								<polygon points="34.27,193 205.73,193 162.27,175 77.73,175" fill="#6e76b9" stroke="#6e76b9" stroke-width="2.5" stroke-linejoin="round" />
+							</g>
+							<g class="bg-back" filter="url(#xldrop-b)">
+								<polygon points="34.27,47 113.64,126.36 162.27,175 205.73,193 126.36,113.64 77.73,65" fill="url(#xlbslash-b)" stroke="url(#xlbslash-b)" stroke-width="2.5" stroke-linejoin="round" />
+							</g>
+							<g class="bg-diag" filter="url(#xldrop-b)">
+								<polygon points="162.27,65 34.27,193 77.73,175 205.73,47" fill="url(#xldiag-b)" stroke="url(#xldiag-b)" stroke-width="2.5" stroke-linejoin="round" />
+							</g>
+						</g>
+						<rect x="48" y="48" width="144" height="144" fill="url(#xlsheen-b)" clip-path="url(#xlshape-b)" />
+					</g>
+				</svg>
+				<div class="b-word">xyz.log</div>
+			</div>
+		</div>
 		<!-- "Liquid glass" filter: real backdrop refraction (feDisplacementMap).
 		     Works in WebView2/Chromium; elsewhere the fallback blur remains. -->
 		<svg width="0" height="0" style="position: absolute" aria-hidden="true">

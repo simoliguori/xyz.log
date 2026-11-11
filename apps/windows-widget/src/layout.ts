@@ -3,6 +3,9 @@
    (horizontal) or tall (vertical) as you like. Everything is customizable and
    saved in the config. */
 
+import type { DateFormat } from "./datefmt";
+import type { TodoSort } from "./sort";
+
 export type TileType =
 	| "header"
 	| "habits"
@@ -32,9 +35,21 @@ export interface TabLayout {
 export interface AppConfig {
 	folder: string;
 	lang: "it" | "en";
+	/** how dates are shown/typed in the task fields */
+	dateFormat: DateFormat;
 	accent: string;
-	/** sync the accent with Obsidian's color (appearance.json) */
+	/** where the accent comes from */
+	accentSource: "obsidian" | "windows" | "custom";
+	/** legacy flag, kept for back-compat; superseded by accentSource */
 	syncAccent: boolean;
+	/** id of the sound played when a reminder fires ("none" = silent) */
+	notifSound: string;
+	/** how the To-do list is ordered */
+	todoSort: TodoSort;
+	/** manual drag-to-reorder on top of the sort (persisted in Todo.md) */
+	todoDraggable: boolean;
+	/** pin overdue tasks to the top, statically, in every sort mode */
+	overdueTop: boolean;
 	opacity: number;
 	pinned: boolean;
 	autostart: boolean;
