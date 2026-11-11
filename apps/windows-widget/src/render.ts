@@ -239,19 +239,36 @@ export function renderHabits(host: HTMLElement, ctx: RenderCtx, withAdd = true):
 	const groups = buildHabitGroups(ctx.data, ctx.today);
 	const flatIds = (order: number[]): string[] => order.flatMap((i) => groups[i].habits.map((v) => v.habit.id));
 
-	// categories are draggable (by their head) to reorder; every group is a drop
-	// target. Reordering rewrites the whole habit order in the frontmatter.
+	// Whole groups are draggable to reorder (grab a category anywhere, or a lone
+	// habit); every group is also a drop target. Reordering rewrites the habit
+	// order in the frontmatter (category order follows habit order).
 	let dragFrom = -1;
 	const clearDrops = () =>
 		list.querySelectorAll(".xl-drop-before,.xl-drop-after").forEach((n) => n.classList.remove("xl-drop-before", "xl-drop-after"));
-	const dropTarget = (node: HTMLElement, gi: number) => {
+	const dragSource = (node: HTMLElement, gi: number) => {
+		node.setAttribute("draggable", "true");
+		node.addEventListener("dragstart", (e) => {
+			const d = e as DragEvent;
+			// setData is required for a drag to actually start in some engines
+			if (d.dataTransfer) {
+				d.dataTransfer.effectAllowed = "move";
+				d.dataTransfer.setData("text/plain", String(gi));
+			}
+			dragFrom = gi;
+			node.classList.add("is-dragging");
+		});
+		node.addEventListener("dragend", () => {
+			node.classList.remove("is-dragging");
+			clearDrops();
+			dragFrom = -1;
+		});
 		node.addEventListener("dragover", (e) => {
 			if (dragFrom < 0) return;
 			e.preventDefault();
 			const rect = node.getBoundingClientRect();
 			const after = (e as DragEvent).clientY > rect.top + rect.height / 2;
 			clearDrops();
-			node.classList.add(after ? "xl-drop-after" : "xl-drop-before");
+			if (gi !== dragFrom) node.classList.add(after ? "xl-drop-after" : "xl-drop-before");
 		});
 		node.addEventListener("drop", (e) => {
 			if (dragFrom < 0 || gi === dragFrom) return;
@@ -286,30 +303,23 @@ export function renderHabits(host: HTMLElement, ctx: RenderCtx, withAdd = true):
 				e.stopPropagation();
 				startCategoryRename(nameEl, cs.icon, cs.name, ctx);
 			};
-			const head = el("div", { cls: "xl-category-head", attr: { draggable: "true" } }, [
+			const grip = el("span", { cls: "xl-cat-grip", text: "⠿", attr: { "aria-hidden": "true", title: it ? "Trascina per riordinare" : "Drag to reorder" } });
+			const head = el("div", { cls: "xl-category-head" }, [
+				grip,
 				iconEl,
 				nameEl,
 				el("span", { cls: "xl-group-count", text: String(group.habits.length) }),
 			]);
-			head.addEventListener("dragstart", (e) => {
-				dragFrom = gi;
-				(e as DragEvent).dataTransfer!.effectAllowed = "move";
-				cat.classList.add("is-dragging");
-			});
-			head.addEventListener("dragend", () => {
-				cat.classList.remove("is-dragging");
-				clearDrops();
-				dragFrom = -1;
-			});
 			cat.appendChild(head);
 			const body = el("div", { cls: "xl-category-body" });
 			for (const v of group.habits) body.appendChild(habitRow(v, ctx));
 			cat.appendChild(body);
-			dropTarget(cat, gi);
+			dragSource(cat, gi);
 			list.appendChild(cat);
 		} else {
 			const row = habitRow(group.habits[0], ctx);
-			dropTarget(row, gi);
+			row.classList.add("xl-habit-draggable");
+			dragSource(row, gi);
 			list.appendChild(row);
 		}
 	});
@@ -319,7 +329,11 @@ export function renderHabits(host: HTMLElement, ctx: RenderCtx, withAdd = true):
 
 /** Swap a category's name label for an inline input (commit on Enter/blur). */
 function startCategoryRename(nameEl: HTMLElement, icon: string, name: string, ctx: RenderCtx): void {
+	// the whole category is draggable; disable it so the text field stays editable
+	const cat = nameEl.closest(".xl-category");
+	cat?.setAttribute("draggable", "false");
 	const input = el("input", { cls: "xl-category-name-input", attr: { type: "text", value: name } }) as HTMLInputElement;
+	input.addEventListener("mousedown", (e) => e.stopPropagation());
 	nameEl.replaceWith(input);
 	input.focus();
 	input.select();

@@ -612,6 +612,28 @@ body {
 .xl-category-head:active {
 	cursor: grabbing;
 }
+/* drag grip: subtle dots on the left of the category head */
+.xl-cat-grip {
+	color: var(--xl-muted);
+	opacity: 0.45;
+	font-size: 13px;
+	line-height: 1;
+	letter-spacing: -1px;
+	transition: opacity 0.14s var(--xl-ease);
+}
+.xl-category-head:hover .xl-cat-grip {
+	opacity: 0.85;
+}
+/* a lone (uncategorised) habit is draggable too */
+.xl-habit-draggable {
+	cursor: grab;
+}
+.xl-habit-draggable:active {
+	cursor: grabbing;
+}
+.xl-habit.is-dragging {
+	opacity: 0.5;
+}
 /* the editable bits (icon + name) light up on hover to invite a click */
 .xl-cat-editable {
 	cursor: pointer;
