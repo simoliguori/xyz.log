@@ -1745,10 +1745,10 @@ body.xl-reveal .xl-brand {
 }
 .xl-brand.is-docked {
 	/* piccolo, in alto a sinistra: posizione fissa in px (rigida al trascinamento) */
-	top: 23px;
+	top: 26px;
 	left: 24px;
-	width: 24px;
-	height: 24px;
+	width: 18px;
+	height: 18px;
 }
 
 /* intro "liquid glass" veil that dissolves as the content comes in */
