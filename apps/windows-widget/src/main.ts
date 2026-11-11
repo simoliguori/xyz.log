@@ -1105,6 +1105,12 @@ class App {
 		});
 		panel.appendChild(mode);
 
+		const credit = el("div", {
+			cls: "xl-set-credit",
+			text: T("creato da eccerobot", "created by eccerobot"),
+		});
+		panel.appendChild(credit);
+
 		const close = el("button", { cls: "xl-set-close", text: T("Chiudi", "Close") });
 		close.onclick = () => {
 			this.showSettings = false;

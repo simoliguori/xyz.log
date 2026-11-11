@@ -1421,6 +1421,15 @@ body {
 	border-top: 1px solid var(--xl-border);
 }
 
+.xl-set-credit {
+	font-size: 10px;
+	color: var(--xl-muted);
+	text-align: center;
+	opacity: 0.7;
+	letter-spacing: 0.03em;
+	margin-top: 2px;
+}
+
 .xl-set-close {
 	background: var(--xl-surface);
 	border: 1px solid var(--xl-border);
@@ -1744,8 +1753,10 @@ body.xl-reveal .xl-brand {
 	height: 100%;
 }
 .xl-brand.is-docked {
-	/* piccolo, in alto a sinistra: posizione fissa in px (rigida al trascinamento) */
-	top: 26px;
+	/* piccolo, in alto a sinistra: posizione fissa in px (rigida al trascinamento).
+	   top/left sono il CENTRO del glifo (transform translate(-50%,-50%)): 23px
+	   allinea il centro con quello della scritta "xyz.log" nella topbar. */
+	top: 23px;
 	left: 24px;
 	width: 18px;
 	height: 18px;

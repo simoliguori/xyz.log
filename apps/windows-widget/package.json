@@ -2,6 +2,7 @@
   "name": "xyzlog-windows-widget",
   "version": "0.2.0",
   "description": "xyz.log Windows desktop widget: an always-on, modular tile-based gadget with notifications.",
+  "author": "eccerobot",
   "license": "MIT",
   "type": "module",
   "scripts": {
