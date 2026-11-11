@@ -92,8 +92,8 @@ class App {
 	private edit = false;
 	private showSettings = false;
 	private intro = true;
-	private docked = true;
-	private logoOnly = false;
+	private docked = false;
+	private logoOnly = true;
 	private slideDir = 0;
 	private brand: HTMLElement | null = null;
 	private obsAccent: string | null = null;
@@ -150,17 +150,24 @@ class App {
 	   since the first frame. Keep it up for a clean split-second, then fade it out to
 	   reveal the app behind; the content's entrance animation plays as it dissolves. */
 	private finishBoot(): void {
-		window.setTimeout(() => {
-			this.intro = false;
-			this.root.classList.remove("xl-intro");
-		}, 1100);
 		const boot = document.getElementById("xl-boot");
-		if (!boot) return;
-		const MIN = 820; // ms the logo stays on screen even if the app is ready sooner
-		const wait = Math.max(0, MIN - (performance.now() - BOOT_T0));
+		const MIN = 820; // ms the motion-graphic stays up even if the app is ready sooner
+		const wait = boot ? Math.max(0, MIN - (performance.now() - BOOT_T0)) : 0;
 		window.setTimeout(() => {
-			boot.classList.add("is-hiding");
-			window.setTimeout(() => boot.remove(), 460);
+			// the boot splash fades, revealing the isolated logo centred underneath
+			boot?.classList.add("is-hiding");
+			window.setTimeout(() => boot?.remove(), 460);
+			// a short beat on the isolated logo, then it slides to the top-left corner
+			// while the window content enters behind it
+			window.setTimeout(() => {
+				this.docked = true;
+				this.logoOnly = false;
+				this.render();
+				window.setTimeout(() => {
+					this.intro = false;
+					this.root.classList.remove("xl-intro");
+				}, 1100);
+			}, 340);
 		}, wait);
 	}
 
