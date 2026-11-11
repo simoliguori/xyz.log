@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 40 160 160" role="img" aria-label="xyz.log">
+  <title>xyz.log — animated mark</title>
+  <!--
+    Self-contained reproduction of the xyz.log mark "writing" animation.
+    The five vectors are revealed one straight line at a time, in order:
+      X (\ lower) -> Y (\ upper) -> Z top plate -> Z "/" -> Z bottom plate.
+    Each pen is a white stroke inside a PER-LAYER reveal mask, confined to its
+    own bar, so a line only ever uncovers its own piece (the "/" can never peek
+    through the centre while the "\" is still being drawn).
+    Timing / easing are identical to the WAAPI original:
+      delays 0 / 215 / 430 / 680 / 1010 ms, durs 175 / 175 / 210 / 290 / 210 ms,
+      linear, fill:both. Plays ONCE and rests fully drawn.
+    See docs/brand/motion.md for the full spec (loop / replay variants included).
+  -->
+  <defs>
+    <style>
+      .pen { stroke-dasharray: 1; stroke-dashoffset: 1; }
+      .pen0 { animation: draw 175ms linear    0ms both; }
+      .pen1 { animation: draw 175ms linear  215ms both; }
+      .pen2 { animation: draw 210ms linear  430ms both; }
+      .pen3 { animation: draw 290ms linear  680ms both; }
+      .pen4 { animation: draw 210ms linear 1010ms both; }
+      @keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+      @media (prefers-reduced-motion: reduce) {
+        .pen { stroke-dashoffset: 0; animation: none; }
+      }
+    </style>
+
+    <clipPath id="box"><rect x="48" y="48" width="144" height="144" rx="1.5"/></clipPath>
+
+    <clipPath id="shape">
+      <polygon points="77.73,65 162.27,65 205.73,47 34.27,47"/>
+      <polygon points="34.27,193 205.73,193 162.27,175 77.73,175"/>
+      <polygon points="162.27,65 34.27,193 77.73,175 205.73,47"/>
+      <polygon points="34.27,47 113.64,126.36 126.36,113.64 77.73,65"/>
+      <polygon points="113.64,126.36 162.27,175 205.73,193 126.36,113.64"/>
+    </clipPath>
+
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42"/>
+      <stop offset="0.38" stop-color="#ffffff" stop-opacity="0.07"/>
+      <stop offset="0.62" stop-color="#000000" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.44"/>
+    </linearGradient>
+    <linearGradient id="bslash" gradientUnits="userSpaceOnUse" x1="56" y1="56" x2="184" y2="184">
+      <stop offset="0" stop-color="#a0a3d7"/><stop offset="1" stop-color="#5e639e"/>
+    </linearGradient>
+    <linearGradient id="diag" gradientUnits="userSpaceOnUse" x1="184" y1="56" x2="56" y2="184">
+      <stop offset="0" stop-color="#767ebf"/><stop offset="0.5" stop-color="#6e76b9"/><stop offset="1" stop-color="#626aae"/>
+    </linearGradient>
+
+    <filter id="drop" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="#000000" flood-opacity="0.33"/></filter>
+
+    <!-- per-bar clips: each pen is confined to its own vector -->
+    <clipPath id="bar0"><polygon points="77.73,65 162.27,65 205.73,47 34.27,47"/></clipPath>
+    <clipPath id="bar1"><polygon points="34.27,193 205.73,193 162.27,175 77.73,175"/></clipPath>
+    <clipPath id="bar2"><polygon points="162.27,65 34.27,193 77.73,175 205.73,47"/></clipPath>
+    <clipPath id="bar3"><polygon points="34.27,47 113.64,126.36 126.36,113.64 77.73,65"/></clipPath>
+    <clipPath id="bar4"><polygon points="113.64,126.36 162.27,175 205.73,193 126.36,113.64"/></clipPath>
+
+    <!-- per-layer sheen clips -->
+    <clipPath id="clPlate"><polygon points="77.73,65 162.27,65 205.73,47 34.27,47"/><polygon points="34.27,193 205.73,193 162.27,175 77.73,175"/></clipPath>
+    <clipPath id="clBack"><polygon points="34.27,47 113.64,126.36 126.36,113.64 77.73,65"/><polygon points="113.64,126.36 162.27,175 205.73,193 126.36,113.64"/></clipPath>
+
+    <!-- ONE reveal mask PER LAYER (pen positions, not bar indices) -->
+    <mask id="mPlate" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="240">
+      <g clip-path="url(#bar0)"><path class="pen pen2" pathLength="1" d="M34 56 L206 56" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g clip-path="url(#bar1)"><path class="pen pen4" pathLength="1" d="M34 184 L206 184" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </mask>
+    <mask id="mBack" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="240">
+      <g clip-path="url(#bar4)"><path class="pen pen0" pathLength="1" d="M199.56 199.56 L120 120" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g clip-path="url(#bar3)"><path class="pen pen1" pathLength="1" d="M120 120 L40.44 40.44" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </mask>
+    <mask id="mSlash" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="240">
+      <g clip-path="url(#bar2)"><path class="pen pen3" pathLength="1" d="M199.56 40.44 L40.44 199.56" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </mask>
+  </defs>
+
+  <g clip-path="url(#box)">
+    <g clip-path="url(#shape)">
+      <!-- plates (Z top + bottom) -->
+      <g mask="url(#mPlate)">
+        <g filter="url(#drop)">
+          <polygon points="77.73,65 162.27,65 205.73,47 34.27,47" fill="#6e76b9" stroke="#6e76b9" stroke-width="2.5" stroke-linejoin="round"/>
+          <polygon points="34.27,193 205.73,193 162.27,175 77.73,175" fill="#6e76b9" stroke="#6e76b9" stroke-width="2.5" stroke-linejoin="round"/>
+        </g>
+        <rect x="48" y="48" width="144" height="144" fill="url(#sheen)" clip-path="url(#clPlate)"/>
+      </g>
+      <!-- the "\" (Y+X) as one seamless hexagon -->
+      <g mask="url(#mBack)">
+        <g filter="url(#drop)">
+          <polygon points="34.27,47 113.64,126.36 162.27,175 205.73,193 126.36,113.64 77.73,65" fill="url(#bslash)" stroke="url(#bslash)" stroke-width="2.5" stroke-linejoin="round"/>
+        </g>
+        <rect x="48" y="48" width="144" height="144" fill="url(#sheen)" clip-path="url(#clBack)"/>
+      </g>
+      <!-- the "/" on top -->
+      <g mask="url(#mSlash)">
+        <g filter="url(#drop)">
+          <polygon points="162.27,65 34.27,193 77.73,175 205.73,47" fill="url(#diag)" stroke="url(#diag)" stroke-width="2.5" stroke-linejoin="round"/>
+        </g>
+        <rect x="48" y="48" width="144" height="144" fill="url(#sheen)" clip-path="url(#bar2)"/>
+      </g>
+    </g>
+  </g>
+</svg>
